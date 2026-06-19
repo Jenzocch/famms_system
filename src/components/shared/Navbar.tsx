@@ -9,17 +9,18 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ShoppingCart, LayoutDashboard, Clock, Plus, LogOut, User, Settings } from 'lucide-react'
+import { ShoppingCart, LayoutDashboard, Clock, Plus, LogOut, User, Shield, BarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavbarProps {
-  profile: Profile | null
+  profile: (Profile & { role: string }) | null
 }
 
 const NAV_LINKS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/requests/new', label: 'New Request', icon: Plus },
   { href: '/history', label: 'History', icon: Clock },
+  { href: '/materials', label: 'Prices', icon: BarChart2 },
 ]
 
 export default function Navbar({ profile }: NavbarProps) {
@@ -62,6 +63,20 @@ export default function Navbar({ profile }: NavbarProps) {
               <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
+          {(profile?.role === 'purchasing' || profile?.role === 'director') && (
+            <Link
+              href="/admin"
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                pathname === '/admin'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              )}
+            >
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Admin</span>
+            </Link>
+          )}
         </nav>
 
         {/* User menu */}

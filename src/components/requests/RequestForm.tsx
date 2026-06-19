@@ -17,6 +17,7 @@ import VendorForm from './VendorForm'
 import { toast } from 'sonner'
 import { Loader2, Send, Save, Info } from 'lucide-react'
 import { APPROVAL_THRESHOLDS } from '@/lib/constants'
+import PriceIntelligence from './PriceIntelligence'
 
 interface RequestFormProps {
   departments: Department[]
@@ -70,14 +71,12 @@ export default function RequestForm({ departments, userId }: RequestFormProps) {
       if (error) throw error
       const requestId = req.id
 
-      // Save images
       if (uploadedImages.length > 0) {
         await supabase.from('request_images').insert(
           uploadedImages.map((path, i) => ({ request_id: requestId, storage_path: path, sort_order: i }))
         )
       }
 
-      // Save attachments
       if (uploadedAttachments.length > 0) {
         await supabase.from('request_attachments').insert(
           uploadedAttachments.map(a => ({
@@ -90,14 +89,12 @@ export default function RequestForm({ departments, userId }: RequestFormProps) {
         )
       }
 
-      // Save URLs
       if (urls.length > 0) {
         await supabase.from('request_urls').insert(
           urls.map((u, i) => ({ request_id: requestId, ...u, sort_order: i }))
         )
       }
 
-      // Save vendors
       const validVendors = vendors.filter(v => v.vendor_name.trim())
       if (validVendors.length > 0) {
         await supabase.from('vendors').insert(
@@ -127,14 +124,14 @@ export default function RequestForm({ departments, userId }: RequestFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Basic Info */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
         <div className="space-y-4">
           <div>
             <Label htmlFor="title">Purchase Title <span className="text-red-500">*</span></Label>
             <Input id="title" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Office Printer Canon MF643Cdw" className="mt-1" />
+              placeholder="e.g. CMC / Xantham Gum / Dextrose" className="mt-1" />
+            <PriceIntelligence searchTerm={title} currentPrice={costNum || undefined} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -182,35 +179,30 @@ export default function RequestForm({ departments, userId }: RequestFormProps) {
         </div>
       </section>
 
-      {/* Images */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-900 mb-1">Product Images</h2>
         <p className="text-xs text-gray-400 mb-4">Up to 20 images. Shown as thumbnails to approvers.</p>
         <ImageUploader onUpload={setUploadedImages} />
       </section>
 
-      {/* Attachments */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-900 mb-1">Attachments</h2>
         <p className="text-xs text-gray-400 mb-4">PDF, Excel, Word, or images</p>
         <AttachmentUploader onUpload={setUploadedAttachments} />
       </section>
 
-      {/* Product URLs */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-900 mb-1">Product URLs</h2>
         <p className="text-xs text-gray-400 mb-4">Tokopedia, Shopee, or supplier website links</p>
         <UrlInput value={urls} onChange={setUrls} />
       </section>
 
-      {/* Vendor Comparison */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-900 mb-1">Vendor Comparison</h2>
         <p className="text-xs text-gray-400 mb-4">Add up to 5 vendors for comparison</p>
         <VendorForm value={vendors} onChange={setVendors} />
       </section>
 
-      {/* Actions */}
       <div className="flex gap-3 pb-8">
         <Button variant="outline" onClick={() => saveRequest(false)} disabled={saving || submitting}>
           {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

@@ -14,9 +14,10 @@ interface Props {
   status: RequestStatus
   myRole: UserRole
   currentApproverRole: UserRole | null
+  compact?: boolean
 }
 
-export default function ApprovalActions({ requestId, status, myRole, currentApproverRole }: Props) {
+export default function ApprovalActions({ requestId, status, myRole, currentApproverRole, compact }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState<ApprovalAction | null>(null)
   const [comment, setComment] = useState('')
@@ -56,8 +57,8 @@ export default function ApprovalActions({ requestId, status, myRole, currentAppr
 
   return (
     <>
-      <div className="bg-white rounded-xl border-2 border-blue-200 p-4">
-        <p className="text-sm font-semibold text-blue-800 mb-3">Your Approval Required</p>
+      <div className={compact ? '' : 'bg-white rounded-xl border-2 border-blue-200 p-4'}>
+        {!compact && <p className="text-sm font-semibold text-blue-800 mb-3">Your Approval Required</p>}
         <div className="flex gap-2">
           <Button onClick={() => setOpen('approve')} className="flex-1 bg-green-600 hover:bg-green-700">
             <CheckCircle className="w-4 h-4 mr-1" /> Approve

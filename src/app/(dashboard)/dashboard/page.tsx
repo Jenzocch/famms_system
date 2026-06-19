@@ -23,7 +23,6 @@ export default async function DashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
   const isApprover = ['dept_manager', 'general_manager', 'director', 'purchasing'].includes(profile?.role ?? '')
 
-  // Build query — approvers see all, applicants see own
   const baseQuery = supabase
     .from('purchase_requests')
     .select(`*, department:departments(id,name), applicant:profiles!applicant_id(id,full_name), images:request_images(id,storage_path,sort_order)`)
@@ -47,55 +46,56 @@ export default async function DashboardPage() {
     : []
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500">Procurement Decision Platform</p>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-base text-gray-600 mt-1">Procurement Decision Platform</p>
         </div>
         <Link href="/requests/new"
-          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          <Plus className="w-4 h-4" /> New Request
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+          <Plus className="w-5 h-5" /> New Request
         </Link>
       </div>
 
-      {/* Pending for me — shown to approvers only */}
       {isApprover && pendingForMe.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            Awaiting Your Approval ({pendingForMe.length})
+        <section className="space-y-4">
+          <h2 className="text-lg font-bold text-red-700 flex items-center gap-2">
+            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            ⚠️ Awaiting Your Approval ({pendingForMe.length})
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {pendingForMe.map(r => (
               <RequestCard key={r.id} request={r} supabaseUrl={supabaseUrl} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <Tabs defaultValue="pending">
-        <TabsList className="mb-4">
+      <Tabs defaultValue="pending" className="space-y-4">
+        <TabsList className="grid grid-cols-4 w-full h-auto gap-1 p-1.5 bg-gray-100">
           {TABS.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value} className="text-xs sm:text-sm">
-              {tab.label}
-              {grouped(tab.statuses).length > 0 && (
-                <span className="ml-1.5 bg-gray-200 text-gray-700 rounded-full px-1.5 py-0.5 text-xs">
-                  {grouped(tab.statuses).length}
-                </span>
-              )}
+            <TabsTrigger key={tab.value} value={tab.value} className="py-3 text-sm sm:text-base font-semibold">
+              <div className="flex flex-col items-center gap-1">
+                <span>{tab.label}</span>
+                {grouped(tab.statuses).length > 0 && (
+                  <span className="bg-red-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">
+                    {grouped(tab.statuses).length}
+                  </span>
+                )}
+              </div>
             </TabsTrigger>
           ))}
         </TabsList>
 
         {TABS.map(tab => (
-          <TabsContent key={tab.value} value={tab.value}>
+          <TabsContent key={tab.value} value={tab.value} className="space-y-6">
             {grouped(tab.statuses).length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <p className="text-sm">No requests here</p>
+              <div className="text-center py-20 text-gray-400">
+                <p className="text-lg text-gray-500">No requests here</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {grouped(tab.statuses).map(r => (
                   <RequestCard key={r.id} request={r} supabaseUrl={supabaseUrl} />
                 ))}

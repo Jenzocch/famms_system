@@ -2,7 +2,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { PurchaseRequest, formatRupiah } from '@/types'
 import StatusBadge from '@/components/shared/StatusBadge'
-import { createClient } from '@/lib/supabase/client'
 import { Calendar, Building2, ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -20,7 +19,6 @@ export default function RequestCard({ request, supabaseUrl }: RequestCardProps) 
   return (
     <Link href={`/requests/${request.id}`}>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow active:scale-[0.99]">
-        {/* Thumbnail */}
         <div className="aspect-[16/9] bg-gray-100 relative overflow-hidden">
           {imageUrl ? (
             <Image
@@ -35,30 +33,28 @@ export default function RequestCard({ request, supabaseUrl }: RequestCardProps) 
               <ImageIcon className="w-10 h-10 text-gray-300" />
             </div>
           )}
-          {/* Status overlay */}
           <div className="absolute top-2 right-2">
             <StatusBadge status={request.status} />
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-4">
-          <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm leading-snug">
+          <h3 className="font-bold text-gray-900 line-clamp-2 text-base leading-snug">
             {request.title}
           </h3>
 
           <div className="mt-3 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <Building2 className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1 text-sm text-gray-600">
+              <Building2 className="w-4 h-4" />
               <span>{request.department?.name ?? '—'}</span>
             </div>
-            <span className="text-sm font-bold text-blue-700">
+            <span className="text-base font-bold text-blue-700">
               {formatRupiah(request.estimated_cost)}
             </span>
           </div>
 
-          <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
-            <Calendar className="w-3.5 h-3.5" />
+          <div className="mt-2 flex items-center gap-1 text-sm text-gray-500">
+            <Calendar className="w-4 h-4" />
             <span>
               {request.submitted_at
                 ? format(new Date(request.submitted_at), 'dd MMM yyyy')
