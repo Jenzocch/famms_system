@@ -153,6 +153,11 @@ CREATE TABLE incidents (
   reported_at TIMESTAMP NOT NULL DEFAULT NOW(),
   reported_by_id UUID REFERENCES profiles(id),
 
+  -- Stamped the first time an incident advances past 'reported'.
+  -- Used for accurate Response Time KPI (reported_at → accepted_at).
+  accepted_at TIMESTAMP,
+  accepted_by_id UUID REFERENCES profiles(id),
+
   root_cause TEXT,
   completion_type TEXT,
   -- 'temporary_fix' | 'permanent_fix' | null (when open)

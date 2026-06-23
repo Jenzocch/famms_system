@@ -24,19 +24,26 @@ export interface IncidentSummary {
 }
 
 /**
- * Calculate average response time (reported → accepted or analyzing).
- * Only incidents that have progressed past 'reported'.
+ * Calculate average response time (reported → accepted).
+ * Uses accepted_at (stamped when the incident first moves past 'reported');
+ * falls back to created_at for legacy rows that predate that column.
+ * Only counts incidents that have progressed past 'reported'.
  */
 export function calcResponseTime(incidents: any[]): number | null {
-  const responded = incidents.filter(i => i.status !== 'reported' && i.reported_at && i.created_at)
+  const responded = incidents.filter(i => i.status !== 'reported' && i.reported_at)
   if (responded.length === 0) return null
 
-  const times = responded.map(i => {
-    const reported = parseISO(i.reported_at)
-    const accepted = parseISO(i.created_at) // proxy; ideally we'd track accepted_at in DB
-    return differenceInMinutes(accepted, reported)
-  })
+  const times = responded
+    .map(i => {
+      const reported = parseISO(i.reported_at)
+      const acceptedStr = i.accepted_at ?? i.created_at // fallback for legacy rows
+      if (!acceptedStr) return null
+      const mins = differenceInMinutes(parseISO(acceptedStr), reported)
+      return mins >= 0 ? mins : null // guard against clock skew / bad data
+    })
+    .filter((m): m is number => m !== null)
 
+  if (times.length === 0) return null
   return Math.round(times.reduce((a, b) => a + b, 0) / times.length)
 }
 

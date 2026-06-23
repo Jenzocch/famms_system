@@ -66,6 +66,21 @@ export async function POST(
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (new_status) update.status = new_status
     if (completion_type) update.completion_type = completion_type
+
+    // Stamp accepted_at the first time this incident moves past 'reported'
+    // (whatever the target status). Used for the Response Time KPI.
+    if (new_status && new_status !== 'reported') {
+      const { data: current } = await supabase
+        .from('incidents')
+        .select('accepted_at')
+        .eq('id', incidentId)
+        .single()
+      if (current && !current.accepted_at) {
+        update.accepted_at = new Date().toISOString()
+        update.accepted_by_id = user.id
+      }
+    }
+
     await supabase.from('incidents').update(update).eq('id', incidentId)
   }
 
