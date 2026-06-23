@@ -1,109 +1,154 @@
 import { createClient } from '@/lib/supabase/server'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import RequestCard from '@/components/dashboard/RequestCard'
-import { RequestStatus, PurchaseRequest } from '@/types'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-
-const TABS: { value: string; label: string; statuses: RequestStatus[] }[] = [
-  {
-    value: 'pending',
-    label: 'Pending',
-    statuses: ['pending_dept_manager', 'pending_general_manager', 'pending_director'],
-  },
-  { value: 'inprogress', label: 'In Progress', statuses: ['draft', 'returned'] },
-  { value: 'approved', label: 'Approved', statuses: ['approved'] },
-  { value: 'rejected', label: 'Rejected', statuses: ['rejected'] },
-]
+import { Plus, AlertCircle, Activity, TrendingDown } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
-  const isApprover = ['dept_manager', 'general_manager', 'director', 'purchasing'].includes(profile?.role ?? '')
 
-  const baseQuery = supabase
-    .from('purchase_requests')
-    .select(`*, department:departments(id,name), applicant:profiles!applicant_id(id,full_name), images:request_images(id,storage_path,sort_order)`)
-    .order('updated_at', { ascending: false })
+  if (!user) {
+    return null
+  }
 
-  const query = isApprover ? baseQuery : baseQuery.eq('applicant_id', user!.id)
-  const { data: requests } = await query
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, role, factory_id')
+    .eq('id', user.id)
+    .single()
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const { data: incidents } = await supabase
+    .from('incidents')
+    .select('status, created_at')
+    .eq('factory_id', profile?.factory_id)
+    .order('created_at', { ascending: false })
+    .limit(100)
 
-  const grouped = (statuses: RequestStatus[]) =>
-    (requests as PurchaseRequest[] ?? []).filter(r => statuses.includes(r.status))
+  const { data: machines } = await supabase
+    .from('machines')
+    .select('id, status')
+    .eq('factory_id', profile?.factory_id)
 
-  const pendingForMe = isApprover
-    ? (requests as PurchaseRequest[] ?? []).filter(r => {
-        if (profile?.role === 'dept_manager') return r.status === 'pending_dept_manager'
-        if (profile?.role === 'general_manager') return r.status === 'pending_general_manager'
-        if (profile?.role === 'director') return r.status === 'pending_director'
-        return false
-      })
-    : []
+  const openIncidents = incidents?.filter(i => !['closed'].includes(i.status)).length || 0
+  const newToday = incidents?.filter(i => {
+    const today = new Date().toISOString().split('T')[0]
+    return i.created_at.startsWith(today)
+  }).length || 0
+  const repairing = machines?.filter(m => m.status === 'repairing').length || 0
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-base text-gray-600 mt-1">Procurement Decision Platform</p>
+          <p className="text-base text-gray-600 mt-1">
+            {profile?.full_name} • FAMMS - Factory Asset & Maintenance Management
+          </p>
         </div>
-        <Link href="/requests/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-          <Plus className="w-5 h-5" /> New Request
+        <Link
+          href="/incidents/new"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+        >
+          <Plus className="w-5 h-5" /> New Incident
         </Link>
       </div>
 
-      {isApprover && pendingForMe.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-lg font-bold text-red-700 flex items-center gap-2">
-            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            ⚠️ Awaiting Your Approval ({pendingForMe.length})
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {pendingForMe.map(r => (
-              <RequestCard key={r.id} request={r} supabaseUrl={supabaseUrl} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          label="Open Incidents"
+          value={openIncidents}
+          icon={<AlertCircle className="w-5 h-5" />}
+          color="bg-red-50 text-red-700"
+        />
+        <KPICard
+          label="New Today"
+          value={newToday}
+          icon={<Activity className="w-5 h-5" />}
+          color="bg-blue-50 text-blue-700"
+        />
+        <KPICard
+          label="Repairing"
+          value={repairing}
+          icon={<TrendingDown className="w-5 h-5" />}
+          color="bg-yellow-50 text-yellow-700"
+        />
+        <KPICard
+          label="Total Machines"
+          value={machines?.length || 0}
+          icon={<Activity className="w-5 h-5" />}
+          color="bg-green-50 text-green-700"
+        />
+      </div>
 
-      <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList className="grid grid-cols-4 w-full h-auto gap-1 p-1.5 bg-gray-100">
-          {TABS.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value} className="py-3 text-sm sm:text-base font-semibold">
-              <div className="flex flex-col items-center gap-1">
-                <span>{tab.label}</span>
-                {grouped(tab.statuses).length > 0 && (
-                  <span className="bg-red-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">
-                    {grouped(tab.statuses).length}
-                  </span>
-                )}
-              </div>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {/* Quick Links */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <QuickLink
+          href="/incidents"
+          label="Incidents"
+          description="Manage incidents & repairs"
+        />
+        <QuickLink href="/machines" label="Machines" description="Equipment master data" />
+        <QuickLink href="/pm" label="PM Schedule" description="Preventive maintenance" />
+        <QuickLink
+          href="/knowledge-base"
+          label="Knowledge Base"
+          description="Search repair history"
+        />
+      </div>
 
-        {TABS.map(tab => (
-          <TabsContent key={tab.value} value={tab.value} className="space-y-6">
-            {grouped(tab.statuses).length === 0 ? (
-              <div className="text-center py-20 text-gray-400">
-                <p className="text-lg text-gray-500">No requests here</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {grouped(tab.statuses).map(r => (
-                  <RequestCard key={r.id} request={r} supabaseUrl={supabaseUrl} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* Coming Soon */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h2 className="text-lg font-bold text-blue-900 mb-2">🚀 FAMMS V1.0</h2>
+        <p className="text-blue-800">
+          Equipment maintenance system designed for SJA, DIN, and Olentia. Track incidents with
+          multi-step repair workflows, detect repeat failures without false positives via fault
+          tree, and drive decision-making with KPI dashboards.
+        </p>
+      </div>
     </div>
+  )
+}
+
+function KPICard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string
+  value: number
+  icon: React.ReactNode
+  color: string
+}) {
+  return (
+    <div className={`${color} rounded-lg p-6 border border-current border-opacity-20`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium opacity-75">{label}</p>
+          <p className="text-3xl font-bold mt-1">{value}</p>
+        </div>
+        <div className="opacity-50">{icon}</div>
+      </div>
+    </div>
+  )
+}
+
+function QuickLink({
+  href,
+  label,
+  description,
+}: {
+  href: string
+  label: string
+  description: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="block p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+    >
+      <h3 className="font-bold text-gray-900">{label}</h3>
+      <p className="text-sm text-gray-600 mt-1">{description}</p>
+    </Link>
   )
 }
