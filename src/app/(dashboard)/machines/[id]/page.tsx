@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Edit2, QrCode } from 'lucide-react'
 import StatusBadge from '@/components/shared/StatusBadge'
+import HealthScoreBadge from '@/components/shared/HealthScoreBadge'
 import { formatDistance } from 'date-fns'
 import { id } from 'date-fns/locale'
 
@@ -28,6 +29,14 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
     .eq('machine_id', params.id)
     .order('reported_at', { ascending: false })
     .limit(5)
+
+  const { data: health } = await supabase
+    .from('equipment_health_scores')
+    .select('*')
+    .eq('machine_id', params.id)
+    .order('last_updated', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   return (
     <div className="space-y-6">
@@ -129,6 +138,18 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
         </div>
 
         <div className="space-y-3">
+          {health && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Health Score</p>
+              <HealthScoreBadge score={health.score} />
+              <div className="mt-3 space-y-1 text-xs text-gray-500">
+                <p>Failure 90d: {health.failure_count_90d ?? 0}</p>
+                <p>Downtime 90d: {health.downtime_hours_90d ?? 0} jam</p>
+                <p>Repeat failure: {health.repeat_failure_count ?? 0}</p>
+                <p>PM terlambat: {health.pm_overdue_count ?? 0}</p>
+              </div>
+            </div>
+          )}
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-4">
             <p className="text-xs font-semibold text-blue-600 uppercase">Dibuat</p>
             <p className="text-sm text-blue-900 mt-1">

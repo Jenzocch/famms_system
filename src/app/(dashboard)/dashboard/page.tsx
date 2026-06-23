@@ -8,6 +8,7 @@ import {
 import FailureDistributionChart from '@/components/dashboard/FailureDistributionChart'
 import IncidentStatusChart from '@/components/dashboard/IncidentStatusChart'
 import EquipmentHealthChart from '@/components/dashboard/EquipmentHealthChart'
+import RecalcHealthButton from '@/components/dashboard/RecalcHealthButton'
 import { INCIDENT_STATUS_COLORS } from '@/types'
 import { formatRupiah } from '@/lib/constants'
 
@@ -26,11 +27,12 @@ export default async function DashboardPage() {
   // Load all data for the factory
   const [
     { data: incidents },
-    { data: actions },
+    { data: rawActions },
     { data: relations },
     { data: machines },
     { data: pmRecords },
     { data: costs },
+    { data: healthScores },
   ] = await Promise.all([
     supabase
       .from('incidents')
@@ -38,10 +40,10 @@ export default async function DashboardPage() {
       .eq('factory_id', profile?.factory_id)
       .order('created_at', { ascending: false })
       .limit(1000),
+    // incident_actions has no factory_id — embed the incident to scope client-side
     supabase
       .from('incident_actions')
-      .select('*, incident:incidents(id, factory_id)')
-      .eq('factory_id', profile?.factory_id),
+      .select('*, incident:incidents(id, factory_id)'),
     supabase
       .from('incident_relations')
       .select('*'),
@@ -56,7 +58,16 @@ export default async function DashboardPage() {
       .from('maintenance_costs')
       .select('*')
       .eq('factory_id', profile?.factory_id),
+    supabase
+      .from('equipment_health_scores')
+      .select('*, machine:machines(machine_code, factory_id)')
+      .order('last_updated', { ascending: false }),
   ])
+
+  // Scope actions to this factory via embedded incident
+  const actions = (rawActions ?? []).filter(
+    (a: any) => a.incident?.factory_id === profile?.factory_id
+  )
 
   // KPI calculations
   const openIncidents = incidents?.filter(i => !['closed'].includes(i.status)).length || 0
@@ -97,11 +108,14 @@ export default async function DashboardPage() {
     { name: 'Selesai', value: incidentSummary.closed, color: '#10b981' },
   ]
 
-  // Machine health (mock — ideally load from equipment_health_scores table)
-  const machineHealth = (machines ?? []).slice(0, 8).map(m => ({
-    machine_code: m.machine_code,
-    score: Math.floor(Math.random() * 40 + 60), // 60-100 for demo
-  }))
+  // Machine health — real scores from equipment_health_scores (latest per machine,
+  // scoped to this factory). Empty until "Hitung Ulang" is run.
+  const machineHealth = (healthScores ?? [])
+    .filter((h: any) => h.machine?.factory_id === profile?.factory_id)
+    .map((h: any) => ({
+      machine_code: h.machine?.machine_code ?? '—',
+      score: h.score,
+    }))
 
   return (
     <div className="space-y-8">
@@ -214,7 +228,10 @@ export default async function DashboardPage() {
 
       {/* Equipment Health */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Kesehatan Peralatan</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-gray-900">Kesehatan Peralatan</h2>
+          <RecalcHealthButton />
+        </div>
         <EquipmentHealthChart data={machineHealth} />
       </div>
 
