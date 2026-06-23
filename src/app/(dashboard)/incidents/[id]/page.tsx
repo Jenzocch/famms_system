@@ -10,7 +10,7 @@ import {
   IncidentStatus, DowntimeImpact, DOWNTIME_IMPACT_LABELS,
   ActionType, ACTION_TYPE_LABELS, CompletionType, COMPLETION_TYPE_LABELS,
 } from '@/types'
-import { ChevronLeft, Clock, Wrench } from 'lucide-react'
+import { ChevronLeft, Clock, Wrench, BookOpen } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default async function IncidentDetailPage({
@@ -153,6 +153,19 @@ export default async function IncidentDetailPage({
               Failure code ini terjadi {rca.occurrenceCount}× dalam 90 hari — isi RCA di atas untuk dapat menutup.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Capture knowledge after close */}
+      {isClosed && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+          <p className="text-sm text-gray-600 mb-3">Incident selesai. Dokumentasikan pembelajaran untuk tim.</p>
+          <Link
+            href={`/knowledge-base/new?incident=${id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+          >
+            <BookOpen className="w-4 h-4" /> Buat Knowledge Base
+          </Link>
         </div>
       )}
     </div>
