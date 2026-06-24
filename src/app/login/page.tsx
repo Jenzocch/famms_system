@@ -11,7 +11,6 @@ import { Loader2, Wrench } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,6 +20,9 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    // Created lazily here (not during render) so the page can be statically
+    // prerendered at build time without Supabase env vars present.
+    const supabase = createClient()
     try {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
