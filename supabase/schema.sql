@@ -119,6 +119,32 @@ CREATE TABLE machine_qr_codes (
 );
 
 -- ============================================================================
+-- 2B. FACILITIES & INFRASTRUCTURE (Non-Machine Assets)
+-- ============================================================================
+
+CREATE TABLE facilities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  factory_id UUID NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
+  area_id UUID REFERENCES areas(id) ON DELETE CASCADE,
+
+  facility_code TEXT NOT NULL,
+  facility_name TEXT NOT NULL,
+  facility_type TEXT NOT NULL,
+  -- 'water_system' | 'floor' | 'lighting' | 'air_compressor' | 'steam_system'
+  -- | 'cooling_system' | 'electrical' | 'exhaust' | 'cleanliness' | 'safety' | 'other'
+
+  description TEXT,
+  owner_id UUID REFERENCES profiles(id),
+  status TEXT DEFAULT 'operational',
+  -- 'operational' | 'maintenance_needed' | 'critical' | 'out_of_service'
+
+  remarks TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(factory_id, facility_code)
+);
+
+-- ============================================================================
 -- 3. FAILURE CLASSIFICATION SYSTEM (Fault Tree)
 -- ============================================================================
 
@@ -145,15 +171,42 @@ CREATE TABLE failure_codes (
 );
 
 -- ============================================================================
+-- 3B. FACILITY ISSUE CATEGORIES (for non-machine incidents)
+-- ============================================================================
+
+CREATE TABLE facility_issue_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  facility_type TEXT NOT NULL,
+  -- Linked to facilities.facility_type for relevance filtering
+  description TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================================
 -- 4. INCIDENTS (Main Event Log)
 -- ============================================================================
 
 CREATE TABLE incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   factory_id UUID NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
-  machine_id UUID NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
+
+  -- Report target: either machine OR facility, not both
+  machine_id UUID REFERENCES machines(id) ON DELETE CASCADE,
+  facility_id UUID REFERENCES facilities(id) ON DELETE CASCADE,
+  incident_type TEXT NOT NULL,
+  -- 'machine' | 'facility'
+
   incident_no TEXT NOT NULL,
-  failure_code_id UUID NOT NULL REFERENCES failure_codes(id),
+
+  -- Machine incidents use failure_code; facility incidents can be null
+  failure_code_id UUID REFERENCES failure_codes(id),
+
+  -- Facility incidents use this for free-text description
+  facility_issue_description TEXT,
 
   status TEXT DEFAULT 'reported',
   -- reported → accepted → analyzing → waiting_* → repairing → testing → observation → closed
@@ -512,7 +565,10 @@ CREATE TABLE projects (
 
 CREATE INDEX idx_profiles_factory_id ON profiles(factory_id);
 CREATE INDEX idx_machines_factory_area ON machines(factory_id, area_id);
+CREATE INDEX idx_facilities_factory_area ON facilities(factory_id, area_id);
 CREATE INDEX idx_incidents_machine_status ON incidents(machine_id, status);
+CREATE INDEX idx_incidents_facility_status ON incidents(facility_id, status);
+CREATE INDEX idx_incidents_type_status ON incidents(incident_type, status);
 CREATE INDEX idx_incidents_failure_code ON incidents(failure_code_id);
 CREATE INDEX idx_incidents_created_at ON incidents(created_at DESC);
 CREATE INDEX idx_incident_actions_incident_id ON incident_actions(incident_id);
@@ -544,6 +600,44 @@ INSERT INTO factories (name, code, country) VALUES
 ('SJA', 'SJA', 'ID'),
 ('DIN', 'DIN', 'ID'),
 ('Olentia', 'OLT', 'ID')
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================================================
+-- INITIAL DATA: Facility Issue Categories
+-- ============================================================================
+
+INSERT INTO facility_issue_categories (code, name, facility_type, display_order, is_active) VALUES
+-- Water System
+('WATER_LEAK', 'Kebocoran Air', 'water_system', 1, true),
+('WATER_PRESSURE', 'Tekanan Air Rendah', 'water_system', 2, true),
+('WATER_QUALITY', 'Kualitas Air Buruk', 'water_system', 3, true),
+
+-- Floor & Structure
+('FLOOR_CRACK', 'Lantai Retak/Rusak', 'floor', 1, true),
+('FLOOR_SLIP', 'Lantai Licin/Hazard', 'floor', 2, true),
+
+-- Lighting
+('LIGHT_BROKEN', 'Lampu Mati/Rusak', 'lighting', 1, true),
+('LIGHT_DIM', 'Pencahayaan Kurang', 'lighting', 2, true),
+
+-- Air Compressor & Pneumatic
+('COMPRESSOR_LOW_PRESSURE', 'Tekanan Udara Rendah', 'air_compressor', 1, true),
+('COMPRESSOR_LEAK', 'Kebocoran Udara Terkompresi', 'air_compressor', 2, true),
+
+-- Electrical & Safety
+('ELECTRICAL_HAZARD', 'Hazard Listrik', 'electrical', 1, true),
+('ELECTRICAL_FAULT', 'Fault Listrik', 'electrical', 2, true),
+
+-- Cleanliness & Environment
+('CLEANLINESS_ISSUE', 'Masalah Kebersihan', 'cleanliness', 1, true),
+('PEST_INFESTATION', 'Serangan Hama', 'cleanliness', 2, true),
+
+-- Safety
+('SAFETY_HAZARD', 'Hazard Keselamatan', 'safety', 1, true),
+('SAFETY_VIOLATION', 'Pelanggaran K3', 'safety', 2, true),
+
+-- Other
+('OTHER_FACILITY_ISSUE', 'Masalah Lainnya', 'other', 1, true)
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================================
