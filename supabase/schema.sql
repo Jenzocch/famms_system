@@ -202,6 +202,11 @@ CREATE TABLE incidents (
 
   incident_no TEXT NOT NULL,
 
+  -- Simplified mobile-first report fields
+  title TEXT,
+  description TEXT,
+  reporter_name TEXT,
+
   -- Machine incidents use failure_code; facility incidents can be null
   failure_code_id UUID REFERENCES failure_codes(id),
 
@@ -653,3 +658,59 @@ INSERT INTO failure_categories (code, name, level, display_order, is_active) VAL
 ('OPERATION', 'Operasi / Human Error', 1, 5, true)
 ON CONFLICT (code) DO NOTHING;
 
+
+-- ============================================================================
+-- MAINTENANCE LOGS (簡化版 PM — 記錄每次保養)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS maintenance_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  machine_id UUID NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
+  performed_by TEXT,
+  notes TEXT,
+  performed_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE maintenance_logs DISABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_machine ON maintenance_logs(machine_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_performed_at ON maintenance_logs(performed_at DESC);
+
+-- ============================================================================
+-- MIGRATION: add simplified report fields + make codes optional
+-- (safe to re-run on an existing database)
+-- ============================================================================
+
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS reporter_name TEXT;
+
+ALTER TABLE machines ALTER COLUMN machine_code DROP NOT NULL;
+ALTER TABLE facilities ALTER COLUMN facility_code DROP NOT NULL;
+
+-- failure_code_id no longer required for any incident
+ALTER TABLE incidents ALTER COLUMN failure_code_id DROP NOT NULL;
+
+-- ============================================================================
+-- INCIDENT UPDATES (簡化版進度追蹤 — 每次狀態變更/處理紀錄)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS incident_updates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  incident_id UUID NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+  new_status TEXT,
+  note TEXT,
+  updated_by TEXT,
+  updated_by_id UUID REFERENCES profiles(id),
+  photos TEXT,  -- JSON array of storage paths
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE incident_updates DISABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_incident_updates_incident ON incident_updates(incident_id);
+
+-- Asset category for simplified item management (機器/項目分類)
+ALTER TABLE machines ADD COLUMN IF NOT EXISTS asset_category TEXT DEFAULT 'machine';
+-- 'machine' | 'item' | 'pipe' | 'electrical' | 'facility'

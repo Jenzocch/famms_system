@@ -1,357 +1,311 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import {
-  Machine, FailureCategory, FailureCode, DowntimeImpact, DOWNTIME_IMPACT_LABELS,
-} from '@/types'
-import { SLA_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { Loader2, Camera, X } from 'lucide-react'
 
-type IncidentType = 'machine' | 'facility'
-const IMPACTS: DowntimeImpact[] = ['A', 'B', 'C', 'D']
+interface Factory { id: string; name: string; code: string }
+interface Area { id: string; factory_id: string; name: string }
+interface Asset { id: string; area_id: string; machine_name: string; machine_code: string | null }
 
-interface Facility {
-  id: string
-  facility_code: string
-  facility_name: string
-  facility_type: string
-}
+const ISSUE_TYPES = [
+  { value: 'machine', label: '🔧 機器故障' },
+  { value: 'pipe', label: '🚿 水管/管線' },
+  { value: 'electrical', label: '💡 電力/照明' },
+  { value: 'facility', label: '🏭 設施/基礎建設' },
+  { value: 'safety', label: '⚠️ 安全問題' },
+  { value: 'cleanliness', label: '🧹 衛生/清潔' },
+  { value: 'other', label: '📋 其他' },
+]
 
-interface FacilityIssueCategory {
-  id: string
-  code: string
-  name: string
-}
+const URGENCY = [
+  { value: 'critical', label: '🔴 緊急', desc: '生產停線' },
+  { value: 'high', label: '🟠 高', desc: '影響生產' },
+  { value: 'medium', label: '🟡 中', desc: '部分影響' },
+  { value: 'low', label: '🟢 低', desc: '不影響生產' },
+]
 
 export default function IncidentForm() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [incidentType, setIncidentType] = useState<IncidentType>('machine')
+  const [factories, setFactories] = useState<Factory[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
 
-  // Machine-related
-  const [machines, setMachines] = useState<Machine[]>([])
-  const [categories, setCategories] = useState<FailureCategory[]>([])
-  const [codes, setCodes] = useState<FailureCode[]>([])
-  const [machineId, setMachineId] = useState('')
-  const [mainCatId, setMainCatId] = useState('')
-  const [subCatId, setSubCatId] = useState('')
-  const [failureCodeId, setFailureCodeId] = useState('')
-
-  // Facility-related
-  const [facilities, setFacilities] = useState<Facility[]>([])
-  const [facilityIssueCategories, setFacilityIssueCategories] = useState<FacilityIssueCategory[]>([])
-  const [facilityId, setFacilityId] = useState('')
-  const [facilityIssueId, setFacilityIssueId] = useState('')
-  const [facilityDescription, setFacilityDescription] = useState('')
-
-  // Common
-  const [impact, setImpact] = useState<DowntimeImpact>('D')
-  const [remarks, setRemarks] = useState('')
+  const [factoryId, setFactoryId] = useState('')
+  const [areaId, setAreaId] = useState('')
+  const [assetId, setAssetId] = useState('')
+  const [issueType, setIssueType] = useState('machine')
+  const [urgency, setUrgency] = useState('medium')
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [reporterName, setReporterName] = useState('')
+  const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    async function load() {
-      const [
-        { data: m },
-        { data: cats },
-        { data: fc },
-        { data: fac },
-        { data: fic },
-      ] = await Promise.all([
-        supabase.from('machines').select('*').neq('status', 'scrapped').order('machine_code'),
-        supabase.from('failure_categories').select('*').eq('is_active', true).order('display_order'),
-        supabase.from('failure_codes').select('*').eq('is_active', true).order('display_order'),
-        supabase.from('facilities').select('*').eq('status', 'operational').order('facility_code'),
-        supabase.from('facility_issue_categories').select('*').eq('is_active', true).order('display_order'),
-      ])
-      setMachines(m ?? [])
-      setCategories(cats ?? [])
-      setCodes(fc ?? [])
-      setFacilities(fac ?? [])
-      setFacilityIssueCategories(fic ?? [])
-    }
-    load()
+    supabase.from('factories').select('*').order('name').then(({ data }) => setFactories(data ?? []))
   }, [])
 
-  // Cascade derivations (machines only)
-  const mainCats = useMemo(() => categories.filter(c => c.level === 1), [categories])
-  const subCats = useMemo(
-    () => categories.filter(c => c.level === 2 && c.parent_id === mainCatId),
-    [categories, mainCatId]
-  )
-  const leafCodes = useMemo(
-    () => codes.filter(c => c.category_id === subCatId),
-    [codes, subCatId]
-  )
+  useEffect(() => {
+    if (!factoryId) { setAreas([]); setAreaId(''); return }
+    supabase.from('areas').select('*').eq('factory_id', factoryId).order('name')
+      .then(({ data }) => setAreas(data ?? []))
+    setAreaId('')
+    setAssetId('')
+  }, [factoryId])
 
-  async function submitMachine() {
-    if (!machineId || !failureCodeId) {
-      toast.error('Pilih mesin dan failure code')
-      return
-    }
-    setSubmitting(true)
-    try {
-      const res = await fetch('/api/incidents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          incident_type: 'machine',
-          machine_id: machineId,
-          failure_code_id: failureCodeId,
-          downtime_impact: impact,
-          remarks,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Gagal membuat incident')
+  useEffect(() => {
+    if (!areaId) { setAssets([]); setAssetId(''); return }
+    supabase.from('machines').select('id, area_id, machine_name, machine_code')
+      .eq('area_id', areaId).neq('status', 'scrapped').order('machine_name')
+      .then(({ data }) => setAssets(data ?? []))
+    setAssetId('')
+  }, [areaId])
 
-      if (json.potential_repeats?.length > 0) {
-        const nos = json.potential_repeats.map((p: { incident_no: string }) => p.incident_no).join(', ')
-        toast.warning(`⚠️ Suspek Repeat Failure: ${nos}. Supervisor harus konfirmasi.`, { duration: 6000 })
-      } else {
-        toast.success(`Incident ${json.incident.incident_no} dibuat`)
-      }
-      router.push(`/incidents/${json.incident.id}`)
-      router.refresh()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal membuat incident')
-    } finally {
-      setSubmitting(false)
-    }
+  function addPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    setPhotos(prev => [...prev, ...files].slice(0, 5))
   }
 
-  async function submitFacility() {
-    if (!facilityId) {
-      toast.error('Pilih fasilitas')
+  async function submit() {
+    if (!factoryId || !title.trim() || !description.trim()) {
+      toast.error('請填寫工廠、標題和問題描述')
       return
     }
-    if (!facilityDescription.trim()) {
-      toast.error('Jelaskan masalah yang terjadi')
-      return
-    }
+
     setSubmitting(true)
     try {
-      const res = await fetch('/api/incidents', {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const now = new Date()
+      const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+      const { count } = await supabase
+        .from('incidents')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString())
+      const seq = String((count ?? 0) + 1).padStart(3, '0')
+      const incident_no = `FIT-${ym}-${seq}`
+
+      const { data: incident, error } = await supabase
+        .from('incidents')
+        .insert({
+          factory_id: factoryId,
+          incident_type: issueType,
+          machine_id: assetId || null,
+          incident_no,
+          title,
+          description,
+          reporter_name: reporterName || null,
+          downtime_impact: urgency === 'critical' ? 'A' : urgency === 'high' ? 'B' : urgency === 'medium' ? 'C' : 'D',
+          status: 'reported',
+          reported_by_id: user?.id ?? null,
+        })
+        .select('*')
+        .single()
+
+      if (error) throw error
+
+      // Upload photos if any
+      if (photos.length > 0) {
+        for (const photo of photos) {
+          const ext = photo.name.split('.').pop()
+          const path = `${incident.id}/${Date.now()}.${ext}`
+          await supabase.storage.from('incident-photos').upload(path, photo)
+        }
+      }
+
+      // Telegram notify
+      await fetch('/api/incidents/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          incident_type: 'facility',
-          facility_id: facilityId,
-          facility_issue_description: facilityDescription,
-          downtime_impact: impact,
-          remarks,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Gagal membuat incident')
-      toast.success(`Incident ${json.incident.incident_no} dibuat`)
-      router.push(`/incidents/${json.incident.id}`)
-      router.refresh()
+        body: JSON.stringify({ incidentId: incident.id }),
+      }).catch(() => {})
+
+      toast.success(`案件 ${incident_no} 已建立`)
+      router.push(`/incidents/${incident.id}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal membuat incident')
+      toast.error(err instanceof Error ? err.message : '送出失敗')
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-      {/* Report Type Selection */}
+    <div className="space-y-5">
       <div>
-        <Label>Tipe Laporan <span className="text-red-500">*</span></Label>
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <button
-            type="button"
-            onClick={() => setIncidentType('machine')}
-            className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
-              incidentType === 'machine'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:bg-gray-50 text-gray-700'
-            }`}
-          >
-            🔧 Mesin/Peralatan
-          </button>
-          <button
-            type="button"
-            onClick={() => setIncidentType('facility')}
-            className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
-              incidentType === 'facility'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:bg-gray-50 text-gray-700'
-            }`}
-          >
-            🏭 Fasilitas/Infrastruktur
-          </button>
-        </div>
+        <h1 className="text-xl font-bold text-gray-900">回報問題</h1>
+        <p className="text-sm text-gray-500 mt-1">現場問題快速回報</p>
       </div>
 
-      {incidentType === 'machine' ? (
-        <>
-          {/* Machine Selection */}
-          <div>
-            <Label>Mesin <span className="text-red-500">*</span></Label>
-            <Select value={machineId} onValueChange={(v) => setMachineId(v ?? '')}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih mesin" /></SelectTrigger>
-              <SelectContent>
-                {machines.map(m => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.machine_code} — {m.machine_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {machines.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">Belum ada mesin terdaftar. Tambah mesin dulu.</p>
-            )}
-          </div>
-
-          {/* Fault Tree Cascade */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <Label>Kategori <span className="text-red-500">*</span></Label>
-              <Select
-                value={mainCatId}
-                onValueChange={(v) => { setMainCatId(v ?? ''); setSubCatId(''); setFailureCodeId('') }}
-              >
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Main" /></SelectTrigger>
-                <SelectContent>
-                  {mainCats.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Sub-Kategori <span className="text-red-500">*</span></Label>
-              <Select
-                value={subCatId}
-                onValueChange={(v) => { setSubCatId(v ?? ''); setFailureCodeId('') }}
-                disabled={!mainCatId}
-              >
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Sub" /></SelectTrigger>
-                <SelectContent>
-                  {subCats.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Failure Code <span className="text-red-500">*</span></Label>
-              <Select value={failureCodeId} onValueChange={(v) => setFailureCodeId(v ?? '')} disabled={!subCatId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Code" /></SelectTrigger>
-                <SelectContent>
-                  {leafCodes.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="font-mono text-xs text-gray-400 mr-1">{c.code}</span>{c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Facility Selection */}
-          <div>
-            <Label>Fasilitas <span className="text-red-500">*</span></Label>
-            <Select value={facilityId} onValueChange={(v) => setFacilityId(v ?? '')}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih fasilitas" /></SelectTrigger>
-              <SelectContent>
-                {facilities.map(f => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.facility_code} — {f.facility_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {facilities.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">Belum ada fasilitas terdaftar.</p>
-            )}
-          </div>
-
-          {/* Facility Issue Category (optional quick selection) */}
-          <div>
-            <Label>Kategori Masalah (Opsional)</Label>
-            <Select value={facilityIssueId} onValueChange={(v) => setFacilityIssueId(v ?? '')}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
-              <SelectContent>
-                {facilityIssueCategories.map(fic => (
-                  <SelectItem key={fic.id} value={fic.id}>
-                    {fic.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Facility Issue Description */}
-          <div>
-            <Label htmlFor="facility-desc">Deskripsi Masalah <span className="text-red-500">*</span></Label>
-            <Textarea
-              id="facility-desc"
-              value={facilityDescription}
-              onChange={e => setFacilityDescription(e.target.value)}
-              placeholder="Jelaskan masalah secara detail: lokasi, gejala, kapan terjadi, dll."
-              className="mt-1"
-              rows={4}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Common Fields */}
-
-      {/* Downtime Impact */}
+      {/* Reporter */}
       <div>
-        <Label>Dampak Downtime <span className="text-red-500">*</span></Label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-          {IMPACTS.map(i => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setImpact(i)}
-              className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
-                impact === i ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              <span className="font-bold">{i}</span>
-              <span className="block text-xs text-gray-500">{DOWNTIME_IMPACT_LABELS[i]}</span>
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" /> SLA respons: {SLA_LABELS[impact]}
-        </p>
-      </div>
-
-      {/* Remarks */}
-      <div>
-        <Label htmlFor="remarks">Catatan Tambahan</Label>
-        <Textarea
-          id="remarks"
-          value={remarks}
-          onChange={e => setRemarks(e.target.value)}
-          placeholder="Informasi tambahan yang relevan..."
+        <Label>回報人姓名</Label>
+        <Input
+          value={reporterName}
+          onChange={e => setReporterName(e.target.value)}
+          placeholder="您的姓名"
           className="mt-1"
-          rows={2}
         />
       </div>
 
-      <Button
-        onClick={incidentType === 'machine' ? submitMachine : submitFacility}
-        disabled={submitting}
-        className="w-full"
-      >
+      {/* Issue Type */}
+      <div>
+        <Label>問題類型 <span className="text-red-500">*</span></Label>
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          {ISSUE_TYPES.map(t => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setIssueType(t.value)}
+              className={`text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                issueType === t.value
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Urgency */}
+      <div>
+        <Label>緊急程度 <span className="text-red-500">*</span></Label>
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          {URGENCY.map(u => (
+            <button
+              key={u.value}
+              type="button"
+              onClick={() => setUrgency(u.value)}
+              className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                urgency === u.value
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-700'
+              }`}
+            >
+              <span className="font-medium">{u.label}</span>
+              <span className="block text-xs text-gray-500">{u.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Location */}
+      <div className="space-y-3">
+        <Label>位置</Label>
+        <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')}>
+          <SelectTrigger><SelectValue placeholder="選擇工廠 *" /></SelectTrigger>
+          <SelectContent>
+            {factories.map(f => (
+              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {areas.length > 0 && (
+          <Select value={areaId} onValueChange={(v) => setAreaId(v ?? '')}>
+            <SelectTrigger><SelectValue placeholder="選擇區域（可選）" /></SelectTrigger>
+            <SelectContent>
+              {areas.map(a => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {assets.length > 0 && (
+          <Select value={assetId} onValueChange={(v) => setAssetId(v ?? '')}>
+            <SelectTrigger><SelectValue placeholder="選擇機器/項目（可選）" /></SelectTrigger>
+            <SelectContent>
+              {assets.map(a => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.machine_code ? `[${a.machine_code}] ` : ''}{a.machine_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {/* Title */}
+      <div>
+        <Label>問題標題 <span className="text-red-500">*</span></Label>
+        <Input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="簡短描述，如：充填機漏水"
+          className="mt-1"
+        />
+      </div>
+
+      {/* Description */}
+      <div>
+        <Label>問題描述 <span className="text-red-500">*</span></Label>
+        <Textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="詳細描述：問題發生位置、狀況、何時開始..."
+          className="mt-1"
+          rows={4}
+        />
+      </div>
+
+      {/* Photos */}
+      <div>
+        <Label>現場照片（最多 5 張）</Label>
+        <div className="mt-1 space-y-2">
+          {photos.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {photos.map((p, i) => (
+                <div key={i} className="relative">
+                  <img
+                    src={URL.createObjectURL(p)}
+                    alt=""
+                    className="w-20 h-20 object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {photos.length < 5 && (
+            <label className="flex items-center gap-2 border-2 border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-400">
+              <Camera className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-500">拍照或選擇照片</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                capture="environment"
+                onChange={addPhoto}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+      </div>
+
+      <Button onClick={submit} disabled={submitting} className="w-full h-12 text-base">
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-        Buat Incident
+        送出回報
       </Button>
     </div>
   )

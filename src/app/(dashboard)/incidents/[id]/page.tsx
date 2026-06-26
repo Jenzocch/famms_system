@@ -1,18 +1,33 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import StatusBadge from '@/components/shared/StatusBadge'
-import ActionForm from '@/components/incidents/ActionForm'
-import RCAForm from '@/components/incidents/RCAForm'
-import CloseIncidentButton from '@/components/incidents/CloseIncidentButton'
+import ProgressUpdate from '@/components/incidents/ProgressUpdate'
 import ImageViewer from '@/components/shared/ImageViewer'
-import { checkRCARequirement } from '@/lib/rca'
+import { IncidentStatus } from '@/types'
 import {
-  IncidentStatus, DowntimeImpact, DOWNTIME_IMPACT_LABELS,
-  ActionType, ACTION_TYPE_LABELS, CompletionType, COMPLETION_TYPE_LABELS,
-} from '@/types'
-import { ChevronLeft, Clock, Wrench, BookOpen } from 'lucide-react'
+  ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR,
+} from '@/lib/incident-display'
+import { ChevronLeft, Clock, User } from 'lucide-react'
 import { format } from 'date-fns'
+
+interface UpdateRow {
+  id: string
+  new_status: string | null
+  note: string | null
+  updated_by: string | null
+  photos: string | null
+  created_at: string
+}
+
+function parsePhotos(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'string') return []
+  try {
+    const v = JSON.parse(raw)
+    return Array.isArray(v) ? v : []
+  } catch {
+    return []
+  }
+}
 
 export default async function IncidentDetailPage({
   params,
@@ -26,198 +41,122 @@ export default async function IncidentDetailPage({
     .from('incidents')
     .select(`
       *,
-      machine:machines(machine_code, machine_name, brand, model),
-      failure_code:failure_codes(code, name)
+      machine:machines(machine_code, machine_name),
+      factory:factories(name)
     `)
     .eq('id', id)
     .single()
 
   if (!incident) notFound()
 
-  const { data: actions } = await supabase
-    .from('incident_actions')
+  const { data: updates } = await supabase
+    .from('incident_updates')
     .select('*')
     .eq('incident_id', id)
-    .order('action_sequence', { ascending: true })
+    .order('created_at', { ascending: false })
 
-  const machine = incident.machine as { machine_code: string; machine_name: string; brand?: string; model?: string } | null
-  const fc = incident.failure_code as { code: string; name: string } | null
-
+  const machine = incident.machine as { machine_code: string | null; machine_name: string } | null
+  const factory = incident.factory as { name: string } | null
+  const status = incident.status as IncidentStatus
+  const urgency = URGENCY_FROM_IMPACT[incident.downtime_impact as 'A' | 'B' | 'C' | 'D']
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const parsePhotos = (raw: unknown): string[] => {
-    if (!raw || typeof raw !== 'string') return []
-    try {
-      const v = JSON.parse(raw)
-      return Array.isArray(v) ? v : []
-    } catch {
-      return []
-    }
-  }
-
-  // RCA gate: when the same failure_code crossed the threshold and no RCA exists,
-  // closing is blocked and the RCA form is shown.
-  const rca = await checkRCARequirement(supabase, incident.failure_code_id, incident.factory_id)
-  const rcaBlocked = rca.required && !rca.satisfied
-  const isClosed = incident.status === 'closed'
+  const updateRows = (updates ?? []) as UpdateRow[]
+  const isClosed = status === 'closed'
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <Link href="/incidents" className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
-          <ChevronLeft className="w-4 h-4" /> Kembali
-        </Link>
-      </div>
+    <div className="space-y-4">
+      <Link href="/incidents" className="text-sm text-gray-500 inline-flex items-center gap-1">
+        <ChevronLeft className="w-4 h-4" /> 返回看板
+      </Link>
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-mono text-lg font-bold text-gray-900">{incident.incident_no}</h1>
-            <p className="text-gray-600 mt-1">
-              {machine ? `${machine.machine_code} — ${machine.machine_name}` : 'Mesin?'}
-            </p>
-          </div>
-          <StatusBadge status={incident.status as IncidentStatus} />
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_ZH_COLOR[status]}`}>
+            {STATUS_ZH[status]}
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urgency.color}`}>
+            {urgency.label}
+          </span>
+          <span className="text-xs text-gray-400 font-mono ml-auto">{incident.incident_no}</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 text-sm">
-          <Field label="Failure Code" value={fc ? `${fc.code}` : '-'} sub={fc?.name} />
-          <Field
-            label="Dampak"
-            value={incident.downtime_impact}
-            sub={DOWNTIME_IMPACT_LABELS[incident.downtime_impact as DowntimeImpact]}
-          />
-          <Field
-            label="Dilaporkan"
-            value={format(new Date(incident.reported_at), 'dd MMM yyyy')}
-            sub={format(new Date(incident.reported_at), 'HH:mm')}
-          />
-          <Field
-            label="Tipe Fix"
-            value={incident.completion_type
-              ? COMPLETION_TYPE_LABELS[incident.completion_type as CompletionType].split(' (')[0]
-              : '-'}
-          />
+        <h1 className="text-lg font-bold text-gray-900 mt-2">
+          {incident.title || ISSUE_TYPE_LABELS[incident.incident_type] || '問題'}
+        </h1>
+
+        <div className="mt-2 space-y-1 text-sm text-gray-600">
+          <p>{ISSUE_TYPE_LABELS[incident.incident_type] || incident.incident_type}</p>
+          <p>
+            📍 {factory?.name || '?'}
+            {machine ? ` · ${machine.machine_code ? `[${machine.machine_code}] ` : ''}${machine.machine_name}` : ''}
+          </p>
+          {incident.reporter_name && (
+            <p className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {incident.reporter_name}</p>
+          )}
+          <p className="flex items-center gap-1 text-gray-400">
+            <Clock className="w-3.5 h-3.5" /> {format(new Date(incident.reported_at), 'yyyy-MM-dd HH:mm')}
+          </p>
         </div>
 
-        {incident.remarks && (
-          <div className="mt-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{incident.remarks}</div>
-        )}
-        {incident.root_cause && (
-          <div className="mt-3 text-sm">
-            <span className="font-medium text-gray-700">Root Cause: </span>
-            <span className="text-gray-600">{incident.root_cause}</span>
+        {incident.description && (
+          <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">
+            {incident.description}
           </div>
         )}
       </div>
 
-      {/* Action timeline */}
+      {/* Progress timeline */}
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Wrench className="w-4 h-4" /> Timeline Perbaikan ({actions?.length ?? 0})
-        </h2>
-        {!actions || actions.length === 0 ? (
-          <p className="text-sm text-gray-400 bg-white rounded-xl border border-gray-200 p-6 text-center">
-            Belum ada action. Tambah langkah perbaikan di bawah.
+        <h2 className="font-semibold text-gray-900 mb-2 text-sm">處理紀錄 ({updateRows.length})</h2>
+        {updateRows.length === 0 ? (
+          <p className="text-sm text-gray-400 bg-white rounded-xl border border-gray-200 p-5 text-center">
+            尚無處理紀錄
           </p>
         ) : (
-          <ol className="relative border-l border-gray-200 ml-3 space-y-4">
-            {actions.map((a) => (
-              <li key={a.id} className="ml-5">
-                <span className="absolute -left-2 flex items-center justify-center w-4 h-4 bg-blue-100 rounded-full ring-4 ring-white">
-                  <span className="w-2 h-2 bg-blue-600 rounded-full" />
-                </span>
-                <div className="bg-white rounded-lg border border-gray-200 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">
-                      {a.action_sequence}. {ACTION_TYPE_LABELS[a.action_type as ActionType]}
-                    </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {format(new Date(a.performed_at), 'dd MMM HH:mm')}
-                    </span>
-                  </div>
-                  {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
-                  {a.duration_minutes ? (
-                    <p className="text-xs text-gray-400 mt-1">Durasi: {a.duration_minutes} menit</p>
-                  ) : null}
-                  {(() => {
-                    const before = parsePhotos(a.photos_before)
-                    const during = parsePhotos(a.photos_during)
-                    const after = parsePhotos(a.photos_after)
-                    if (!before.length && !during.length && !after.length) return null
-                    return (
-                      <div className="mt-3 space-y-2">
-                        {before.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 mb-1">Sebelum</p>
-                            <ImageViewer paths={before} supabaseUrl={supabaseUrl} />
-                          </div>
-                        )}
-                        {during.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 mb-1">Saat Perbaikan</p>
-                            <ImageViewer paths={during} supabaseUrl={supabaseUrl} />
-                          </div>
-                        )}
-                        {after.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 mb-1">Sesudah</p>
-                            <ImageViewer paths={after} supabaseUrl={supabaseUrl} />
-                          </div>
-                        )}
+          <ol className="relative border-l-2 border-gray-100 ml-2 space-y-3">
+            {updateRows.map(u => {
+              const photos = parsePhotos(u.photos)
+              return (
+                <li key={u.id} className="ml-4">
+                  <span className="absolute -left-[7px] w-3 h-3 bg-blue-500 rounded-full ring-4 ring-white" />
+                  <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-gray-800">
+                        {u.updated_by || '維修人員'}
+                      </span>
+                      {u.new_status && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_ZH_COLOR[u.new_status as IncidentStatus] || 'bg-gray-100 text-gray-600'}`}>
+                          → {STATUS_ZH[u.new_status as IncidentStatus] || u.new_status}
+                        </span>
+                      )}
+                    </div>
+                    {u.note && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{u.note}</p>}
+                    {photos.length > 0 && (
+                      <div className="mt-2">
+                        <ImageViewer paths={photos} supabaseUrl={supabaseUrl} />
                       </div>
-                    )
-                  })()}
-                </div>
-              </li>
-            ))}
+                    )}
+                    <p className="text-xs text-gray-400 mt-1.5">
+                      {format(new Date(u.created_at), 'MM-dd HH:mm')}
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
           </ol>
         )}
       </div>
 
-      {/* RCA mandatory form (when triggered & not yet satisfied) */}
-      {!isClosed && rcaBlocked && (
-        <RCAForm failureCodeId={incident.failure_code_id} occurrenceCount={rca.occurrenceCount} />
-      )}
-
-      {/* Add action */}
-      {!isClosed && <ActionForm incidentId={id} />}
-
-      {/* Close incident */}
-      {!isClosed && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <CloseIncidentButton incidentId={id} rcaBlocked={rcaBlocked} />
-          {rcaBlocked && (
-            <p className="text-xs text-red-600 mt-2 text-center">
-              Failure code ini terjadi {rca.occurrenceCount}× dalam 90 hari — isi RCA di atas untuk dapat menutup.
-            </p>
-          )}
+      {/* Update form */}
+      {!isClosed ? (
+        <ProgressUpdate incidentId={id} currentStatus={status} />
+      ) : (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center text-sm text-green-700">
+          ✅ 此案件已結案
+          {incident.closed_at && ` · ${format(new Date(incident.closed_at), 'yyyy-MM-dd HH:mm')}`}
         </div>
       )}
-
-      {/* Capture knowledge after close */}
-      {isClosed && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-          <p className="text-sm text-gray-600 mb-3">Incident selesai. Dokumentasikan pembelajaran untuk tim.</p>
-          <Link
-            href={`/knowledge-base/new?incident=${id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
-          >
-            <BookOpen className="w-4 h-4" /> Buat Knowledge Base
-          </Link>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Field({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className="font-medium text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-500">{sub}</p>}
     </div>
   )
 }

@@ -1,337 +1,146 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, AlertCircle, Activity, TrendingDown, BarChart3, Zap, Clock } from 'lucide-react'
-import {
-  calcResponseTime, calcRepairTime, calcDowntimeHours, calcFirstFixRate,
-  calcRepeatFailureRate, calcPMCompliance, summarizeIncidents
-} from '@/lib/kpi'
-import FailureDistributionChart from '@/components/dashboard/FailureDistributionChart'
-import IncidentStatusChart from '@/components/dashboard/IncidentStatusChart'
-import EquipmentHealthChart from '@/components/dashboard/EquipmentHealthChart'
-import RecalcHealthButton from '@/components/dashboard/RecalcHealthButton'
-import { INCIDENT_STATUS_COLORS } from '@/types'
-import { formatRupiah } from '@/lib/constants'
+import { AlertTriangle, Clock, Factory, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { zhTW } from 'date-fns/locale'
+import { IncidentStatus } from '@/types'
+import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR } from '@/lib/incident-display'
+
+export const metadata = { title: '主管追蹤 | 維修系統' }
+
+const OPEN_STATUSES: IncidentStatus[] = [
+  'reported', 'accepted', 'analyzing', 'waiting_parts', 'waiting_approval',
+  'waiting_vendor', 'waiting_shutdown', 'repairing', 'testing', 'observation',
+]
+
+interface Row {
+  id: string
+  incident_no: string
+  status: IncidentStatus
+  downtime_impact: 'A' | 'B' | 'C' | 'D'
+  incident_type: string
+  title: string | null
+  reported_at: string
+  updated_at: string
+  factory: { name: string } | null
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return null
+  const { data } = await supabase
+    .from('incidents')
+    .select('id, incident_no, status, downtime_impact, incident_type, title, reported_at, updated_at, factory:factories(name)')
+    .order('reported_at', { ascending: false })
+    .limit(500)
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role, factory_id')
-    .eq('id', user.id)
-    .single()
+  const rows = (data ?? []) as unknown as Row[]
+  const open = rows.filter(r => OPEN_STATUSES.includes(r.status))
 
-  // Load all data for the factory
-  const [
-    { data: incidents },
-    { data: rawActions },
-    { data: relations },
-    { data: machines },
-    { data: pmRecords },
-    { data: costs },
-    { data: healthScores },
-  ] = await Promise.all([
-    supabase
-      .from('incidents')
-      .select('*, failure_code:failure_codes(code, name)')
-      .eq('factory_id', profile?.factory_id)
-      .order('created_at', { ascending: false })
-      .limit(1000),
-    // incident_actions has no factory_id — embed the incident to scope client-side
-    supabase
-      .from('incident_actions')
-      .select('*, incident:incidents(id, factory_id)'),
-    supabase
-      .from('incident_relations')
-      .select('*'),
-    supabase
-      .from('machines')
-      .select('*')
-      .eq('factory_id', profile?.factory_id),
-    supabase
-      .from('pm_records')
-      .select('*'),
-    supabase
-      .from('maintenance_costs')
-      .select('*')
-      .eq('factory_id', profile?.factory_id),
-    supabase
-      .from('equipment_health_scores')
-      .select('*, machine:machines(machine_code, factory_id)')
-      .order('last_updated', { ascending: false }),
-  ])
+  // Open count per factory
+  const byFactory = new Map<string, number>()
+  for (const r of open) {
+    const name = r.factory?.name || '未指定'
+    byFactory.set(name, (byFactory.get(name) ?? 0) + 1)
+  }
 
-  // Scope actions to this factory via embedded incident
-  const actions = (rawActions ?? []).filter(
-    (a: any) => a.incident?.factory_id === profile?.factory_id
-  )
+  // Urgent open cases (impact A or B)
+  const urgent = open.filter(r => r.downtime_impact === 'A' || r.downtime_impact === 'B')
 
-  // KPI calculations
-  const openIncidents = incidents?.filter(i => !['closed'].includes(i.status)).length || 0
-  const newToday = incidents?.filter(i => {
-    const today = new Date().toISOString().split('T')[0]
-    return i.created_at.startsWith(today)
-  }).length || 0
-  const repairing = machines?.filter(m => m.status === 'repairing').length || 0
-
-  const responseTime = calcResponseTime(incidents ?? [])
-  const repairTime = calcRepairTime(incidents ?? [], actions ?? [])
-  const downtime = calcDowntimeHours(actions ?? [])
-  const firstFixRate = calcFirstFixRate(incidents ?? [])
-  const repeatRate = calcRepeatFailureRate(incidents ?? [], relations ?? [])
-  const pmCompliance = calcPMCompliance(pmRecords ?? [])
-  const incidentSummary = summarizeIncidents(incidents ?? [])
-
-  // Total maintenance costs
-  const totalCost = (costs ?? []).reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0)
-
-  // Failure distribution (by failure_code)
-  const failureDistribution = (incidents ?? []).reduce((acc: any, i) => {
-    const key = i.failure_code?.name || 'Unknown'
-    const existing = acc.find((x: any) => x.name === key)
-    if (existing) existing.count += 1
-    else acc.push({ name: key, count: 1 })
-    return acc
-  }, [])
-
-  // Incident status distribution for pie chart
-  const statusDistData = [
-    { name: 'Dilaporkan', value: incidentSummary.reported, color: INCIDENT_STATUS_COLORS.reported.split(' ')[0].replace('bg-', '#').substring(0, 7) || '#3b82f6' },
-    { name: 'Diterima', value: incidentSummary.accepted, color: '#3b82f6' },
-    { name: 'Analisa', value: incidentSummary.analyzing, color: '#a855f7' },
-    { name: 'Perbaikan', value: incidentSummary.repairing, color: '#f97316' },
-    { name: 'Testing', value: incidentSummary.testing, color: '#6366f1' },
-    { name: 'Observasi', value: incidentSummary.observation, color: '#14b8a6' },
-    { name: 'Selesai', value: incidentSummary.closed, color: '#10b981' },
-  ]
-
-  // Machine health — real scores from equipment_health_scores (latest per machine,
-  // scoped to this factory). Empty until "Hitung Ulang" is run.
-  const machineHealth = (healthScores ?? [])
-    .filter((h: any) => h.machine?.factory_id === profile?.factory_id)
-    .map((h: any) => ({
-      machine_code: h.machine?.machine_code ?? '—',
-      score: h.score,
-    }))
+  // Stale: open + not updated in 3+ days
+  const now = Date.now()
+  const stale = open.filter(r => now - new Date(r.updated_at).getTime() > 3 * 86400000)
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-base text-gray-600 mt-1">
-            {profile?.full_name} • FAMMS - Factory Asset & Maintenance Management
-          </p>
-        </div>
-        <Link
-          href="/incidents/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-        >
-          <Plus className="w-5 h-5" /> Lapor Incident
-        </Link>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">主管追蹤</h1>
+        <p className="text-sm text-gray-500 mt-1">案件總覽</p>
       </div>
 
-      {/* Quick KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Incident Aktif"
-          value={openIncidents}
-          icon={<AlertCircle className="w-5 h-5" />}
-          color="bg-red-50 text-red-700"
-        />
-        <KPICard
-          label="Baru Hari Ini"
-          value={newToday}
-          icon={<Activity className="w-5 h-5" />}
-          color="bg-blue-50 text-blue-700"
-        />
-        <KPICard
-          label="Sedang Perbaikan"
-          value={repairing}
-          icon={<TrendingDown className="w-5 h-5" />}
-          color="bg-yellow-50 text-yellow-700"
-        />
-        <KPICard
-          label="Total Mesin"
-          value={machines?.length || 0}
-          icon={<Activity className="w-5 h-5" />}
-          color="bg-green-50 text-green-700"
-        />
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-2">
+        <SummaryCard label="未結案" value={open.length} color="text-blue-600" />
+        <SummaryCard label="緊急" value={urgent.length} color="text-red-600" />
+        <SummaryCard label="逾時未更新" value={stale.length} color="text-amber-600" />
       </div>
 
-      {/* KPI Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          label="Response Time"
-          value={responseTime ? `${responseTime}m` : '—'}
-          icon={<Clock className="w-5 h-5" />}
-          desc="Waktu rata-rata respons"
-        />
-        <MetricCard
-          label="Repair Time"
-          value={repairTime ? `${repairTime}h` : '—'}
-          icon={<Zap className="w-5 h-5" />}
-          desc="Durasi rata-rata perbaikan"
-        />
-        <MetricCard
-          label="Downtime"
-          value={`${downtime}h`}
-          icon={<TrendingDown className="w-5 h-5" />}
-          desc="Total downtime 90 hari"
-        />
-        <MetricCard
-          label="First Fix Rate"
-          value={`${firstFixRate}%`}
-          icon={<Zap className="w-5 h-5" />}
-          desc="Permanen fix rate"
-        />
-      </div>
+      {/* Per-factory open counts */}
+      <Section icon={<Factory className="w-4 h-4" />} title="各工廠未結案">
+        {byFactory.size === 0 ? (
+          <Empty text="目前沒有未結案案件" />
+        ) : (
+          <div className="space-y-1.5">
+            {[...byFactory.entries()].map(([name, count]) => (
+              <div key={name} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
+                <span className="text-sm font-medium text-gray-700">{name}</span>
+                <span className="text-sm font-bold text-blue-600">{count} 件</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
-      {/* Advanced KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MetricCard
-          label="Repeat Failure Rate"
-          value={`${repeatRate}%`}
-          icon={<AlertCircle className="w-5 h-5" />}
-          desc="Repeat failure %"
-          highlight={repeatRate > 20}
-        />
-        <MetricCard
-          label="PM Compliance"
-          value={`${pmCompliance}%`}
-          icon={<BarChart3 className="w-5 h-5" />}
-          desc="Kepatuhan PM"
-        />
-        <MetricCard
-          label="Total Cost"
-          value={formatRupiah(totalCost)}
-          icon={<TrendingDown className="w-5 h-5" />}
-          desc="Biaya maintenance"
-        />
-      </div>
+      {/* Urgent cases */}
+      <Section icon={<AlertTriangle className="w-4 h-4 text-red-500" />} title="緊急案件">
+        {urgent.length === 0 ? <Empty text="沒有緊急案件" /> : <CaseList rows={urgent} />}
+      </Section>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Distribusi Failure</h2>
-          <FailureDistributionChart data={failureDistribution} />
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Status Incident</h2>
-          <IncidentStatusChart data={statusDistData} />
-        </div>
-      </div>
-
-      {/* Equipment Health */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900">Kesehatan Peralatan</h2>
-          <RecalcHealthButton />
-        </div>
-        <EquipmentHealthChart data={machineHealth} />
-      </div>
-
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <QuickLink
-          href="/incidents"
-          label="Incident"
-          description="Kelola incident & perbaikan"
-        />
-        <QuickLink href="/machines" label="Mesin" description="Data master equipment" />
-        <QuickLink href="/pm" label="Jadwal PM" description="Preventive maintenance" />
-        <QuickLink
-          href="/knowledge-base"
-          label="Knowledge Base"
-          description="Cari riwayat perbaikan"
-        />
-      </div>
-
-      {/* Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h2 className="text-lg font-bold text-blue-900 mb-2">🚀 FAMMS V1.0 — KPI Dashboard</h2>
-        <p className="text-blue-800">
-          Response time, diagnosis time, repair time, downtime hours, first fix rate, repeat failure rate, PM compliance.
-          Fault tree prevents false positives. Multi-step repairs, temporary vs permanent tracking, RCA auto-trigger.
-        </p>
-      </div>
+      {/* Stale cases */}
+      <Section icon={<Clock className="w-4 h-4 text-amber-500" />} title="逾 3 天未更新">
+        {stale.length === 0 ? <Empty text="沒有逾時案件" /> : <CaseList rows={stale} />}
+      </Section>
     </div>
   )
 }
 
-function KPICard({
-  label,
-  value,
-  icon,
-  color,
-}: {
-  label: string
-  value: number
-  icon: React.ReactNode
-  color: string
-}) {
+function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className={`${color} rounded-lg p-6 border border-current border-opacity-20`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium opacity-75">{label}</p>
-          <p className="text-3xl font-bold mt-1">{value}</p>
-        </div>
-        <div className="opacity-50">{icon}</div>
-      </div>
+    <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
     </div>
   )
 }
 
-function MetricCard({
-  label,
-  value,
-  icon,
-  desc,
-  highlight = false,
-}: {
-  label: string
-  value: string
-  icon: React.ReactNode
-  desc: string
-  highlight?: boolean
-}) {
+function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className={`${highlight ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'} rounded-lg border p-5`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase">{label}</p>
-          <p className={`text-2xl font-bold mt-2 ${highlight ? 'text-red-700' : 'text-gray-900'}`}>
-            {value}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">{desc}</p>
-        </div>
-        <div className="text-gray-300">{icon}</div>
-      </div>
+    <div>
+      <h2 className="font-semibold text-gray-700 text-sm mb-2 flex items-center gap-1.5">{icon} {title}</h2>
+      {children}
     </div>
   )
 }
 
-function QuickLink({
-  href,
-  label,
-  description,
-}: {
-  href: string
-  label: string
-  description: string
-}) {
+function Empty({ text }: { text: string }) {
   return (
-    <Link
-      href={href}
-      className="block p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-    >
-      <h3 className="font-bold text-gray-900">{label}</h3>
-      <p className="text-sm text-gray-600 mt-1">{description}</p>
-    </Link>
+    <div className="bg-white rounded-lg border border-gray-200 p-4 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
+      <CheckCircle2 className="w-4 h-4 text-green-400" /> {text}
+    </div>
+  )
+}
+
+function CaseList({ rows }: { rows: Row[] }) {
+  return (
+    <div className="space-y-1.5">
+      {rows.map(r => {
+        const urgency = URGENCY_FROM_IMPACT[r.downtime_impact]
+        return (
+          <Link key={r.id} href={`/incidents/${r.id}`} className="block bg-white rounded-lg border border-gray-200 p-3 active:bg-gray-50">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_ZH_COLOR[r.status]}`}>{STATUS_ZH[r.status]}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urgency.color}`}>{urgency.label}</span>
+              <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
+            </div>
+            <p className="text-sm font-medium text-gray-900 mt-1.5 line-clamp-1">
+              {r.title || ISSUE_TYPE_LABELS[r.incident_type] || '問題'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {r.factory?.name || ''} · {formatDistanceToNow(new Date(r.updated_at), { addSuffix: true, locale: zhTW })}
+            </p>
+          </Link>
+        )
+      })}
+    </div>
   )
 }
