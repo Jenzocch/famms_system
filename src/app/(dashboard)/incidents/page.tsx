@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth'
 import IncidentBoard, { BoardRow } from '@/components/incidents/IncidentBoard'
 
 export const metadata = { title: '案件看板 | 維修系統' }
 
 export default async function IncidentsPage() {
+  const user = await getCurrentUser()
   const supabase = await createClient()
+
   const { data: incidents } = await supabase
     .from('incidents')
     .select(`
@@ -18,5 +21,5 @@ export default async function IncidentsPage() {
 
   const rows = (incidents ?? []) as unknown as BoardRow[]
 
-  return <IncidentBoard rows={rows} />
+  return <IncidentBoard rows={rows} userRole={user?.role} />
 }

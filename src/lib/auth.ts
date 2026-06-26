@@ -42,3 +42,23 @@ export async function requireAdmin(): Promise<
   if (user.role !== 'admin') return { ok: false, status: 403 }
   return { ok: true, user }
 }
+
+// Permission checks for different features
+export const PERMISSIONS = {
+  // Can access dashboard (supervisor+)
+  dashboard: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
+  // Can view full incident board (supervisor+)
+  boardFull: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
+  // Can assign incidents (supervisor+)
+  assignIncident: (role: UserRole) => ['supervisor', 'director', 'admin'].includes(role),
+  // Can close incidents (supervisor+)
+  closeIncident: (role: UserRole) => ['supervisor', 'director', 'admin'].includes(role),
+  // Can edit incidents (supervisor+)
+  editIncident: (role: UserRole) => ['supervisor', 'director', 'admin'].includes(role),
+  // Can delete incidents (supervisor+)
+  deleteIncident: (role: UserRole) => ['supervisor', 'director', 'admin'].includes(role),
+  // Can manage users (admin only)
+  manageUsers: (role: UserRole) => role === 'admin',
+  // Can manage settings (admin only)
+  manageSettings: (role: UserRole) => role === 'admin',
+} as const

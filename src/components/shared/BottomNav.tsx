@@ -4,22 +4,37 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ClipboardList, Plus, LayoutDashboard, Settings, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { UserRole } from '@/types'
+import { PERMISSIONS } from '@/lib/auth'
 
-const NAV = [
-  { href: '/dashboard', label: '主管', icon: LayoutDashboard },
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  primary?: boolean
+  requiredRole?: (role: UserRole) => boolean
+}
+
+const NAV: NavItem[] = [
+  { href: '/dashboard', label: '主管', icon: LayoutDashboard, requiredRole: (r) => PERMISSIONS.dashboard(r) },
   { href: '/incidents', label: '看板', icon: ClipboardList },
   { href: '/incidents/new', label: '回報', icon: Plus, primary: true },
   { href: '/pm', label: '保養', icon: Wrench },
   { href: '/settings', label: '設定', icon: Settings },
 ]
 
-export default function BottomNav() {
+interface BottomNavProps {
+  userRole?: UserRole
+}
+
+export default function BottomNav({ userRole = 'technician' }: BottomNavProps) {
   const pathname = usePathname()
+  const visibleNav = NAV.filter(item => !item.requiredRole || item.requiredRole(userRole))
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-        {NAV.map(({ href, label, icon: Icon, primary }) => {
+        {visibleNav.map(({ href, label, icon: Icon, primary }) => {
           const active = href === '/incidents/new'
             ? pathname === href
             : pathname === href || (pathname.startsWith(href + '/') && href !== '/incidents/new')

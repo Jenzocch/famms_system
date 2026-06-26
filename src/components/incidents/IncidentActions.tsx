@@ -11,7 +11,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Pencil, Trash2 } from 'lucide-react'
+import { Loader2, Pencil, Trash2, Lock } from 'lucide-react'
+import type { UserRole } from '@/types'
+import { PERMISSIONS } from '@/lib/auth'
 
 const ISSUE_TYPES = [
   { value: 'machine', label: '🔧 機器故障' },
@@ -30,15 +32,20 @@ const URGENCY = [
   { value: 'D', label: '🟢 低' },
 ]
 
-export default function IncidentActions({
-  incidentId, title, description, incidentType, impact,
-}: {
+interface IncidentActionsProps {
   incidentId: string
   title: string | null
   description: string | null
   incidentType: string
   impact: string
-}) {
+  userRole?: UserRole
+}
+
+export default function IncidentActions({
+  incidentId, title, description, incidentType, impact, userRole = 'technician',
+}: IncidentActionsProps) {
+  const canEdit = PERMISSIONS.editIncident(userRole)
+  const canDelete = PERMISSIONS.deleteIncident(userRole)
   const router = useRouter()
   const supabase = createClient()
 
@@ -93,11 +100,31 @@ export default function IncidentActions({
   if (!editing) {
     return (
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setEditing(true)} className="flex-1 gap-2">
-          <Pencil className="w-4 h-4" /> 編輯案件
+        <Button
+          variant="outline"
+          onClick={() => setEditing(true)}
+          disabled={!canEdit}
+          className="flex-1 gap-2"
+          title={!canEdit ? '只有主管可以編輯案件' : ''}
+        >
+          {canEdit ? (
+            <>
+              <Pencil className="w-4 h-4" /> 編輯案件
+            </>
+          ) : (
+            <>
+              <Lock className="w-4 h-4" /> 編輯案件
+            </>
+          )}
         </Button>
-        <Button variant="outline" onClick={remove} disabled={deleting} className="gap-2 text-red-600">
-          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+        <Button
+          variant="outline"
+          onClick={remove}
+          disabled={deleting || !canDelete}
+          className="gap-2 text-red-600"
+          title={!canDelete ? '只有主管可以刪除案件' : ''}
+        >
+          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
           刪除
         </Button>
       </div>

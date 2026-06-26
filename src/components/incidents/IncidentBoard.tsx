@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, ChevronRight, UserCheck } from 'lucide-react'
+import { AlertCircle, ChevronRight, UserCheck, Lock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
-import type { IncidentStatus } from '@/types'
+import type { IncidentStatus, UserRole } from '@/types'
 import {
   ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR, BOARD_FILTERS,
 } from '@/lib/incident-display'
+import { PERMISSIONS } from '@/lib/auth'
 
 export interface BoardRow {
   id: string
@@ -25,8 +26,14 @@ export interface BoardRow {
   factory: { name: string } | null
 }
 
-export default function IncidentBoard({ rows }: { rows: BoardRow[] }) {
+interface IncidentBoardProps {
+  rows: BoardRow[]
+  userRole?: UserRole
+}
+
+export default function IncidentBoard({ rows, userRole = 'technician' }: IncidentBoardProps) {
   const [filter, setFilter] = useState('all')
+  const canAssign = PERMISSIONS.assignIncident(userRole)
 
   const activeFilter = BOARD_FILTERS.find(f => f.key === filter)!
   const filtered = activeFilter.statuses
@@ -111,8 +118,12 @@ export default function IncidentBoard({ rows }: { rows: BoardRow[] }) {
                       <span className="inline-flex items-center gap-0.5 text-xs text-blue-600">
                         <UserCheck className="w-3 h-3" /> {inc.assigned_to}
                       </span>
-                    ) : (
+                    ) : canAssign ? (
                       <span className="text-xs text-amber-600">未指派</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5 text-xs text-gray-400" title="只有主管可以派工">
+                        <Lock className="w-3 h-3" /> 未指派
+                      </span>
                     )
                   )}
                 </div>

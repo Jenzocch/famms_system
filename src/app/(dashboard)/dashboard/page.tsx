@@ -1,4 +1,6 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import Link from 'next/link'
 import { AlertTriangle, Clock, Factory, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -26,6 +28,11 @@ interface Row {
 }
 
 export default async function DashboardPage() {
+  const user = await getCurrentUser()
+  if (!user || !PERMISSIONS.dashboard(user.role)) {
+    redirect('/incidents')
+  }
+
   const supabase = await createClient()
 
   const { data } = await supabase

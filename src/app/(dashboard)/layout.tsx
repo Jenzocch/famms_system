@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 max-w-lg w-full mx-auto px-4 py-4 pb-24">
         {children}
       </main>
-      <BottomNav />
+      <BottomNav userRole={profile?.role} />
     </div>
   )
 }

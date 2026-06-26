@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ProgressUpdate from '@/components/incidents/ProgressUpdate'
@@ -37,6 +38,7 @@ export default async function IncidentDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const user = await getCurrentUser()
   const supabase = await createClient()
 
   const { data: incident } = await supabase
@@ -198,6 +200,7 @@ export default async function IncidentDetailPage({
         description={incident.description}
         incidentType={incident.incident_type}
         impact={incident.downtime_impact}
+        userRole={user?.role}
       />
     </div>
   )
