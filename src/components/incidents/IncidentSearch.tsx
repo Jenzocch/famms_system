@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import Link from 'next/link'
 import { toast } from 'sonner'
-import { Download, Search, X } from 'lucide-react'
+import { Download, Search, X, ChevronRight, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 import * as XLSX from 'xlsx'
 import type { IncidentStatus } from '@/types'
-import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH } from '@/lib/incident-display'
+import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR } from '@/lib/incident-display'
 
 interface Factory { id: string; name: string }
 interface Area { id: string; name: string }
@@ -46,7 +47,7 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
   const [machines, setMachines] = useState<Machine[]>([])
   const [results, setResults] = useState<IncidentRow[]>([])
   const [loading, setLoading] = useState(false)
-  const [searching, setSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
 
   // Filter state
   const [factoryId, setFactoryId] = useState('')
@@ -138,6 +139,7 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
         factory: Array.isArray(d.factory) ? d.factory[0] : d.factory,
       }))
       setResults(mapped)
+      setHasSearched(true)
       if (onResults) onResults(mapped)
       toast.success(`找到 ${mapped.length} 件案件`)
     } catch (err) {
@@ -202,6 +204,7 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
     setStartDate('')
     setEndDate('')
     setResults([])
+    setHasSearched(false)
     if (onResults) onResults([])
   }
 
@@ -346,24 +349,75 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
         </div>
       </div>
 
-      {/* Export Button */}
+      {/* Results header: count + export */}
       {results.length > 0 && (
-        <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-gray-600">
+            找到 <span className="font-semibold text-blue-600">{results.length}</span> 件案件
+          </p>
           <Button
             onClick={exportToExcel}
             variant="outline"
-            className="flex-1 gap-2 text-green-600 border-green-300"
+            size="sm"
+            className="gap-2 text-green-600 border-green-300"
           >
             <Download className="w-4 h-4" />
-            匯出 Excel ({results.length} 件)
+            匯出 Excel
           </Button>
         </div>
       )}
 
-      {/* Results Summary */}
+      {/* Results list */}
       {results.length > 0 && (
-        <div className="text-sm text-gray-600 px-1">
-          找到 <span className="font-semibold text-blue-600">{results.length}</span> 件案件
+        <div className="space-y-2">
+          {results.map(inc => {
+            const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact]
+            return (
+              <Link
+                key={inc.id}
+                href={`/incidents/${inc.id}`}
+                className="block bg-white rounded-xl border border-gray-200 p-3 active:bg-gray-50"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_ZH_COLOR[inc.status as IncidentStatus]}`}>
+                    {STATUS_ZH[inc.status as IncidentStatus] || inc.status}
+                  </span>
+                  {urgency && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urgency.color}`}>
+                      {urgency.label}
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-400 font-mono ml-auto">{inc.incident_no}</span>
+                </div>
+
+                <p className="font-medium text-gray-900 mt-2 line-clamp-1">
+                  {inc.title || ISSUE_TYPE_LABELS[inc.incident_type] || '問題'}
+                </p>
+
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-500 truncate">
+                    {ISSUE_TYPE_LABELS[inc.incident_type] || inc.incident_type}
+                    {inc.factory ? ` · ${inc.factory.name}` : ''}
+                    {inc.machine ? ` · ${inc.machine.machine_name}` : ''}
+                  </p>
+                  <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                </div>
+
+                <p className="text-xs text-gray-400 mt-1">
+                  {inc.reporter_name ? `${inc.reporter_name} · ` : ''}
+                  {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: zhTW })}
+                </p>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Empty state after a search with no matches */}
+      {hasSearched && results.length === 0 && !loading && (
+        <div className="text-center py-12 text-gray-400">
+          <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">沒有符合條件的案件</p>
         </div>
       )}
     </div>
