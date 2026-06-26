@@ -22,7 +22,7 @@ SET role = 'admin',
     updated_at = NOW()
 FROM auth.users u
 WHERE u.id = p.id
-  AND u.email = 'REPLACE_WITH_YOUR_EMAIL@example.com';
+  AND u.email = 'a0811332331@gmail.com';
 
 -- Verify:
 SELECT u.email, p.role, p.is_active
