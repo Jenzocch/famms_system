@@ -714,3 +714,11 @@ CREATE INDEX IF NOT EXISTS idx_incident_updates_incident ON incident_updates(inc
 -- Asset category for simplified item management (機器/項目分類)
 ALTER TABLE machines ADD COLUMN IF NOT EXISTS asset_category TEXT DEFAULT 'machine';
 -- 'machine' | 'item' | 'pipe' | 'electrical' | 'facility'
+
+-- ============================================================================
+-- ASSIGNMENT (派工指派) — who handles the case + due date
+-- ============================================================================
+
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_dept TEXT;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS due_date DATE;

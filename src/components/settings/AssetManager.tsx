@@ -9,7 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Trash2, Plus } from 'lucide-react'
+import { Loader2, Trash2, Plus, Pencil } from 'lucide-react'
 
 interface Factory { id: string; name: string }
 interface Area { id: string; factory_id: string; name: string }
@@ -39,6 +39,7 @@ export default function AssetManager() {
   const [factoryId, setFactoryId] = useState('')
   const [areaId, setAreaId] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [category, setCategory] = useState('machine')
   const [code, setCode] = useState('')
@@ -93,6 +94,29 @@ export default function AssetManager() {
     return `${prefix}-${String(next).padStart(3, '0')}`
   }
 
+  function startAdd() {
+    setEditingId(null)
+    setName('')
+    setCode('')
+    setCategory('machine')
+    setShowForm(true)
+  }
+
+  function startEdit(a: Asset) {
+    setEditingId(a.id)
+    setName(a.machine_name)
+    setCode(a.machine_code || '')
+    setCategory(a.asset_category || 'machine')
+    setShowForm(true)
+  }
+
+  function resetForm() {
+    setShowForm(false)
+    setEditingId(null)
+    setName('')
+    setCode('')
+  }
+
   async function submit() {
     if (!areaId || !name.trim()) {
       toast.error('請選擇區域並填寫名稱')
@@ -100,23 +124,31 @@ export default function AssetManager() {
     }
     setSubmitting(true)
     try {
-      const finalCode = code.trim() || await generateDefaultCode(category)
-      const { error } = await supabase.from('machines').insert({
-        factory_id: factoryId,
-        area_id: areaId,
-        machine_name: name,
-        machine_code: finalCode,
-        asset_category: category,
-        status: 'running',
-      })
-      if (error) throw error
-      toast.success(`已新增 ${finalCode}`)
-      setName('')
-      setCode('')
-      setShowForm(false)
+      if (editingId) {
+        const { error } = await supabase.from('machines').update({
+          machine_name: name,
+          machine_code: code.trim() || null,
+          asset_category: category,
+        }).eq('id', editingId)
+        if (error) throw error
+        toast.success('已更新')
+      } else {
+        const finalCode = code.trim() || await generateDefaultCode(category)
+        const { error } = await supabase.from('machines').insert({
+          factory_id: factoryId,
+          area_id: areaId,
+          machine_name: name,
+          machine_code: finalCode,
+          asset_category: category,
+          status: 'running',
+        })
+        if (error) throw error
+        toast.success(`已新增 ${finalCode}`)
+      }
+      resetForm()
       loadAssets()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '新增失敗')
+      toast.error(err instanceof Error ? err.message : '操作失敗')
     } finally {
       setSubmitting(false)
     }
@@ -150,13 +182,14 @@ export default function AssetManager() {
       </div>
 
       {!showForm && areaId && (
-        <Button onClick={() => setShowForm(true)} className="gap-2 w-full">
+        <Button onClick={startAdd} className="gap-2 w-full">
           <Plus className="w-4 h-4" /> 新增機器/項目
         </Button>
       )}
 
       {showForm && (
         <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+          <p className="text-sm font-medium text-gray-700">{editingId ? '編輯機器/項目' : '新增機器/項目'}</p>
           <div>
             <Label>類別</Label>
             <Select value={category} onValueChange={(v) => setCategory(v ?? 'machine')}>
@@ -187,11 +220,9 @@ export default function AssetManager() {
           <div className="flex gap-2">
             <Button onClick={submit} disabled={submitting}>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              新增
+              {editingId ? '更新' : '新增'}
             </Button>
-            <Button variant="outline" onClick={() => { setShowForm(false); setName(''); setCode('') }}>
-              取消
-            </Button>
+            <Button variant="outline" onClick={resetForm}>取消</Button>
           </div>
         </div>
       )}
@@ -209,9 +240,14 @@ export default function AssetManager() {
                   {a.asset_category && ` · ${CATEGORIES.find(c => c.value === a.asset_category)?.label ?? ''}`}
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => remove(a.id)}>
-                <Trash2 className="w-4 h-4 text-red-600" />
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => startEdit(a)}>
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => remove(a.id)}>
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </Button>
+              </div>
             </div>
           ))
         )}

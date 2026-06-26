@@ -9,7 +9,7 @@ export default async function IncidentsPage() {
     .from('incidents')
     .select(`
       id, incident_no, status, downtime_impact, incident_type,
-      title, reporter_name, reported_at,
+      title, reporter_name, reported_at, assigned_to, due_date,
       machine:machines(machine_code, machine_name),
       factory:factories(name)
     `)

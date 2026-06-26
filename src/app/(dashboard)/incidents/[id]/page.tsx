@@ -2,12 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ProgressUpdate from '@/components/incidents/ProgressUpdate'
+import AssignForm from '@/components/incidents/AssignForm'
+import IncidentActions from '@/components/incidents/IncidentActions'
 import ImageViewer from '@/components/shared/ImageViewer'
 import { IncidentStatus } from '@/types'
 import {
   ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR,
 } from '@/lib/incident-display'
-import { ChevronLeft, Clock, User } from 'lucide-react'
+import { ChevronLeft, Clock, User, UserCheck, CalendarClock } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface UpdateRow {
@@ -104,6 +106,27 @@ export default async function IncidentDetailPage({
             {incident.description}
           </div>
         )}
+
+        {(incident.assigned_to || incident.due_date) && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {incident.assigned_to && (
+              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                <UserCheck className="w-3.5 h-3.5" />
+                {incident.assigned_to}{incident.assigned_dept ? ` · ${incident.assigned_dept}` : ''}
+              </span>
+            )}
+            {incident.due_date && (
+              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${
+                !isClosed && new Date(incident.due_date) < new Date(new Date().toDateString())
+                  ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'
+              }`}>
+                <CalendarClock className="w-3.5 h-3.5" />
+                預計 {format(new Date(incident.due_date), 'yyyy-MM-dd')}
+                {!isClosed && new Date(incident.due_date) < new Date(new Date().toDateString()) ? ' (逾期)' : ''}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Progress timeline */}
@@ -157,6 +180,25 @@ export default async function IncidentDetailPage({
           {incident.closed_at && ` · ${format(new Date(incident.closed_at), 'yyyy-MM-dd HH:mm')}`}
         </div>
       )}
+
+      {/* Assignment (派工) */}
+      {!isClosed && (
+        <AssignForm
+          incidentId={id}
+          assignedTo={incident.assigned_to}
+          assignedDept={incident.assigned_dept}
+          dueDate={incident.due_date}
+        />
+      )}
+
+      {/* Edit / Delete */}
+      <IncidentActions
+        incidentId={id}
+        title={incident.title}
+        description={incident.description}
+        incidentType={incident.incident_type}
+        impact={incident.downtime_impact}
+      />
     </div>
   )
 }

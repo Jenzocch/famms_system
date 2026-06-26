@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, ChevronRight } from 'lucide-react'
+import { AlertCircle, ChevronRight, UserCheck } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 import type { IncidentStatus } from '@/types'
@@ -19,6 +19,8 @@ export interface BoardRow {
   title: string | null
   reporter_name: string | null
   reported_at: string
+  assigned_to: string | null
+  due_date: string | null
   machine: { machine_code: string | null; machine_name: string } | null
   factory: { name: string } | null
 }
@@ -99,10 +101,21 @@ export default function IncidentBoard({ rows }: { rows: BoardRow[] }) {
                   <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
                 </div>
 
-                <p className="text-xs text-gray-400 mt-1">
-                  {inc.reporter_name ? `${inc.reporter_name} · ` : ''}
-                  {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: zhTW })}
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-400">
+                    {inc.reporter_name ? `${inc.reporter_name} · ` : ''}
+                    {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: zhTW })}
+                  </p>
+                  {inc.status !== 'closed' && (
+                    inc.assigned_to ? (
+                      <span className="inline-flex items-center gap-0.5 text-xs text-blue-600">
+                        <UserCheck className="w-3 h-3" /> {inc.assigned_to}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-amber-600">未指派</span>
+                    )
+                  )}
+                </div>
               </Link>
             )
           })}
