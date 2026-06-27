@@ -9,7 +9,7 @@ import type { IncidentStatus, UserRole } from '@/types'
 import {
   ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR, BOARD_FILTERS,
 } from '@/lib/incident-display'
-import { PERMISSIONS } from '@/lib/auth'
+import { PERMISSIONS } from '@/lib/permissions'
 
 export interface BoardRow {
   id: string

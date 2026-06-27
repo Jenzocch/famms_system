@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2, Pencil, Trash2, Lock } from 'lucide-react'
 import type { UserRole } from '@/types'
-import { PERMISSIONS } from '@/lib/auth'
+import { PERMISSIONS } from '@/lib/permissions'
 
 const ISSUE_TYPES = [
   { value: 'machine', label: '🔧 機器故障' },

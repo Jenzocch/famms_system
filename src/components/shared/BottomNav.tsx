@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ClipboardList, Plus, LayoutDashboard, Settings, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types'
-import { PERMISSIONS } from '@/lib/auth'
+import { PERMISSIONS } from '@/lib/permissions'
 
 interface NavItem {
   href: string
