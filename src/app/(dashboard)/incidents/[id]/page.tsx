@@ -176,7 +176,12 @@ export default async function IncidentDetailPage({
 
       {/* Update form */}
       {!isClosed ? (
-        <ProgressUpdate incidentId={id} currentStatus={status} />
+        <ProgressUpdate
+          incidentId={id}
+          currentStatus={status}
+          userRole={user?.role}
+          userName={user?.full_name}
+        />
       ) : (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center text-sm text-green-700">
           ✅ 此案件已結案
@@ -191,6 +196,8 @@ export default async function IncidentDetailPage({
           assignedTo={incident.assigned_to}
           assignedDept={incident.assigned_dept}
           dueDate={incident.due_date}
+          userRole={user?.role}
+          userName={user?.full_name}
         />
       )}
 
@@ -202,6 +209,8 @@ export default async function IncidentDetailPage({
         incidentType={incident.incident_type}
         impact={incident.downtime_impact}
         userRole={user?.role}
+        userName={user?.full_name}
+        factoryId={incident.factory_id}
       />
 
       {/* Audit Trail - Operation History */}

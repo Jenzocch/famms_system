@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2, Camera, X, ZoomIn } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { logAuditEvent } from '@/lib/audit'
 
 interface Factory { id: string; name: string; code: string }
 interface Area { id: string; factory_id: string; name: string }
@@ -166,6 +167,18 @@ export default function IncidentForm() {
           await supabase.storage.from('incident-photos').upload(path, photo)
         }
       }
+
+      // Audit trail: case created
+      await logAuditEvent(supabase, {
+        userId: user?.id ?? null,
+        userName: reporterName || null,
+        actionType: 'create',
+        resourceType: 'incident',
+        resourceId: incident.id,
+        newValue: { incident_no, title, incident_type: incidentType },
+        changeSummary: `案件已建立：${incident_no}`,
+        factoryId: factoryId || undefined,
+      })
 
       // Telegram notify
       await fetch('/api/incidents/notify', {

@@ -8,17 +8,23 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { Loader2, UserCheck } from 'lucide-react'
+import type { UserRole } from '@/types'
+import { PERMISSIONS } from '@/lib/permissions'
+import { logAuditEvent } from '@/lib/audit'
 
 export default function AssignForm({
-  incidentId, assignedTo, assignedDept, dueDate,
+  incidentId, assignedTo, assignedDept, dueDate, userRole = 'technician', userName,
 }: {
   incidentId: string
   assignedTo: string | null
   assignedDept: string | null
   dueDate: string | null
+  userRole?: UserRole
+  userName?: string | null
 }) {
   const router = useRouter()
   const supabase = createClient()
+  const canAssign = PERMISSIONS.assignIncident(userRole)
 
   const [person, setPerson] = useState(assignedTo || '')
   const [dept, setDept] = useState(assignedDept || '')
@@ -26,8 +32,10 @@ export default function AssignForm({
   const [submitting, setSubmitting] = useState(false)
 
   async function save() {
+    if (!canAssign) { toast.error('只有主管可以派工'); return }
     setSubmitting(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase
         .from('incidents')
         .update({
@@ -38,6 +46,18 @@ export default function AssignForm({
         })
         .eq('id', incidentId)
       if (error) throw error
+
+      await logAuditEvent(supabase, {
+        userId: user?.id ?? null,
+        userName: userName || null,
+        actionType: 'assign',
+        resourceType: 'incident',
+        resourceId: incidentId,
+        oldValue: { assigned_to: assignedTo },
+        newValue: { assigned_to: person || null },
+        changeSummary: person ? `已指派給 ${person}${dept ? ` · ${dept}` : ''}` : '已取消指派',
+      })
+
       toast.success('派工已更新')
       router.refresh()
     } catch (err) {
@@ -79,7 +99,13 @@ export default function AssignForm({
         <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" />
       </div>
 
-      <Button onClick={save} disabled={submitting} variant="outline" className="w-full">
+      <Button
+        onClick={save}
+        disabled={submitting || !canAssign}
+        variant="outline"
+        className="w-full"
+        title={!canAssign ? '只有主管可以派工' : ''}
+      >
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         儲存派工
       </Button>

@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { Loader2, Pencil, Trash2, Lock } from 'lucide-react'
 import type { UserRole } from '@/types'
 import { PERMISSIONS } from '@/lib/permissions'
+import { logAuditEvent } from '@/lib/audit'
 
 const ISSUE_TYPES = [
   { value: 'machine', label: '🔧 機器故障' },
@@ -39,10 +40,13 @@ interface IncidentActionsProps {
   incidentType: string
   impact: string
   userRole?: UserRole
+  userName?: string | null
+  factoryId?: string | null
 }
 
 export default function IncidentActions({
   incidentId, title, description, incidentType, impact, userRole = 'technician',
+  userName, factoryId,
 }: IncidentActionsProps) {
   const canEdit = PERMISSIONS.editIncident(userRole)
   const canDelete = PERMISSIONS.deleteIncident(userRole)
@@ -61,6 +65,7 @@ export default function IncidentActions({
     if (!t.trim()) { toast.error('標題不可空白'); return }
     setSubmitting(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase
         .from('incidents')
         .update({
@@ -72,6 +77,19 @@ export default function IncidentActions({
         })
         .eq('id', incidentId)
       if (error) throw error
+
+      await logAuditEvent(supabase, {
+        userId: user?.id ?? null,
+        userName: userName || null,
+        actionType: 'update',
+        resourceType: 'incident',
+        resourceId: incidentId,
+        oldValue: { title, description, incident_type: incidentType, downtime_impact: impact },
+        newValue: { title: t, description: d || null, incident_type: type, downtime_impact: urg },
+        changeSummary: '案件內容已更新',
+        factoryId: factoryId ?? undefined,
+      })
+
       toast.success('案件已更新')
       setEditing(false)
       router.refresh()
@@ -86,6 +104,18 @@ export default function IncidentActions({
     if (!confirm('確認刪除此案件？此動作無法復原，所有處理紀錄也會一併刪除。')) return
     setDeleting(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      // Log before delete so the audit record is created while the row exists.
+      await logAuditEvent(supabase, {
+        userId: user?.id ?? null,
+        userName: userName || null,
+        actionType: 'delete',
+        resourceType: 'incident',
+        resourceId: incidentId,
+        oldValue: { title },
+        changeSummary: `案件已刪除${title ? `：${title}` : ''}`,
+        factoryId: factoryId ?? undefined,
+      })
       const { error } = await supabase.from('incidents').delete().eq('id', incidentId)
       if (error) throw error
       toast.success('案件已刪除')

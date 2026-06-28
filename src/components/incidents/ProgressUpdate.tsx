@@ -13,8 +13,10 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2, Camera, X, ZoomIn } from 'lucide-react'
-import type { IncidentStatus } from '@/types'
+import type { IncidentStatus, UserRole } from '@/types'
 import { STATUS_ZH } from '@/lib/incident-display'
+import { PERMISSIONS } from '@/lib/permissions'
+import { logAuditEvent } from '@/lib/audit'
 
 // Statuses a maintenance person can move an incident to (simplified set)
 const SELECTABLE: IncidentStatus[] = [
@@ -22,17 +24,23 @@ const SELECTABLE: IncidentStatus[] = [
 ]
 
 export default function ProgressUpdate({
-  incidentId, currentStatus,
+  incidentId, currentStatus, userRole = 'technician', userName,
 }: {
   incidentId: string
   currentStatus: IncidentStatus
+  userRole?: UserRole
+  userName?: string | null
 }) {
   const router = useRouter()
   const supabase = createClient()
+  const canClose = PERMISSIONS.closeIncident(userRole)
+
+  // Only supervisors+ may move a case to "closed".
+  const selectableStatuses = canClose ? SELECTABLE : SELECTABLE.filter(s => s !== 'closed')
 
   const [newStatus, setNewStatus] = useState<string>(currentStatus)
   const [note, setNote] = useState('')
-  const [updaterName, setUpdaterName] = useState('')
+  const [updaterName, setUpdaterName] = useState(userName ?? '')
   const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [compressing, setCompressing] = useState(false)
@@ -66,8 +74,13 @@ export default function ProgressUpdate({
   }
 
   async function submit() {
-    if (!note.trim() && newStatus === currentStatus) {
+    const statusChanged = newStatus !== currentStatus
+    if (!note.trim() && !statusChanged) {
       toast.error('請更新狀態或填寫處理說明')
+      return
+    }
+    if (newStatus === 'closed' && !canClose) {
+      toast.error('只有主管可以結案')
       return
     }
     setSubmitting(true)
@@ -83,10 +96,27 @@ export default function ProgressUpdate({
         if (!upErr) paths.push(path)
       }
 
-      // Log the update
+      // Closing goes through the close API so the RCA gate is enforced and
+      // closed_at / closed_by_id are stamped server-side.
+      if (newStatus === 'closed') {
+        const res = await fetch(`/api/incidents/${incidentId}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ root_cause: note || undefined }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          if (json?.rca_required) {
+            throw new Error(`需先完成 RCA 才能結案（同故障在90天內已發生 ${json.occurrence_count ?? '≥3'} 次）`)
+          }
+          throw new Error(json?.error || '結案失敗')
+        }
+      }
+
+      // Log the update row (timeline)
       const { error: logErr } = await supabase.from('incident_updates').insert({
         incident_id: incidentId,
-        new_status: newStatus !== currentStatus ? newStatus : null,
+        new_status: statusChanged ? newStatus : null,
         note: note || null,
         updated_by: updaterName || null,
         updated_by_id: user?.id ?? null,
@@ -94,19 +124,30 @@ export default function ProgressUpdate({
       })
       if (logErr) throw logErr
 
-      // Update incident status (+ stamp accepted_at / closed_at)
-      if (newStatus !== currentStatus) {
+      // Update incident status (+ stamp accepted_at). For 'closed' the close
+      // API already updated status/closed_at above, so skip the raw update.
+      if (statusChanged && newStatus !== 'closed') {
         const patch: Record<string, unknown> = { status: newStatus, updated_at: new Date().toISOString() }
         if (currentStatus === 'reported' && newStatus !== 'reported') {
           patch.accepted_at = new Date().toISOString()
           patch.accepted_by_id = user?.id ?? null
         }
-        if (newStatus === 'closed') {
-          patch.closed_at = new Date().toISOString()
-          patch.closed_by_id = user?.id ?? null
-        }
         const { error: updErr } = await supabase.from('incidents').update(patch).eq('id', incidentId)
         if (updErr) throw updErr
+      }
+
+      // Audit trail
+      if (statusChanged) {
+        await logAuditEvent(supabase, {
+          userId: user?.id ?? null,
+          userName: updaterName || userName || null,
+          actionType: 'status_change',
+          resourceType: 'incident',
+          resourceId: incidentId,
+          oldValue: currentStatus,
+          newValue: newStatus,
+          changeSummary: `狀態從 "${STATUS_ZH[currentStatus]}" 變更為 "${STATUS_ZH[newStatus as IncidentStatus]}"`,
+        })
       }
 
       toast.success('進度已更新')
@@ -139,7 +180,7 @@ export default function ProgressUpdate({
         <Select value={newStatus} onValueChange={(v) => setNewStatus(v ?? currentStatus)}>
           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {SELECTABLE.map(s => (
+            {selectableStatuses.map(s => (
               <SelectItem key={s} value={s}>{STATUS_ZH[s]}</SelectItem>
             ))}
           </SelectContent>
