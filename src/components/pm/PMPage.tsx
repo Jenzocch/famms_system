@@ -15,6 +15,7 @@ import { zhTW } from 'date-fns/locale'
 import OverdueMaintenanceAlert from './OverdueMaintenanceAlert'
 import PMScheduleManager from './PMScheduleManager'
 import PMFullCalendar from './PMFullCalendar'
+import PMDueList from './PMDueList'
 import { useI18n } from '@/lib/i18n'
 
 interface Factory { id: string; name: string }
@@ -192,6 +193,9 @@ export default function PMPage() {
           {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
         </SelectContent>
       </Select>
+
+      {/* Technician due-list: dates at a glance + search */}
+      {factoryId && <PMDueList factoryId={factoryId} />}
 
       {/* Factory PM Calendar */}
       {factoryId && (
