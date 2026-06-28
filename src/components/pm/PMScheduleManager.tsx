@@ -22,6 +22,7 @@ interface PMSchedule {
   id: string
   machine_id: string
   pm_type: string
+  interval_days: number | null
   description: string | null
   is_active: boolean
   machine_name?: string
@@ -35,7 +36,14 @@ const PM_TYPES = [
   { value: 'quarterly', label: '每季' },
   { value: 'half_yearly', label: '每半年' },
   { value: 'yearly', label: '每年' },
+  { value: 'custom', label: '自訂天數' },
 ]
+
+// Human label for a schedule's cadence, including custom "每 N 天".
+function pmTypeLabel(pmType: string, intervalDays?: number | null): string {
+  if (pmType === 'custom') return intervalDays ? `每 ${intervalDays} 天` : '自訂天數'
+  return PM_TYPES.find(t => t.value === pmType)?.label || pmType
+}
 
 export default function PMScheduleManager() {
   const supabase = createClient()
@@ -50,6 +58,7 @@ export default function PMScheduleManager() {
   const [areaId, setAreaId] = useState('')
   const [machineId, setMachineId] = useState('')
   const [pmType, setPmType] = useState('monthly')
+  const [intervalDays, setIntervalDays] = useState('')
   const [description, setDescription] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -83,7 +92,7 @@ export default function PMScheduleManager() {
     const { data } = await supabase
       .from('pm_schedules')
       .select(`
-        id, machine_id, pm_type, description, is_active,
+        id, machine_id, pm_type, interval_days, description, is_active,
         machines:machines(machine_name, machine_code)
       `)
       .eq('is_active', true)
@@ -94,6 +103,7 @@ export default function PMScheduleManager() {
         id: s.id,
         machine_id: s.machine_id,
         pm_type: s.pm_type,
+        interval_days: s.interval_days ?? null,
         description: s.description,
         is_active: s.is_active,
         machine_name: s.machines?.machine_name || '',
@@ -109,12 +119,19 @@ export default function PMScheduleManager() {
       return
     }
 
+    const days = parseInt(intervalDays, 10)
+    if (pmType === 'custom' && (!days || days < 1)) {
+      toast.error('請輸入自訂天數（至少 1 天）')
+      return
+    }
+    const intervalValue = pmType === 'custom' ? days : null
+
     setSubmitting(true)
     try {
       if (editingId) {
         const { error } = await supabase
           .from('pm_schedules')
-          .update({ pm_type: pmType, description: description || null })
+          .update({ pm_type: pmType, interval_days: intervalValue, description: description || null })
           .eq('id', editingId)
         if (error) throw error
         toast.success('已更新保養計畫')
@@ -124,6 +141,7 @@ export default function PMScheduleManager() {
           .insert({
             machine_id: machineId,
             pm_type: pmType,
+            interval_days: intervalValue,
             description: description || null,
             is_active: true,
           })
@@ -132,6 +150,7 @@ export default function PMScheduleManager() {
       }
       setMachineId('')
       setPmType('monthly')
+      setIntervalDays('')
       setDescription('')
       setShowForm(false)
       setEditingId(null)
@@ -221,6 +240,24 @@ export default function PMScheduleManager() {
             </Select>
           </div>
 
+          {pmType === 'custom' && (
+            <div>
+              <Label>每幾天保養一次</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm text-gray-500">每</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={intervalDays}
+                  onChange={e => setIntervalDays(e.target.value)}
+                  placeholder="例如 45"
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <span className="text-sm text-gray-500">天</span>
+              </div>
+            </div>
+          )}
+
           <div>
             <Label>備註（可選）</Label>
             <input
@@ -252,7 +289,7 @@ export default function PMScheduleManager() {
                   {s.machine_code ? `[${s.machine_code}] ` : ''}{s.machine_name}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {PM_TYPES.find(t => t.value === s.pm_type)?.label || s.pm_type}
+                  {pmTypeLabel(s.pm_type, s.interval_days)}
                   {s.description && ` · ${s.description}`}
                 </p>
               </div>
@@ -264,6 +301,7 @@ export default function PMScheduleManager() {
                     setEditingId(s.id)
                     setMachineId(s.machine_id)
                     setPmType(s.pm_type)
+                    setIntervalDays(s.interval_days ? String(s.interval_days) : '')
                     setDescription(s.description || '')
                     setShowForm(true)
                   }}

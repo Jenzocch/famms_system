@@ -23,9 +23,10 @@ const PM_TYPE_LABELS: Record<string, string> = {
   quarterly: '每季',
   half_yearly: '每半年',
   yearly: '每年',
+  custom: '自訂天數',
 }
 
-function getNextDueDate(lastMaintained: string | null, pmType: string): Date {
+function getNextDueDate(lastMaintained: string | null, pmType: string, intervalDays?: number | null): Date {
   const base = lastMaintained ? new Date(lastMaintained) : new Date()
 
   switch (pmType) {
@@ -35,6 +36,7 @@ function getNextDueDate(lastMaintained: string | null, pmType: string): Date {
     case 'quarterly': return addMonths(base, 3)
     case 'half_yearly': return addMonths(base, 6)
     case 'yearly': return addMonths(base, 12)
+    case 'custom': return addDays(base, intervalDays && intervalDays > 0 ? intervalDays : 30)
     default: return addMonths(base, 1)
   }
 }
@@ -54,7 +56,7 @@ export default function OverdueMaintenanceAlert() {
       const { data: schedules } = await supabase
         .from('pm_schedules')
         .select(`
-          id, machine_id, pm_type,
+          id, machine_id, pm_type, interval_days,
           machines(id, machine_name, machine_code)
         `)
         .eq('is_active', true)
@@ -86,7 +88,7 @@ export default function OverdueMaintenanceAlert() {
         .filter(s => s.machines)
         .map(s => {
           const lastMaintained = lastByMachine[s.machine_id]
-          const dueDate = getNextDueDate(lastMaintained, s.pm_type)
+          const dueDate = getNextDueDate(lastMaintained, s.pm_type, s.interval_days)
           const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / 86400000)
 
           return {

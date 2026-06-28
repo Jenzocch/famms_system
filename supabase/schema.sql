@@ -315,7 +315,9 @@ CREATE TABLE pm_schedules (
   machine_id UUID NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
 
   pm_type TEXT NOT NULL,
-  -- 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly'
+  -- 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'
+
+  interval_days INTEGER, -- "every N days" cadence when pm_type = 'custom'
 
   description TEXT,
   checklist TEXT, -- JSON array of checklist items
@@ -324,6 +326,9 @@ CREATE TABLE pm_schedules (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Safe to re-run: add interval_days to existing pm_schedules tables.
+ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS interval_days INTEGER;
 
 CREATE TABLE pm_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

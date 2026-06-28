@@ -35,7 +35,7 @@ export async function PATCH(
   // Load the record + its schedule (for recurrence + active check)
   const { data: record, error: recordErr } = await supabase
     .from('pm_records')
-    .select('*, schedule:pm_schedules(id, pm_type, is_active)')
+    .select('*, schedule:pm_schedules(id, pm_type, interval_days, is_active)')
     .eq('id', id)
     .single()
   if (recordErr || !record) {
@@ -61,11 +61,11 @@ export async function PATCH(
   }
 
   // Generate the next occurrence if the schedule is still active.
-  const schedule = record.schedule as { id: string; pm_type: PMType; is_active: boolean } | null
+  const schedule = record.schedule as { id: string; pm_type: PMType; interval_days: number | null; is_active: boolean } | null
   let nextRecord = null
   if (schedule?.is_active) {
     const anchor = new Date(record.scheduled_date)
-    const nextDate = toDateStr(nextScheduledDate(anchor, schedule.pm_type))
+    const nextDate = toDateStr(nextScheduledDate(anchor, schedule.pm_type, schedule.interval_days))
 
     // Avoid duplicate next records for the same schedule + date
     const { data: existing } = await supabase

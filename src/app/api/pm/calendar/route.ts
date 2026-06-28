@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     // Active schedules for this factory (optionally filtered by machine)
     let scheduleQuery = supabase
       .from('pm_schedules')
-      .select('id, machine_id, pm_type, description, created_at')
+      .select('id, machine_id, pm_type, interval_days, description, created_at')
       .eq('factory_id', factoryId)
       .eq('is_active', true)
     if (machineId) scheduleQuery = scheduleQuery.eq('machine_id', machineId)
@@ -136,7 +136,7 @@ export async function GET(req: Request) {
         const machine = machineMap[s.machine_id]
         if (!machine) continue
 
-        const dates = occurrencesInWindow(anchorMap[s.id], s.pm_type as PMType, monthStart, monthEnd)
+        const dates = occurrencesInWindow(anchorMap[s.id], s.pm_type as PMType, monthStart, monthEnd, (s as any).interval_days)
         for (const date of dates) {
           if (taken.has(`${s.id}|${date}`)) continue // real record already shown
           taken.add(`${s.id}|${date}`)

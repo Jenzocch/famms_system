@@ -3,8 +3,15 @@
 import { addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears } from 'date-fns'
 import type { PMType } from '@/types'
 
+// Custom "every N days" schedules fall back to this when no interval is set.
+const DEFAULT_CUSTOM_DAYS = 30
+function customDays(intervalDays?: number | null): number {
+  return intervalDays && intervalDays > 0 ? intervalDays : DEFAULT_CUSTOM_DAYS
+}
+
 // Compute the next scheduled date for a PM occurrence based on its type.
-export function nextScheduledDate(from: Date, pmType: PMType): Date {
+// For pm_type 'custom', intervalDays sets the "every N days" cadence.
+export function nextScheduledDate(from: Date, pmType: PMType, intervalDays?: number | null): Date {
   switch (pmType) {
     case 'daily': return addDays(from, 1)
     case 'weekly': return addWeeks(from, 1)
@@ -12,12 +19,13 @@ export function nextScheduledDate(from: Date, pmType: PMType): Date {
     case 'quarterly': return addMonths(from, 3)
     case 'half_yearly': return addMonths(from, 6)
     case 'yearly': return addYears(from, 1)
+    case 'custom': return addDays(from, customDays(intervalDays))
     default: return addMonths(from, 1)
   }
 }
 
 // Compute the previous scheduled date (one interval back).
-export function prevScheduledDate(from: Date, pmType: PMType): Date {
+export function prevScheduledDate(from: Date, pmType: PMType, intervalDays?: number | null): Date {
   switch (pmType) {
     case 'daily': return subDays(from, 1)
     case 'weekly': return subWeeks(from, 1)
@@ -25,6 +33,7 @@ export function prevScheduledDate(from: Date, pmType: PMType): Date {
     case 'quarterly': return subMonths(from, 3)
     case 'half_yearly': return subMonths(from, 6)
     case 'yearly': return subYears(from, 1)
+    case 'custom': return subDays(from, customDays(intervalDays))
     default: return subMonths(from, 1)
   }
 }
@@ -43,6 +52,7 @@ export function occurrencesInWindow(
   pmType: PMType,
   winStartStr: string,
   winEndStr: string,
+  intervalDays?: number | null,
 ): string[] {
   const winStart = parseDateStr(winStartStr)
   const winEnd = parseDateStr(winEndStr)
@@ -59,11 +69,11 @@ export function occurrencesInWindow(
   // Other cadences: walk the anchor into the window, then forward.
   let occ = parseDateStr(anchorStr)
   let guard = 0
-  while (occ >= winStart && guard++ < 5000) occ = prevScheduledDate(occ, pmType)
+  while (occ >= winStart && guard++ < 5000) occ = prevScheduledDate(occ, pmType, intervalDays)
   guard = 0
   while (occ < winEnd && guard++ < 5000) {
     if (occ >= winStart) out.push(toDateStr(occ))
-    occ = nextScheduledDate(occ, pmType)
+    occ = nextScheduledDate(occ, pmType, intervalDays)
   }
   return out
 }

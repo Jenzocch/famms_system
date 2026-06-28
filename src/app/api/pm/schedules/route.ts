@@ -11,9 +11,10 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { machine_id, pm_type, description, checklist, first_due_date } = body as {
+  const { machine_id, pm_type, interval_days, description, checklist, first_due_date } = body as {
     machine_id?: string
     pm_type?: PMType
+    interval_days?: number | null
     description?: string
     checklist?: string[]
     first_due_date?: string
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
       factory_id: machine.factory_id,
       machine_id,
       pm_type,
+      interval_days: pm_type === 'custom' ? (interval_days || null) : null,
       description: description || null,
       checklist: checklist && checklist.length ? JSON.stringify(checklist) : null,
       is_active: true,
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
   // otherwise schedule one interval from today.
   const dueDate = first_due_date
     ? first_due_date
-    : toDateStr(nextScheduledDate(new Date(), pm_type))
+    : toDateStr(nextScheduledDate(new Date(), pm_type, interval_days))
 
   const { data: record, error: recordErr } = await supabase
     .from('pm_records')

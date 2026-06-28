@@ -50,7 +50,7 @@ interface PMFullCalendarProps {
 
 const PM_TYPE_LABELS: Record<string, string> = {
   daily: '每日', weekly: '每週', monthly: '每月',
-  quarterly: '每季', half_yearly: '每半年', yearly: '每年',
+  quarterly: '每季', half_yearly: '每半年', yearly: '每年', custom: '自訂天數',
 }
 
 const STATUS_DOT: Record<string, string> = {

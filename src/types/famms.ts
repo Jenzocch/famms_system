@@ -235,13 +235,14 @@ export type WorkOrderBlock = {
 // Preventive Maintenance (PM)
 // ============================================================================
 
-export type PMType = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
+export type PMType = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom';
 
 export type PMSchedule = {
   id: string;
   factory_id: string;
   machine_id: string;
   pm_type: PMType;
+  interval_days?: number | null; // "every N days" cadence when pm_type === 'custom'
   description?: string;
   checklist?: string[]; // JSON array of checklist items
   is_active: boolean;
@@ -555,6 +556,7 @@ export const PM_TYPE_LABELS: Record<PMType, string> = {
   quarterly: 'Per 3 Bulan',
   half_yearly: 'Per 6 Bulan',
   yearly: 'Tahunan',
+  custom: 'Custom (per N hari)',
 };
 
 export const PM_DELAY_REASON_LABELS: Record<PMDelayReason, string> = {
