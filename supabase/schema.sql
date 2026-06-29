@@ -815,7 +815,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action_type);
 
 -- View for easy access to incident audit trail
-CREATE VIEW IF NOT EXISTS incident_audit_trail AS
+CREATE OR REPLACE VIEW incident_audit_trail AS
   SELECT 
     al.id,
     al.user_id,
