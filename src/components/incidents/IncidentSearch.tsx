@@ -21,6 +21,7 @@ import { useI18n } from '@/lib/i18n'
 interface Factory { id: string; name: string }
 interface Area { id: string; name: string }
 interface Machine { id: string; machine_name: string; machine_code: string | null }
+interface IssueType { code: string; label: string }
 interface IncidentRow {
   id: string
   incident_no: string
@@ -43,8 +44,12 @@ interface IncidentSearchProps {
 export default function IncidentSearch({ onResults }: IncidentSearchProps) {
   const { t } = useI18n()
   const supabase = createClient()
+  const [issueTypes, setIssueTypes] = useState<IssueType[]>([])
+  // Built-in codes stay translatable via i18n; admin-added types (where the
+  // entered text is stored as both code and label) display their label as-is.
+  const dbLabels: Record<string, string> = Object.fromEntries(issueTypes.map(it => [it.code, it.label]))
   const typeLabelOf = (key: string, fallback?: string) =>
-    t(`issueTypes.${key}`, fallback ?? key ?? t('board.unknown'))
+    t(`issueTypes.${key}`, dbLabels[key] ?? fallback ?? key ?? t('board.unknown'))
   const statusLabelOf = (key: string) => t(`boardStatus.${key}`, key)
 
   const [factories, setFactories] = useState<Factory[]>([])
@@ -70,7 +75,24 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
 
   useEffect(() => {
     loadFactories()
+    loadIssueTypes()
   }, [])
+
+  async function loadIssueTypes() {
+    const { data } = await supabase
+      .from('incident_types')
+      .select('code, label')
+      .eq('is_active', true)
+      .order('sort_order')
+    // De-dupe by code; fall back to the 7 built-ins if the table is empty.
+    const seen = new Set<string>()
+    const rows = (data ?? []).filter((r: any) => {
+      if (seen.has(r.code)) return false
+      seen.add(r.code)
+      return true
+    }) as IssueType[]
+    setIssueTypes(rows.length > 0 ? rows : Object.keys(ISSUE_TYPE_LABELS).map(code => ({ code, label: ISSUE_TYPE_LABELS[code] })))
+  }
 
   useEffect(() => {
     if (!factoryId) { setAreas([]); setAreaId(''); return }
@@ -314,8 +336,8 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
                 <SelectValue placeholder={t('board.selectType')} />
               </SelectTrigger>
               <SelectContent>
-                {Object.keys(ISSUE_TYPE_LABELS).map((key) => (
-                  <SelectItem key={key} value={key}>{typeLabelOf(key)}</SelectItem>
+                {issueTypes.map((it) => (
+                  <SelectItem key={it.code} value={it.code}>{typeLabelOf(it.code)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
