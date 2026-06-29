@@ -560,6 +560,7 @@
     "unassigned": "Unassigned",
     "onlySupervisorAssign": "Only supervisors can assign",
     "problem": "Issue",
+    "overdue": "Overdue",
     "tabBoard": "Board",
     "tabSearch": "Search",
     "searchSubtitle": "Search incidents by date range, machine, type",

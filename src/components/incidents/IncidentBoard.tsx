@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, ChevronRight, UserCheck, Lock } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { AlertCircle, ChevronRight, UserCheck, Lock, CalendarClock } from 'lucide-react'
+import { formatDistanceToNow, format } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 import type { IncidentStatus, UserRole } from '@/types'
 import {
@@ -42,6 +42,21 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
     ? rows.filter(r => activeFilter.statuses!.includes(r.status))
     : rows
 
+  // Surface the most pressing work first: overdue cases, then by urgency
+  // (A > B > C > D), then most recently reported. Helps technicians see what
+  // to tackle next at a glance.
+  const today = new Date(new Date().toDateString())
+  const URGENCY_RANK: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 }
+  const isOverdue = (r: BoardRow) =>
+    !!r.due_date && r.status !== 'closed' && new Date(r.due_date) < today
+  const sorted = [...filtered].sort((a, b) => {
+    const ov = (isOverdue(a) ? 0 : 1) - (isOverdue(b) ? 0 : 1)
+    if (ov !== 0) return ov
+    const ur = (URGENCY_RANK[a.downtime_impact] ?? 9) - (URGENCY_RANK[b.downtime_impact] ?? 9)
+    if (ur !== 0) return ur
+    return new Date(b.reported_at).getTime() - new Date(a.reported_at).getTime()
+  })
+
   function countFor(statuses: IncidentStatus[] | null) {
     if (!statuses) return rows.length
     return rows.filter(r => statuses.includes(r.status)).length
@@ -79,8 +94,9 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map(inc => {
+          {sorted.map(inc => {
             const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact]
+            const overdue = isOverdue(inc)
             return (
               <Link
                 key={inc.id}
@@ -94,6 +110,15 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urgency.color}`}>
                     {t(`urgency.${inc.downtime_impact}`, urgency.label)}
                   </span>
+                  {inc.due_date && (
+                    <span className={`inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full font-medium ${
+                      overdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <CalendarClock className="w-3 h-3" />
+                      {format(new Date(inc.due_date), 'MM/dd')}
+                      {overdue ? ` ${t('board.overdue', '逾期')}` : ''}
+                    </span>
+                  )}
                   <span className="text-xs text-gray-400 font-mono ml-auto">{inc.incident_no}</span>
                 </div>
 
