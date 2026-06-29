@@ -163,7 +163,7 @@ function CaseList({
               <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
             </div>
             <p className="text-sm font-medium text-gray-900 mt-1.5 line-clamp-1">
-              {r.title || t(`issueTypes.${r.incident_type}`, ISSUE_TYPE_LABELS[r.incident_type] || t('board.problem'))}
+              {r.title || t(`issueTypes.${r.incident_type}`, ISSUE_TYPE_LABELS[r.incident_type] || r.incident_type || t('board.problem'))}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
               {r.factory?.name || ''} · {formatDistanceToNow(new Date(r.updated_at), { addSuffix: true, locale: dateLocale })}
