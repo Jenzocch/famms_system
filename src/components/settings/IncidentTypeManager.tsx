@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -8,48 +8,17 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { Loader2, Trash2, Plus } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
-
-interface IncidentType {
-  id: string
-  code: string
-  label: string
-  sort_order: number
-  is_active: boolean
-}
+import { useIncidentTypes, invalidateIncidentTypes } from '@/lib/useIncidentTypes'
 
 export default function IncidentTypeManager() {
   const { t: tr } = useI18n()
   const supabase = createClient()
-  const [types, setTypes] = useState<IncidentType[]>([])
-  const [loading, setLoading] = useState(true)
+  // Shared cache drives the list; mutations call invalidateIncidentTypes() so
+  // the report/edit/search forms pick up changes without a reload.
+  const { types, loading } = useIncidentTypes()
   const [showForm, setShowForm] = useState(false)
   const [label, setLabel] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => { load() }, [])
-
-  async function load() {
-    setLoading(true)
-    try {
-      const { data } = await supabase
-        .from('incident_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order')
-      // De-dupe by code so legacy duplicate rows don't show up twice.
-      const seen = new Set<string>()
-      const unique = (data ?? []).filter(r => {
-        if (seen.has(r.code)) return false
-        seen.add(r.code)
-        return true
-      })
-      setTypes(unique)
-    } catch {
-      toast.error(tr('settings.loadIncidentTypesFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function add() {
     if (!label.trim()) {
@@ -70,7 +39,7 @@ export default function IncidentTypeManager() {
       toast.success(tr('settings.incidentTypeAdded'))
       setLabel('')
       setShowForm(false)
-      load()
+      await invalidateIncidentTypes()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tr('settings.addFailed'))
     } finally {
@@ -92,7 +61,7 @@ export default function IncidentTypeManager() {
         .eq('id', id)
       if (error) throw error
       toast.success(tr('settings.deleted'))
-      load()
+      await invalidateIncidentTypes()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tr('settings.deleteFailed'))
     }

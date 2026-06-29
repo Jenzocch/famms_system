@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx'
 import type { IncidentStatus } from '@/types'
 import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH_COLOR } from '@/lib/incident-display'
 import { useI18n } from '@/lib/i18n'
+import { useIncidentTypes } from '@/lib/useIncidentTypes'
 
 interface Factory { id: string; name: string }
 interface Area { id: string; name: string }
@@ -44,7 +45,11 @@ interface IncidentSearchProps {
 export default function IncidentSearch({ onResults }: IncidentSearchProps) {
   const { t } = useI18n()
   const supabase = createClient()
-  const [issueTypes, setIssueTypes] = useState<IssueType[]>([])
+  // Issue types from the shared cache; fall back to the 7 built-ins if empty.
+  const { types: cachedTypes } = useIncidentTypes()
+  const issueTypes: IssueType[] = cachedTypes.length > 0
+    ? cachedTypes.map(it => ({ code: it.code, label: it.label }))
+    : Object.keys(ISSUE_TYPE_LABELS).map(code => ({ code, label: ISSUE_TYPE_LABELS[code] }))
   // Built-in codes stay translatable via i18n; admin-added types (where the
   // entered text is stored as both code and label) display their label as-is.
   const dbLabels: Record<string, string> = Object.fromEntries(issueTypes.map(it => [it.code, it.label]))
@@ -75,24 +80,7 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
 
   useEffect(() => {
     loadFactories()
-    loadIssueTypes()
   }, [])
-
-  async function loadIssueTypes() {
-    const { data } = await supabase
-      .from('incident_types')
-      .select('code, label')
-      .eq('is_active', true)
-      .order('sort_order')
-    // De-dupe by code; fall back to the 7 built-ins if the table is empty.
-    const seen = new Set<string>()
-    const rows = (data ?? []).filter((r: any) => {
-      if (seen.has(r.code)) return false
-      seen.add(r.code)
-      return true
-    }) as IssueType[]
-    setIssueTypes(rows.length > 0 ? rows : Object.keys(ISSUE_TYPE_LABELS).map(code => ({ code, label: ISSUE_TYPE_LABELS[code] })))
-  }
 
   useEffect(() => {
     if (!factoryId) { setAreas([]); setAreaId(''); return }

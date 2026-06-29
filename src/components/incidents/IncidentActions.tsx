@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import type { UserRole } from '@/types'
 import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
+import { useIncidentTypes } from '@/lib/useIncidentTypes'
 
 // Fallback types used if the incident_types table is empty
 const FALLBACK_ISSUE_TYPES = [
@@ -64,27 +65,12 @@ export default function IncidentActions({
   const [due, setDue] = useState(dueDate || '')
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [issueTypes, setIssueTypes] = useState(FALLBACK_ISSUE_TYPES)
 
-  // Load dynamic issue types from the incident_types table
-  useEffect(() => {
-    supabase
-      .from('incident_types')
-      .select('code, label')
-      .eq('is_active', true)
-      .order('label')
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          const seen = new Set<string>()
-          const unique = data.filter(r => {
-            if (seen.has(r.code)) return false
-            seen.add(r.code)
-            return true
-          })
-          setIssueTypes(unique.map(r => ({ value: r.code, label: r.label })))
-        }
-      })
-  }, [])
+  // Issue types from the shared cache; fall back to built-ins if empty.
+  const { types: cachedTypes } = useIncidentTypes()
+  const issueTypes = cachedTypes.length > 0
+    ? cachedTypes.map(t => ({ value: t.code, label: t.label }))
+    : FALLBACK_ISSUE_TYPES
 
   async function saveEdit() {
     if (!t.trim()) { toast.error('標題不可空白'); return }

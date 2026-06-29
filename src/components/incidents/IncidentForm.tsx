@@ -16,6 +16,7 @@ import { Loader2, Camera, X, ZoomIn } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
+import { useIncidentTypes } from '@/lib/useIncidentTypes'
 
 interface Factory { id: string; name: string; code: string }
 interface Area { id: string; factory_id: string; name: string }
@@ -49,7 +50,11 @@ export default function IncidentForm() {
   const [areas, setAreas] = useState<Area[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
 
-  const [issueTypes, setIssueTypes] = useState<IssueType[]>(DEFAULT_ISSUE_TYPES)
+  const { types: cachedTypes } = useIncidentTypes()
+  // Use shared cache when populated; otherwise the built-in defaults.
+  const issueTypes: IssueType[] = cachedTypes.length > 0
+    ? cachedTypes.map(t => ({ value: t.code, label: t.label }))
+    : DEFAULT_ISSUE_TYPES
   const [factoryId, setFactoryId] = useState('')
   const [areaId, setAreaId] = useState('')
   const [assetId, setAssetId] = useState('')
@@ -66,20 +71,7 @@ export default function IncidentForm() {
 
   useEffect(() => {
     supabase.from('factories').select('*').order('name').then(({ data }) => setFactories(data ?? []))
-    // Load manageable issue types; keep defaults if table is empty/unavailable.
-    supabase.from('incident_types').select('code, label').eq('is_active', true)
-      .order('sort_order').then(({ data }) => {
-        if (data && data.length > 0) {
-          // De-dupe by code in case the table still has duplicate rows.
-          const seen = new Set<string>()
-          const unique = data.filter((t: any) => {
-            if (seen.has(t.code)) return false
-            seen.add(t.code)
-            return true
-          })
-          setIssueTypes(unique.map((t: any) => ({ value: t.code, label: t.label })))
-        }
-      })
+    // Issue types come from the shared cache (useIncidentTypes) above.
   }, [])
 
   useEffect(() => {
