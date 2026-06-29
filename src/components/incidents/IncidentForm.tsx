@@ -166,12 +166,19 @@ export default function IncidentForm() {
 
       if (error) throw error
 
-      // Upload photos if any
+      // Upload photos if any. Best-effort: the incident is already saved, so a
+      // storage problem (missing bucket / permissions) must not fail the report.
       if (photos.length > 0) {
-        for (const photo of photos) {
-          const ext = photo.name.split('.').pop()
-          const path = `${incident.id}/${Date.now()}.${ext}`
-          await supabase.storage.from('incident-photos').upload(path, photo)
+        try {
+          for (const photo of photos) {
+            const ext = photo.name.split('.').pop()
+            const path = `${incident.id}/${Date.now()}.${ext}`
+            const { error: upErr } = await supabase.storage.from('incident-photos').upload(path, photo)
+            if (upErr) throw upErr
+          }
+        } catch (photoErr) {
+          console.error('Photo upload failed:', photoErr)
+          toast.warning('案件已建立，但照片上傳失敗')
         }
       }
 
