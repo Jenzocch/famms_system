@@ -1,0 +1,76 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { nextScheduledDate, toDateStr } from '@/lib/pm'
+import type { PMType } from '@/types'
+
+// POST /api/pm/schedules — create a PM schedule for a machine,
+// and generate its first pending pm_record.
+export async function POST(req: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await req.json()
+  const { machine_id, pm_type, interval_days, description, checklist, first_due_date } = body as {
+    machine_id?: string
+    pm_type?: PMType
+    interval_days?: number | null
+    description?: string
+    checklist?: string[]
+    first_due_date?: string
+  }
+
+  if (!machine_id || !pm_type) {
+    return NextResponse.json({ error: 'machine_id dan pm_type wajib diisi' }, { status: 400 })
+  }
+
+  // Resolve factory from the machine
+  const { data: machine, error: machineErr } = await supabase
+    .from('machines')
+    .select('id, factory_id')
+    .eq('id', machine_id)
+    .single()
+  if (machineErr || !machine) {
+    return NextResponse.json({ error: 'Mesin tidak ditemukan' }, { status: 404 })
+  }
+
+  const { data: schedule, error: scheduleErr } = await supabase
+    .from('pm_schedules')
+    .insert({
+      factory_id: machine.factory_id,
+      machine_id,
+      pm_type,
+      interval_days: pm_type === 'custom' ? (interval_days || null) : null,
+      description: description || null,
+      checklist: checklist && checklist.length ? JSON.stringify(checklist) : null,
+      is_active: true,
+    })
+    .select('*')
+    .single()
+
+  if (scheduleErr) {
+    return NextResponse.json({ error: scheduleErr.message }, { status: 500 })
+  }
+
+  // Generate the first pending record. Use first_due_date if provided,
+  // otherwise schedule one interval from today.
+  const dueDate = first_due_date
+    ? first_due_date
+    : toDateStr(nextScheduledDate(new Date(), pm_type, interval_days))
+
+  const { data: record, error: recordErr } = await supabase
+    .from('pm_records')
+    .insert({
+      pm_schedule_id: schedule.id,
+      scheduled_date: dueDate,
+      status: 'pending',
+    })
+    .select('*')
+    .single()
+
+  if (recordErr) {
+    return NextResponse.json({ error: recordErr.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ schedule, record })
+}

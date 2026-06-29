@@ -7,37 +7,27 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Loader2, ShoppingCart } from 'lucide-react'
+import { Loader2, Wrench } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [fullName, setFullName] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    // Created lazily here (not during render) so the page can be statically
+    // prerendered at build time without Supabase env vars present.
+    const supabase = createClient()
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName } },
-        })
-        if (error) throw error
-        toast.success('Account created! Check your email to confirm.')
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-        router.push('/dashboard')
-        router.refresh()
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Authentication failed')
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      router.push('/dashboard')
+      router.refresh()
+    } catch {
+      toast.error('帳號或密碼錯誤')
     } finally {
       setLoading(false)
     }
@@ -49,35 +39,19 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-            <ShoppingCart className="w-7 h-7 text-white" />
+            <Wrench className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">PDP</h1>
-          <p className="text-sm text-gray-500 mt-1">Procurement Decision Platform</p>
+          <h1 className="text-2xl font-bold text-gray-900">工廠維修系統</h1>
+          <p className="text-sm text-gray-500 mt-1">Factory Asset & Maintenance Management</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            {isSignUp ? 'Create account' : 'Sign in'}
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">登入</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div>
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="John Doe"
-                  required
-                  className="mt-1"
-                />
-              </div>
-            )}
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">帳號 (Email)</Label>
               <Input
                 id="email"
                 type="email"
@@ -89,7 +63,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">密碼</Label>
               <Input
                 id="password"
                 type="password"
@@ -97,25 +71,18 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={6}
                 className="mt-1"
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              登入
             </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-blue-600 font-medium hover:underline"
-            >
-              {isSignUp ? 'Sign in' : 'Sign up'}
-            </button>
+          <p className="text-center text-xs text-gray-400 mt-6">
+            帳號由系統管理員建立，如需帳號請洽管理員
           </p>
         </div>
       </div>

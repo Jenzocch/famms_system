@@ -3,24 +3,28 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Profile } from '@/types'
+import { Profile, ROLE_LABELS } from '@/types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ShoppingCart, LayoutDashboard, Clock, Plus, LogOut, User, Shield, BarChart2 } from 'lucide-react'
+import {
+  Wrench, LayoutDashboard, AlertCircle, HardDrive,
+  CalendarCheck, BookOpen, LogOut, User, Settings,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavbarProps {
-  profile: (Profile & { role: string }) | null
+  profile: Profile | null
 }
 
 const NAV_LINKS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/requests/new', label: 'New Request', icon: Plus },
-  { href: '/history', label: 'History', icon: Clock },
-  { href: '/materials', label: 'Prices', icon: BarChart2 },
+  { href: '/incidents', label: 'Incident', icon: AlertCircle },
+  { href: '/machines', label: 'Mesin', icon: HardDrive },
+  { href: '/pm', label: 'PM', icon: CalendarCheck },
+  { href: '/knowledge-base', label: 'Knowledge', icon: BookOpen },
 ]
 
 export default function Navbar({ profile }: NavbarProps) {
@@ -42,67 +46,56 @@ export default function Navbar({ profile }: NavbarProps) {
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 font-bold text-blue-600">
-          <ShoppingCart className="w-5 h-5" />
-          <span className="hidden sm:inline">PDP</span>
+          <Wrench className="w-5 h-5" />
+          <span className="hidden sm:inline">FAMMS</span>
         </Link>
 
         {/* Nav links */}
         <nav className="flex items-center gap-1">
-          {NAV_LINKS.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                pathname === href
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{label}</span>
-            </Link>
-          ))}
-          {(profile?.role === 'purchasing' || profile?.role === 'director') && (
-            <Link
-              href="/admin"
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                pathname === '/admin'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              )}
-            >
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Admin</span>
-            </Link>
-          )}
+          {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + '/')
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden md:inline">{label}</span>
+              </Link>
+            )
+          })}
         </nav>
 
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-3 py-2">
               <p className="text-sm font-medium">{profile?.full_name}</p>
-              <p className="text-xs text-gray-500">{profile?.email}</p>
-              <p className="text-xs text-blue-600 mt-0.5 capitalize">
-                {profile?.role?.replace('_', ' ')}
+              <p className="text-xs text-blue-600 mt-0.5">
+                {profile?.role ? ROLE_LABELS[profile.role] : ''}
               </p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/profile')} className="flex items-center gap-2 cursor-pointer">
-              <User className="w-4 h-4" /> Profile
+              <User className="w-4 h-4" /> Profil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/settings')} className="flex items-center gap-2 cursor-pointer">
+              <Settings className="w-4 h-4" /> Pengaturan
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={signOut} className="text-red-600 flex items-center gap-2">
-              <LogOut className="w-4 h-4" /> Sign Out
+              <LogOut className="w-4 h-4" /> Keluar
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
