@@ -53,7 +53,7 @@ export default async function DashboardPage() {
   const [schedulesRes, logsRes, pmRecordsRes] = await Promise.all([
     supabase
       .from('pm_schedules')
-      .select('machine_id, pm_type, interval_days, machines(machine_name, machine_code)')
+      .select('id, machine_id, pm_type, interval_days, machines(machine_name, machine_code)')
       .eq('is_active', true),
     supabase
       .from('maintenance_logs')
@@ -61,10 +61,14 @@ export default async function DashboardPage() {
       .order('performed_at', { ascending: false }),
     supabase
       .from('pm_records')
-      .select('machine_id, performed_date')
+      .select('pm_schedule_id, completed_at')
       .eq('status', 'completed')
-      .order('performed_date', { ascending: false }),
+      .order('completed_at', { ascending: false }),
   ])
+
+  // pm_records is keyed by pm_schedule_id, so map through the schedules.
+  const scheduleToMachine: Record<string, string> = {}
+  for (const s of schedulesRes.data ?? []) scheduleToMachine[(s as any).id] = s.machine_id
 
   // Build last-maintenance-date map from both sources
   const lastByMachine: Record<string, string> = {}
@@ -73,7 +77,10 @@ export default async function DashboardPage() {
     if (!existing || date > existing) lastByMachine[machineId] = date
   }
   for (const log of logsRes.data ?? []) recordLatest(log.machine_id, log.performed_at)
-  for (const rec of pmRecordsRes.data ?? []) recordLatest(rec.machine_id, rec.performed_date)
+  for (const rec of pmRecordsRes.data ?? []) {
+    const machineId = scheduleToMachine[(rec as any).pm_schedule_id]
+    if (machineId && (rec as any).completed_at) recordLatest(machineId, (rec as any).completed_at)
+  }
 
   const overdue = (schedulesRes.data ?? [])
     .filter(s => (s as any).machines)

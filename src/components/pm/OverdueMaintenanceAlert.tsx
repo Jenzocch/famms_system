@@ -73,10 +73,15 @@ export default function OverdueMaintenanceAlert() {
         return
       }
 
+      // pm_records is keyed by pm_schedule_id (not machine_id), so map through
+      // the schedules we just loaded. Last-done date = completed_at.
+      const scheduleToMachine: Record<string, string> = {}
+      for (const s of schedules as any[]) scheduleToMachine[s.id] = s.machine_id
+
       // Check both maintenance_logs and pm_records for last-done date
       const [logsRes, pmRecordsRes] = await Promise.all([
         supabase.from('maintenance_logs').select('machine_id, performed_at').order('performed_at', { ascending: false }),
-        supabase.from('pm_records').select('machine_id, performed_date').eq('status', 'completed').order('performed_date', { ascending: false }),
+        supabase.from('pm_records').select('pm_schedule_id, completed_at').eq('status', 'completed').order('completed_at', { ascending: false }),
       ])
 
       const lastByMachine: Record<string, string> = {}
@@ -85,7 +90,10 @@ export default function OverdueMaintenanceAlert() {
         if (!existing || date > existing) lastByMachine[machineId] = date
       }
       for (const log of logsRes.data ?? []) recordLatest(log.machine_id, log.performed_at)
-      for (const rec of pmRecordsRes.data ?? []) recordLatest(rec.machine_id, rec.performed_date)
+      for (const rec of pmRecordsRes.data ?? []) {
+        const machineId = scheduleToMachine[(rec as any).pm_schedule_id]
+        if (machineId && (rec as any).completed_at) recordLatest(machineId, (rec as any).completed_at)
+      }
 
       const now = new Date()
       const overdueList = (schedules as any[])

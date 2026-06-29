@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/types'
 export { PERMISSIONS } from '@/lib/permissions'
@@ -11,7 +12,9 @@ export type CurrentUser = {
 }
 
 // Returns the logged-in user's profile, or null when unauthenticated.
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+// Wrapped in React cache() so repeated calls within a single server render
+// (page + nested guards/components) reuse one auth + profile lookup.
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -31,7 +34,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role: (profile.role ?? 'technician') as UserRole,
     is_active: profile.is_active ?? true,
   }
-}
+})
 
 // Guard for admin-only API routes. Returns the admin user or an error reason.
 export async function requireAdmin(): Promise<

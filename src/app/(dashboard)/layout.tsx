@@ -10,23 +10,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  // Fetch profile and my-open-case count in parallel — they're independent,
+  // so this saves one round-trip of latency on every page navigation.
+  const [{ data: profile }, { count: myOpenCount }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase
+      .from('incidents')
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'closed')
+      .contains('assigned_user_ids', [user.id]),
+  ])
 
   // Admin-disabled accounts are blocked from the app entirely
   if (profile && profile.is_active === false) {
     return <AccountDisabled />
   }
-
-  // Badge: how many open (not closed) cases are assigned to me — my workload.
-  const { count: myOpenCount } = await supabase
-    .from('incidents')
-    .select('id', { count: 'exact', head: true })
-    .neq('status', 'closed')
-    .contains('assigned_user_ids', [user.id])
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
