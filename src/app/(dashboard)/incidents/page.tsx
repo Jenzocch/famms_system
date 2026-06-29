@@ -20,8 +20,8 @@ export default async function IncidentsPage() {
     .order('reported_at', { ascending: false })
     .limit(200)
 
-  // Scope to the user's factory; admins with no factory see everything.
-  if (user?.factory_id) query = query.eq('factory_id', user.factory_id)
+  // Scope to the user's factory. Admins see every factory's cases.
+  if (user?.factory_id && user.role !== 'admin') query = query.eq('factory_id', user.factory_id)
 
   const { data: incidents } = await query
 

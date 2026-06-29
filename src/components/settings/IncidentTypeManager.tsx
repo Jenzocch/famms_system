@@ -36,7 +36,14 @@ export default function IncidentTypeManager() {
         .select('*')
         .eq('is_active', true)
         .order('sort_order')
-      setTypes(data ?? [])
+      // De-dupe by code so legacy duplicate rows don't show up twice.
+      const seen = new Set<string>()
+      const unique = (data ?? []).filter(r => {
+        if (seen.has(r.code)) return false
+        seen.add(r.code)
+        return true
+      })
+      setTypes(unique)
     } catch {
       toast.error(tr('settings.loadIncidentTypesFailed'))
     } finally {

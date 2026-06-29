@@ -68,7 +68,14 @@ export default function IncidentForm() {
     supabase.from('incident_types').select('code, label').eq('is_active', true)
       .order('sort_order').then(({ data }) => {
         if (data && data.length > 0) {
-          setIssueTypes(data.map((t: any) => ({ value: t.code, label: t.label })))
+          // De-dupe by code in case the table still has duplicate rows.
+          const seen = new Set<string>()
+          const unique = data.filter((t: any) => {
+            if (seen.has(t.code)) return false
+            seen.add(t.code)
+            return true
+          })
+          setIssueTypes(unique.map((t: any) => ({ value: t.code, label: t.label })))
         }
       })
   }, [])
@@ -159,12 +166,19 @@ export default function IncidentForm() {
 
       if (error) throw error
 
-      // Upload photos if any
+      // Upload photos if any. Best-effort: the incident is already saved, so a
+      // storage problem (missing bucket / permissions) must not fail the report.
       if (photos.length > 0) {
-        for (const photo of photos) {
-          const ext = photo.name.split('.').pop()
-          const path = `${incident.id}/${Date.now()}.${ext}`
-          await supabase.storage.from('incident-photos').upload(path, photo)
+        try {
+          for (const photo of photos) {
+            const ext = photo.name.split('.').pop()
+            const path = `${incident.id}/${Date.now()}.${ext}`
+            const { error: upErr } = await supabase.storage.from('incident-photos').upload(path, photo)
+            if (upErr) throw upErr
+          }
+        } catch (photoErr) {
+          console.error('Photo upload failed:', photoErr)
+          toast.warning('案件已建立，但照片上傳失敗')
         }
       }
 
@@ -190,7 +204,13 @@ export default function IncidentForm() {
       toast.success(`案件 ${incident_no} 已建立`)
       router.push(`/incidents/${incident.id}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('report.submitFailed'))
+      // Supabase errors (PostgrestError / StorageError) are plain objects with
+      // a `message`, NOT Error instances — extract it so the real cause shows.
+      const msg =
+        err instanceof Error ? err.message
+        : (err && typeof err === 'object' && 'message' in err) ? String((err as any).message)
+        : t('report.submitFailed')
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }

@@ -1,4 +1,19 @@
 {
+  "dash": {
+    "title": "主管追蹤",
+    "overview": "案件與保養總覽",
+    "open": "處理中案件",
+    "urgent": "緊急案件",
+    "cases": "件",
+    "openByFactory": "各廠處理中案件",
+    "noOpen": "目前沒有處理中案件",
+    "urgentCases": "緊急案件（A/B 級）",
+    "noUrgent": "沒有緊急案件",
+    "staleCases": "停滯案件（逾 3 天未更新）",
+    "noStale": "沒有停滯案件",
+    "overdueMachines": "保養逾期機台",
+    "noOverdue": "沒有逾期保養"
+  },
   "report": {
     "title": "回報問題",
     "subtitle": "現場問題快速回報",
@@ -307,6 +322,7 @@
     "details": "机器详情",
     "history": "历史",
     "selectFactory": "选择工厂",
+    "allFactories": "全部工厂（跨厂）",
     "selectArea": "选择区域",
     "selectMachine": "选择机器",
     "issueType": "问题类型"

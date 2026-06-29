@@ -39,7 +39,7 @@ export const PERMISSIONS = {
   manageMachines: (role: UserRole) => ['manager', 'admin'].includes(role),
   manageAreas: (role: UserRole) => ['manager', 'admin'].includes(role),
   manageFactories: (role: UserRole) => ['manager', 'admin'].includes(role),
-  manageIncidentTypes: (role: UserRole) => ['manager', 'admin'].includes(role),
+  manageIncidentTypes: (role: UserRole) => role === 'admin',
 
   // --- Settings ---
   // The Settings page is visible to managers and admins. Individual sections

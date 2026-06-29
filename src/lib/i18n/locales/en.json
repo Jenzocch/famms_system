@@ -1,4 +1,19 @@
 {
+  "dash": {
+    "title": "Supervisor Tracking",
+    "overview": "Incidents & maintenance overview",
+    "open": "Open cases",
+    "urgent": "Urgent cases",
+    "cases": "cases",
+    "openByFactory": "Open cases by factory",
+    "noOpen": "No open cases",
+    "urgentCases": "Urgent cases (A/B)",
+    "noUrgent": "No urgent cases",
+    "staleCases": "Stale cases (no update in 3+ days)",
+    "noStale": "No stale cases",
+    "overdueMachines": "Machines overdue for maintenance",
+    "noOverdue": "No overdue maintenance"
+  },
   "report": {
     "title": "Report Issue",
     "subtitle": "Quickly report a site issue",
@@ -308,6 +323,7 @@
     "details": "Machine Details",
     "history": "History",
     "selectFactory": "Select Factory",
+    "allFactories": "All factories (cross-factory)",
     "selectArea": "Select Area",
     "selectMachine": "Select Machine",
     "issueType": "Issue Type"

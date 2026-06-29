@@ -42,7 +42,7 @@ export default async function DashboardPage() {
     .select('id, incident_no, status, downtime_impact, incident_type, title, reported_at, updated_at, factory:factories(name)')
     .order('reported_at', { ascending: false })
     .limit(500)
-  if (user.factory_id) incidentQuery = incidentQuery.eq('factory_id', user.factory_id)
+  if (user.factory_id && user.role !== 'admin') incidentQuery = incidentQuery.eq('factory_id', user.factory_id)
 
   const { data } = await incidentQuery
   const rows = (data ?? []) as unknown as DashboardRow[]

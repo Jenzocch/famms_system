@@ -18,7 +18,7 @@ export async function PATCH(
   let body: {
     full_name?: string
     role?: string
-    factory_id?: string
+    factory_id?: string | null
     is_active?: boolean
     password?: string
   }
@@ -42,8 +42,8 @@ export async function PATCH(
   // Build profile update from provided fields only
   const update: Record<string, unknown> = {}
   if (body.full_name !== undefined) update.full_name = body.full_name.trim() || null
-  // factory_id is NOT NULL — only update when a real value is supplied
-  if (body.factory_id) update.factory_id = body.factory_id
+  // factory_id present (incl. null) = set it; null means cross-factory.
+  if ('factory_id' in body) update.factory_id = body.factory_id || null
   if (body.is_active !== undefined) update.is_active = body.is_active
   if (body.role !== undefined) {
     if (!VALID_ROLES.includes(body.role as UserRole)) {

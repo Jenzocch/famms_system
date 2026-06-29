@@ -27,6 +27,10 @@ interface ManagedUser {
 
 const ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
 
+// Sentinel for "not bound to a single factory" (cross-factory). Base UI Select
+// can't use an empty-string value, so we map this <-> null factory_id.
+const ALL_FACTORIES = '__all__'
+
 const ROLE_BADGE: Record<UserRole, string> = {
   technician: 'bg-gray-100 text-gray-700',
   supervisor: 'bg-blue-100 text-blue-700',
@@ -229,7 +233,11 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>{t('settings.role')}</Label>
-              <Select value={role} onValueChange={(v) => setRole((v ?? 'technician') as UserRole)}>
+              <Select
+                value={role}
+                onValueChange={(v) => setRole((v ?? 'technician') as UserRole)}
+                items={Object.fromEntries(ROLES.map(r => [r, roleLabel(r)]))}
+              >
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ROLES.map(r => <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>)}
@@ -238,9 +246,14 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
             </div>
             <div>
               <Label>{t('settings.factory')}</Label>
-              <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')}>
+              <Select
+                value={factoryId || ALL_FACTORIES}
+                onValueChange={(v) => setFactoryId(v === ALL_FACTORIES ? '' : (v ?? ''))}
+                items={{ [ALL_FACTORIES]: t('settings.allFactories', '全部工廠（跨廠）'), ...Object.fromEntries(factories.map(f => [f.id, f.name])) }}
+              >
                 <SelectTrigger className="mt-1"><SelectValue placeholder={t('settings.selectFactory')} /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={ALL_FACTORIES}>{t('settings.allFactories', '全部工廠（跨廠）')}</SelectItem>
                   {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                 </SelectContent>
               </Select>

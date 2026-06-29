@@ -1,4 +1,19 @@
 {
+  "dash": {
+    "title": "Pelacakan Supervisor",
+    "overview": "Ikhtisar insiden & pemeliharaan",
+    "open": "Kasus aktif",
+    "urgent": "Kasus mendesak",
+    "cases": "kasus",
+    "openByFactory": "Kasus aktif per pabrik",
+    "noOpen": "Tidak ada kasus aktif",
+    "urgentCases": "Kasus mendesak (A/B)",
+    "noUrgent": "Tidak ada kasus mendesak",
+    "staleCases": "Kasus tertunda (tidak diperbarui 3+ hari)",
+    "noStale": "Tidak ada kasus tertunda",
+    "overdueMachines": "Mesin terlambat pemeliharaan",
+    "noOverdue": "Tidak ada pemeliharaan terlambat"
+  },
   "report": {
     "title": "Lapor Masalah",
     "subtitle": "Lapor masalah lapangan dengan cepat",
@@ -307,6 +322,7 @@
     "details": "Detail Mesin",
     "history": "Riwayat",
     "selectFactory": "Pilih Pabrik",
+    "allFactories": "Semua pabrik (lintas pabrik)",
     "selectArea": "Pilih Area",
     "selectMachine": "Pilih Mesin",
     "issueType": "Jenis Masalah"

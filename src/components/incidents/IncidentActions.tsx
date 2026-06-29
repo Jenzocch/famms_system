@@ -72,7 +72,13 @@ export default function IncidentActions({
       .order('label')
       .then(({ data }) => {
         if (data && data.length > 0) {
-          setIssueTypes(data.map(r => ({ value: r.code, label: r.label })))
+          const seen = new Set<string>()
+          const unique = data.filter(r => {
+            if (seen.has(r.code)) return false
+            seen.add(r.code)
+            return true
+          })
+          setIssueTypes(unique.map(r => ({ value: r.code, label: r.label })))
         }
       })
   }, [])

@@ -77,20 +77,8 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient()
 
-  // profiles.factory_id is NOT NULL — fall back to the first factory if unset
-  let resolvedFactoryId = factory_id
-  if (!resolvedFactoryId) {
-    const { data: firstFactory } = await admin
-      .from('factories')
-      .select('id')
-      .order('code')
-      .limit(1)
-      .single()
-    resolvedFactoryId = firstFactory?.id ?? null
-  }
-  if (!resolvedFactoryId) {
-    return NextResponse.json({ error: '請先建立工廠' }, { status: 400 })
-  }
+  // factory_id may be null = "cross-factory" (not bound to one factory).
+  const resolvedFactoryId = factory_id
 
   // Create auth user (auto-confirm so they can log in immediately)
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
