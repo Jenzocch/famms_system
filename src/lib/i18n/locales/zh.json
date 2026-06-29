@@ -18,6 +18,7 @@
     "title": "派工指派",
     "assignees": "負責人（可多選）",
     "allTechnicians": "指派給全部技師",
+    "clearAll": "取消全部",
     "noAccounts": "尚無可指派的帳號",
     "extraNames": "其他人員（外部/廠商，逗號分隔）",
     "extraPlaceholder": "如：ABC 外包, 王師傅",

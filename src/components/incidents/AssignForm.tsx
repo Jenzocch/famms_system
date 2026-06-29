@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { Loader2, UserCheck, Check, Users } from 'lucide-react'
+import { Loader2, UserCheck, Check, Users, X } from 'lucide-react'
 import type { UserRole } from '@/types'
 import { PERMISSIONS } from '@/lib/permissions'
 import { ROLE_ZH } from '@/lib/incident-display'
@@ -58,6 +58,10 @@ export default function AssignForm({
 
   function assignAllTechnicians() {
     setSelectedIds(prev => Array.from(new Set([...prev, ...factoryTechnicians.map(a => a.id)])))
+  }
+
+  function clearAll() {
+    setSelectedIds([])
   }
 
   // Initial free-text names = whatever in assigned_to that doesn't match a
@@ -138,15 +142,29 @@ export default function AssignForm({
       <div>
         <div className="flex items-center justify-between gap-2">
           <Label>{t('assign.assignees', '負責人（可多選）')}</Label>
-          {canAssign && factoryTechnicians.length > 0 && (
-            <button
-              type="button"
-              onClick={assignAllTechnicians}
-              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-            >
-              <Users className="w-3.5 h-3.5" />
-              {t('assign.allTechnicians', '指派給全部技師')} ({factoryTechnicians.length})
-            </button>
+          {canAssign && (
+            <div className="flex items-center gap-3">
+              {factoryTechnicians.length > 0 && (
+                <button
+                  type="button"
+                  onClick={assignAllTechnicians}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  {t('assign.allTechnicians', '指派給全部技師')} ({factoryTechnicians.length})
+                </button>
+              )}
+              {selectedIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  {t('assign.clearAll', '取消全部')}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {accounts.length === 0 ? (
