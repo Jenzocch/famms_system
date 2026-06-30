@@ -719,6 +719,8 @@
     "next": "Next",
     "doneLabel": "Completed",
     "doneNote": "Consider adding a knowledge base entry for future reference.",
+    "awaitClose": "Awaiting your close",
+    "awaitCloseNote": "Close it once the machine runs stably.",
     "hint": {
       "reported": "technician accepts it",
       "accepted": "inspect and find the cause",

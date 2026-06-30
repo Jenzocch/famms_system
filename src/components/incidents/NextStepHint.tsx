@@ -1,8 +1,9 @@
 'use client'
 
-import { CheckCircle2, ArrowRight } from 'lucide-react'
-import type { IncidentStatus } from '@/types'
+import { CheckCircle2, ArrowRight, Clock } from 'lucide-react'
+import type { IncidentStatus, UserRole } from '@/types'
 import { useI18n } from '@/lib/i18n'
+import { PERMISSIONS } from '@/lib/permissions'
 import { STATUS_ZH, STATUS_ZH_COLOR } from '@/lib/incident-display'
 import { isTerminalStatus, nextStatusOf, nextHintKey } from '@/lib/incident-next-step'
 
@@ -22,23 +23,39 @@ function StatusPill({ status }: { status: IncidentStatus }) {
  * - `banner` (default): a two-row card (現在 / 接下來) for the detail page.
  * - `inline`: a compact "current → next" line for dense board cards.
  *
- * Closed cases show a green "done" variant suggesting the follow-up
- * (knowledge base entry) instead of a forward step.
+ * Role-aware close handoff: an observation-period case is the supervisor's cue
+ * to review and close. For someone who can close (supervisor+) it shows a
+ * highlighted "awaiting your close" prompt; for everyone else it stays the
+ * normal "→ closed (supervisor confirms)" hint. Closed cases show a green
+ * "done / create KB" variant (banner only).
  */
 export default function NextStepHint({
   status,
   variant = 'banner',
+  userRole,
 }: {
   status: IncidentStatus
   variant?: 'banner' | 'inline'
+  userRole?: UserRole
 }) {
   const { t } = useI18n()
   const done = isTerminalStatus(status)
   const next = nextStatusOf(status)
+  const canClose = userRole ? PERMISSIONS.closeIncident(userRole) : false
+  // An observation case is waiting for a supervisor to review and close.
+  const awaitingClose = status === 'observation' && canClose
 
-  // ---- Inline (board card) ----
+  // ---- Inline (board / dashboard card) ----
   if (variant === 'inline') {
     if (done || !next) return null
+    if (awaitingClose) {
+      return (
+        <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          {t('nextStep.awaitClose')}
+        </p>
+      )
+    }
     return (
       <p className="flex items-center gap-1 text-xs text-gray-500">
         {t(`boardStatus.${status}`, STATUS_ZH[status])}
@@ -58,6 +75,19 @@ export default function NextStepHint({
         <div>
           <p className="text-xs font-semibold text-green-700">{t('nextStep.doneLabel')}</p>
           <p className="text-sm mt-0.5 text-green-900">{t('nextStep.doneNote')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ---- Banner: awaiting your close (supervisor on an observation case) ----
+  if (awaitingClose) {
+    return (
+      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 flex items-start gap-2.5">
+        <Clock className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+        <div>
+          <p className="text-xs font-semibold text-amber-700">{t('nextStep.awaitClose')}</p>
+          <p className="text-sm mt-0.5 text-amber-900">{t('nextStep.awaitCloseNote')}</p>
         </div>
       </div>
     )

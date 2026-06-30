@@ -126,6 +126,7 @@ export default async function DashboardPage() {
       urgent={urgent}
       stale={stale}
       overdue={overdue}
+      userRole={user.role}
     />
   )
 }

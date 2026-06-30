@@ -718,6 +718,8 @@
     "next": "Selanjutnya",
     "doneLabel": "Selesai",
     "doneNote": "Pertimbangkan membuat entri knowledge base untuk referensi.",
+    "awaitClose": "Menunggu konfirmasi Anda",
+    "awaitCloseNote": "Tutup setelah mesin berjalan stabil.",
     "hint": {
       "reported": "teknisi menerima",
       "accepted": "inspeksi & cari penyebab",

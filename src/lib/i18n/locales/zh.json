@@ -718,6 +718,8 @@
     "next": "接下來",
     "doneLabel": "已完成",
     "doneNote": "建議建立知識庫紀錄，供日後相同故障參考。",
+    "awaitClose": "待你確認結案",
+    "awaitCloseNote": "確認運轉穩定後即可結案。",
     "hint": {
       "reported": "技師接收案件",
       "accepted": "現場檢查找原因",
