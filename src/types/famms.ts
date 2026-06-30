@@ -526,11 +526,20 @@ export const DOWNTIME_IMPACT_LABELS: Record<DowntimeImpact, string> = {
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  technician: 'Teknisi — Lapor & catat perbaikan',
-  supervisor: 'Pengawas — Terima & assign insiden',
-  manager: 'Manajer — Pantau KPI & persetujuan',
-  director: 'Kepala Pabrik — Lihat laporan strategis',
-  admin: 'Admin Sistem — Kelola master data',
+  technician: 'Teknisi',
+  supervisor: 'Pengawas',
+  manager: 'Manajer',
+  director: 'Kepala Pabrik',
+  admin: 'Admin Sistem',
+};
+
+// Extended descriptions for admin/settings pages where context helps.
+export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  technician: 'Lapor & catat perbaikan',
+  supervisor: 'Terima & assign insiden',
+  manager: 'Pantau KPI & persetujuan',
+  director: 'Lihat laporan strategis',
+  admin: 'Kelola semua master data & akun',
 };
 
 export const ACTION_TYPE_LABELS: Record<ActionType, string> = {

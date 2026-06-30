@@ -19,9 +19,12 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
 import { useI18n } from '@/lib/i18n'
 
-// Statuses a maintenance person can move an incident to (simplified set)
+// Statuses a maintenance person can move an incident to (simplified set).
+// All four waiting-states must be here so a blocked case can be unblocked.
 const SELECTABLE: IncidentStatus[] = [
-  'accepted', 'analyzing', 'waiting_parts', 'repairing', 'testing', 'observation', 'closed',
+  'accepted', 'analyzing',
+  'waiting_parts', 'waiting_approval', 'waiting_vendor', 'waiting_shutdown',
+  'repairing', 'testing', 'observation', 'closed',
 ]
 
 // Linear forward order of the main workflow. A case may only move to its
