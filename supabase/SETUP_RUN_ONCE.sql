@@ -57,6 +57,11 @@ ALTER TABLE incidents ALTER COLUMN incident_type   DROP NOT NULL;
 
 ALTER TABLE machines ADD COLUMN IF NOT EXISTS asset_category TEXT DEFAULT 'machine';
 ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS interval_days INTEGER;
+ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS assigned_user_ids UUID[] DEFAULT '{}';
+ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_pm_schedules_assigned_user_ids
+  ON pm_schedules USING GIN (assigned_user_ids);
 
 CREATE TABLE IF NOT EXISTS maintenance_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

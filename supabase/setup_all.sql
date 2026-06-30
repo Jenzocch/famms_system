@@ -724,6 +724,17 @@ ALTER TABLE machines ADD COLUMN IF NOT EXISTS asset_category TEXT DEFAULT 'machi
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_to TEXT;
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_dept TEXT;
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS due_date DATE;
+
+-- ============================================================================
+-- PM MAINTENANCE ASSIGNMENT
+-- ============================================================================
+
+ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS assigned_user_ids UUID[] DEFAULT '{}';
+ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_pm_schedules_assigned_user_ids
+  ON pm_schedules USING GIN (assigned_user_ids);
+
 -- ============================================================================
 -- FAMMS Fault Tree Seed Data
 -- Bahasa Indonesia + technical English terms
