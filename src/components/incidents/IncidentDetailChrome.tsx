@@ -17,6 +17,21 @@ export function BackLink() {
   )
 }
 
+// Urgency pill derived from the impact code (A/B/C/D). Label follows the app
+// language; falls back to the static Chinese label for safety.
+export function UrgencyChip({ impact, color, fallbackLabel }: {
+  impact: string
+  color: string
+  fallbackLabel: string
+}) {
+  const { t } = useI18n()
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${color}`}>
+      {t(`urgency.${impact}`, fallbackLabel)}
+    </span>
+  )
+}
+
 export function DueDateChip({ dueDate, isClosed }: { dueDate: string; isClosed: boolean }) {
   const { t } = useI18n()
   const overdue = !isClosed && new Date(dueDate) < new Date(new Date().toDateString())

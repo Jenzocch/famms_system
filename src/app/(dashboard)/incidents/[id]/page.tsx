@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import ProgressUpdate from '@/components/incidents/ProgressUpdate'
 import ProgressTimeline from '@/components/incidents/ProgressTimeline'
 import StatusChip from '@/components/incidents/StatusChip'
-import { BackLink, DueDateChip, ClosedBanner } from '@/components/incidents/IncidentDetailChrome'
+import { BackLink, UrgencyChip, DueDateChip, ClosedBanner } from '@/components/incidents/IncidentDetailChrome'
 import AssignForm from '@/components/incidents/AssignForm'
 import IncidentActions from '@/components/incidents/IncidentActions'
 import AuditTrail from '@/components/incidents/AuditTrail'
@@ -84,9 +84,7 @@ export default async function IncidentDetailPage({
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center gap-2 flex-wrap">
           <StatusChip status={status} />
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urgency.color}`}>
-            {urgency.label}
-          </span>
+          <UrgencyChip impact={incident.downtime_impact} color={urgency.color} fallbackLabel={urgency.label} />
           <span className="text-xs text-gray-400 font-mono ml-auto">{incident.incident_no}</span>
         </div>
 
