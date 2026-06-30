@@ -34,6 +34,8 @@
     "subtitle": "Quickly report a site issue",
     "reporterName": "Reporter Name",
     "reporterPlaceholder": "Your name",
+    "selectReporter": "Select account (or type manually)",
+    "unnamedAccount": "(Unnamed account)",
     "issueType": "Issue Type",
     "otherPlaceholder": "Describe the issue type, e.g. ceiling leak",
     "urgency": "Urgency",

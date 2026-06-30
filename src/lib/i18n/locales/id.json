@@ -34,6 +34,8 @@
     "subtitle": "Lapor masalah lapangan dengan cepat",
     "reporterName": "Nama Pelapor",
     "reporterPlaceholder": "Nama Anda",
+    "selectReporter": "Pilih akun (atau isi manual)",
+    "unnamedAccount": "(Akun tanpa nama)",
     "issueType": "Jenis Masalah",
     "otherPlaceholder": "Jelaskan jenis masalah, mis. plafon bocor",
     "urgency": "Tingkat Urgensi",

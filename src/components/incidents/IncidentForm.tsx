@@ -22,6 +22,7 @@ interface Factory { id: string; name: string; code: string }
 interface Area { id: string; factory_id: string; name: string }
 interface Asset { id: string; area_id: string; machine_name: string; machine_code: string | null }
 interface IssueType { value: string; label: string }
+interface Account { id: string; full_name: string | null }
 
 // Fallback list used if the incident_types table is empty/unavailable.
 const DEFAULT_ISSUE_TYPES: IssueType[] = [
@@ -49,6 +50,7 @@ export default function IncidentForm() {
   const [factories, setFactories] = useState<Factory[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
 
   const { types: cachedTypes } = useIncidentTypes()
   // Use shared cache when populated; otherwise the built-in defaults.
@@ -65,12 +67,16 @@ export default function IncidentForm() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [reporterName, setReporterName] = useState('')
+  const [reporterAccountId, setReporterAccountId] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [compressing, setCompressing] = useState(false)
 
   useEffect(() => {
     supabase.from('factories').select('*').order('name').then(({ data }) => setFactories(data ?? []))
+    // Active accounts for the reporter picker (still allows manual entry).
+    supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name')
+      .then(({ data }) => setAccounts((data ?? []) as Account[]))
     // Issue types come from the shared cache (useIncidentTypes) above.
   }, [])
 
@@ -222,14 +228,39 @@ export default function IncidentForm() {
         <p className="text-sm text-gray-500 mt-1">{t('report.subtitle')}</p>
       </div>
 
-      {/* Reporter */}
+      {/* Reporter — pick a registered account or type a name manually */}
       <div>
         <Label>{t('report.reporterName')}</Label>
+        {accounts.length > 0 && (
+          <Select
+            value={reporterAccountId}
+            onValueChange={(v) => {
+              const id = v ?? ''
+              setReporterAccountId(id)
+              const a = accounts.find(x => x.id === id)
+              if (a) setReporterName(a.full_name || '')
+            }}
+            items={Object.fromEntries(accounts.map(a => [a.id, a.full_name || t('report.unnamedAccount', '(未命名帳號)')]))}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder={t('report.selectReporter', '選擇帳號（或手動填寫）')} />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts.map(a => (
+                <SelectItem key={a.id} value={a.id}>{a.full_name || t('report.unnamedAccount', '(未命名帳號)')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Input
           value={reporterName}
-          onChange={e => setReporterName(e.target.value)}
+          onChange={e => {
+            setReporterName(e.target.value)
+            // Typing manually clears the linked account selection.
+            if (reporterAccountId) setReporterAccountId('')
+          }}
           placeholder={t('report.reporterPlaceholder')}
-          className="mt-1"
+          className="mt-2"
         />
       </div>
 
