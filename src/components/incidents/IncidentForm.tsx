@@ -110,16 +110,26 @@ export default function IncidentForm() {
       const compressed: File[] = []
       for (const file of files) {
         if (!file.type.startsWith('image/')) continue
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 2000,
-          useWebWorker: true,
+        try {
+          const options = {
+            maxSizeMB: 0.8,
+            maxWidthOrHeight: 1280,
+            useWebWorker: true,
+          }
+          const compressedFile = await imageCompression(file, options)
+          compressed.push(compressedFile)
+        } catch (fileErr) {
+          // Skip individual files that fail compression (e.g., very large images on low-end devices)
+          console.warn('Failed to compress individual file:', file.name, fileErr)
         }
-        const compressedFile = await imageCompression(file, options)
-        compressed.push(compressedFile)
       }
-      setPhotos(prev => [...prev, ...compressed].slice(0, 5))
-      toast.success(`壓縮完成（節省 ${Math.round(files.reduce((s, f) => s + f.size, 0) / 1024 / 1024)}MB）`)
+      if (compressed.length > 0) {
+        setPhotos(prev => [...prev, ...compressed].slice(0, 5))
+        toast.success(t('report.compressedToast', `壓縮 ${compressed.length} 張完成`))
+      }
+      if (compressed.length < files.length) {
+        toast.warning(`${files.length - compressed.length} ${t('report.compressSkipped', 'file(s) could not be compressed (too large for device)')}`)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('report.compressFailed'))
     } finally {
@@ -468,7 +478,11 @@ export default function IncidentForm() {
         </div>
       </div>
 
-      <Button onClick={submit} disabled={submitting} className="w-full h-12 text-base">
+      <Button
+        onClick={submit}
+        disabled={submitting || !factoryId || !title.trim() || !description.trim() || (issueType === 'other' && !customType.trim())}
+        className="w-full h-12 text-base"
+      >
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         {t('report.submit')}
       </Button>

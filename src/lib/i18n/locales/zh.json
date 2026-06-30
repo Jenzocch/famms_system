@@ -65,6 +65,8 @@
     "specifyType": "請說明問題類型",
     "submitFailed": "送出失敗",
     "compressFailed": "圖片壓縮失敗",
+    "compressedToast": "壓縮 {count} 張圖片完成",
+    "compressSkipped": "個檔案無法壓縮（裝置容量不足）",
     "locationOther": "其他位置（自行填寫，選填）"
   },
   "common": {

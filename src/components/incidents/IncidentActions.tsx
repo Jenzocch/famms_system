@@ -10,6 +10,9 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Loader2, Pencil, Trash2, Lock } from 'lucide-react'
 import type { UserRole } from '@/types'
@@ -63,6 +66,7 @@ export default function IncidentActions({
   const { t: tr } = useI18n()
 
   const [editing, setEditing] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [t, setT] = useState(title || '')
   const [d, setD] = useState(description || '')
   const [type, setType] = useState(incidentType)
@@ -119,8 +123,7 @@ export default function IncidentActions({
     }
   }
 
-  async function remove() {
-    if (!confirm(tr('caseEdit.confirmDelete'))) return
+  async function confirmDelete() {
     setDeleting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -138,11 +141,13 @@ export default function IncidentActions({
       const { error } = await supabase.from('incidents').delete().eq('id', incidentId)
       if (error) throw error
       toast.success(tr('caseEdit.deleted'))
+      setShowDeleteConfirm(false)
       router.push('/incidents')
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tr('caseEdit.deleteFailed'))
       setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -158,14 +163,42 @@ export default function IncidentActions({
         </Button>
         <Button
           variant="outline"
-          onClick={remove}
-          disabled={deleting || !canDelete}
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={!canDelete}
           className="gap-2 text-red-600"
           title={!canDelete ? tr('caseEdit.onlySupervisorDelete') : ''}
         >
-          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+          {canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
           {tr('caseEdit.delete')}
         </Button>
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-red-600">{tr('caseEdit.delete')}</DialogTitle>
+              <DialogDescription>{tr('caseEdit.confirmDelete')}</DialogDescription>
+            </DialogHeader>
+            {title && <p className="text-sm text-gray-600 px-6">{title}</p>}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                {tr('common.cancel')}
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {tr('caseEdit.delete')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }

@@ -65,6 +65,8 @@
     "specifyType": "Harap jelaskan jenis masalah",
     "submitFailed": "Gagal mengirim",
     "compressFailed": "Kompresi gambar gagal",
+    "compressedToast": "{count} foto dikompres",
+    "compressSkipped": "berkas tidak dapat dikompres (kapasitas perangkat terbatas)",
     "locationOther": "Lokasi lain (isi sendiri, opsional)"
   },
   "common": {

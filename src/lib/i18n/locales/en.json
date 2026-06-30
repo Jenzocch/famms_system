@@ -65,6 +65,8 @@
     "specifyType": "Please specify the issue type",
     "submitFailed": "Submit failed",
     "compressFailed": "Image compression failed",
+    "compressedToast": "Compressed {count} photo(s)",
+    "compressSkipped": "file(s) could not be compressed (too large for device)",
     "locationOther": "Other location (type it yourself, optional)"
   },
   "common": {

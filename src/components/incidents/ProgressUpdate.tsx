@@ -66,10 +66,6 @@ export default function ProgressUpdate({
   const statusLabel = (s: IncidentStatus) => t(`boardStatus.${s}`, STATUS_ZH[s])
   const canClose = PERMISSIONS.closeIncident(userRole)
 
-  // Status options based on rollback setting. Only supervisors+ may move a case to "closed".
-  const availableStatuses = allowedStatuses(currentStatus, allowRollback)
-  const selectableStatuses = canClose ? availableStatuses : availableStatuses.filter(s => s !== 'closed')
-
   const [newStatus, setNewStatus] = useState<string>(currentStatus)
   const [note, setNote] = useState('')
   const [updaterName, setUpdaterName] = useState(userName ?? '')
@@ -77,6 +73,10 @@ export default function ProgressUpdate({
   const [allowRollback, setAllowRollback] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [compressing, setCompressing] = useState(false)
+
+  // Status options based on rollback setting. Only supervisors+ may move a case to "closed".
+  const availableStatuses = allowedStatuses(currentStatus, allowRollback)
+  const selectableStatuses = canClose ? availableStatuses : availableStatuses.filter(s => s !== 'closed')
 
   async function addPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
