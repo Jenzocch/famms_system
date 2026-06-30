@@ -10,7 +10,7 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   if (!isTelegramConfigured()) {
-    return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN belum dikonfigurasi di server' }, { status: 400 })
+    return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN 尚未在伺服器設定' }, { status: 400 })
   }
 
   const { data: profile } = await supabase
@@ -19,10 +19,10 @@ export async function POST() {
     .eq('id', user.id)
     .single()
   if (!profile?.factory_id) {
-    return NextResponse.json({ error: 'Factory tidak ditemukan' }, { status: 400 })
+    return NextResponse.json({ error: '找不到工廠' }, { status: 400 })
   }
 
-  const html = '✅ <b>Tes Notifikasi FAMMS</b>\nKoneksi Telegram berfungsi dengan baik.'
+  const html = '✅ <b>FAMMS 測試通知</b>\nTelegram 連線正常。'
   const r = await notifyFactory(supabase, {
     factoryId: profile.factory_id,
     type: 'status_update',
@@ -31,7 +31,7 @@ export async function POST() {
 
   if (r.sent === 0 && r.failed === 0) {
     return NextResponse.json({
-      error: 'Tidak ada penerima terdaftar. Tambahkan group atau user dulu.',
+      error: '尚無已登記的接收者，請先新增群組或使用者。',
     }, { status: 400 })
   }
 

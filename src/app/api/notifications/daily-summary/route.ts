@@ -11,7 +11,7 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   if (!isTelegramConfigured()) {
-    return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN belum dikonfigurasi' }, { status: 400 })
+    return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN 尚未設定' }, { status: 400 })
   }
 
   const today = new Date().toISOString().split('T')[0]

@@ -11,10 +11,10 @@ export const SLA_MINUTES: Record<DowntimeImpact, number> = {
 }
 
 export const SLA_LABELS: Record<DowntimeImpact, string> = {
-  A: 'Critical (15 menit)',
-  B: 'High (30 menit)',
-  C: 'Medium (2 jam)',
-  D: 'Low (24 jam)',
+  A: '緊急 (15 分鐘)',
+  B: '高 (30 分鐘)',
+  C: '中 (2 小時)',
+  D: '低 (24 小時)',
 }
 
 // Observation periods (days) after repair before closing

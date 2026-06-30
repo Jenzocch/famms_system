@@ -519,10 +519,10 @@ export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, string> = {
 };
 
 export const DOWNTIME_IMPACT_LABELS: Record<DowntimeImpact, string> = {
-  A: 'Pabrik Berhenti',      // Factory Stop
-  B: 'Line Berhenti',        // Production Line Stop
-  C: 'Kapasitas Turun',      // Reduced Capacity
-  D: 'Tidak Berpengaruh',    // No Impact
+  A: '全廠停工',      // Factory Stop
+  B: '產線停止',      // Production Line Stop
+  C: '產能下降',      // Reduced Capacity
+  D: '不影響',        // No Impact
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {

@@ -27,7 +27,7 @@ export interface SendResult {
 }
 
 export async function sendTelegramMessage(chatId: number | string, html: string): Promise<SendResult> {
-  if (!TOKEN) return { ok: false, error: 'TELEGRAM_BOT_TOKEN belum dikonfigurasi' }
+  if (!TOKEN) return { ok: false, error: 'TELEGRAM_BOT_TOKEN 尚未設定' }
   try {
     const res = await fetch(`${API_BASE}/sendMessage`, {
       method: 'POST',
@@ -60,10 +60,10 @@ export function formatNewIncident(args: {
   incidentId?: string
 }): string {
   const lines = [
-    `🚨 <b>Incident Baru</b> — ${esc(args.incidentNo)}`,
-    `🏭 Mesin: ${esc(args.machineLabel)}`,
-    `🔧 Failure: ${esc(args.failureName)}`,
-    `📉 Dampak: ${esc(DOWNTIME_IMPACT_LABELS[args.impact])} (SLA ${esc(SLA_LABELS[args.impact])})`,
+    `🚨 <b>新案件</b> — ${esc(args.incidentNo)}`,
+    `🏭 機器: ${esc(args.machineLabel)}`,
+    `🔧 故障: ${esc(args.failureName)}`,
+    `📉 影響: ${esc(DOWNTIME_IMPACT_LABELS[args.impact])}（SLA ${esc(SLA_LABELS[args.impact])}）`,
   ]
   if (args.appUrl && args.incidentId) {
     lines.push(`🔗 ${args.appUrl}/incidents/${args.incidentId}`)
@@ -73,16 +73,16 @@ export function formatNewIncident(args: {
 
 export function formatSLAAlert(args: { incidentNo: string; machineLabel: string; minutesLate: number }): string {
   return [
-    `⏰ <b>SLA Terlewati</b> — ${esc(args.incidentNo)}`,
-    `🏭 Mesin: ${esc(args.machineLabel)}`,
-    `⚠️ Belum direspons, terlambat ${args.minutesLate} menit`,
+    `⏰ <b>SLA 已逾時</b> — ${esc(args.incidentNo)}`,
+    `🏭 機器: ${esc(args.machineLabel)}`,
+    `⚠️ 尚未回應，已逾時 ${args.minutesLate} 分鐘`,
   ].join('\n')
 }
 
 export function formatBlocking(args: { incidentNo: string; reason: string }): string {
   return [
-    `🛑 <b>Work Order Terblokir</b> — ${esc(args.incidentNo)}`,
-    `Alasan: ${esc(args.reason)}`,
+    `🛑 <b>工單已阻擋</b> — ${esc(args.incidentNo)}`,
+    `原因: ${esc(args.reason)}`,
   ].join('\n')
 }
 
@@ -94,11 +94,11 @@ export function formatDailySummary(args: {
   overduePM: number
 }): string {
   return [
-    `📊 <b>Ringkasan Harian</b> — ${esc(args.factoryName)}`,
-    `• Incident aktif: ${args.open}`,
-    `• Baru hari ini: ${args.newToday}`,
-    `• Selesai hari ini: ${args.closedToday}`,
-    `• PM terlambat: ${args.overduePM}`,
+    `📊 <b>每日摘要</b> — ${esc(args.factoryName)}`,
+    `• 進行中案件: ${args.open}`,
+    `• 今日新增: ${args.newToday}`,
+    `• 今日完成: ${args.closedToday}`,
+    `• 保養逾期: ${args.overduePM}`,
   ].join('\n')
 }
 

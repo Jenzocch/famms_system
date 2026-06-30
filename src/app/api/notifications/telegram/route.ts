@@ -25,13 +25,13 @@ export async function POST(req: Request) {
           '👋 <b>FAMMS Bot</b>',
           `Group ID: <code>${chatId}</code>`,
           '',
-          'Berikan ID ini ke admin untuk mendaftarkan group ke notifikasi pabrik.',
+          '請把這個 ID 提供給管理員，登記群組以接收工廠通知。',
         ].join('\n')
       : [
           '👋 <b>FAMMS Bot</b>',
-          `Chat ID Anda: <code>${chatId}</code>`,
+          `您的 Chat ID: <code>${chatId}</code>`,
           '',
-          'Berikan ID ini ke admin untuk mengaktifkan notifikasi incident.',
+          '請把這個 ID 提供給管理員，以啟用案件通知。',
         ].join('\n')
     await sendTelegramMessage(chatId, reply)
   }
