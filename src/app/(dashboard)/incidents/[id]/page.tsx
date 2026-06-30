@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import ProgressUpdate from '@/components/incidents/ProgressUpdate'
 import ProgressTimeline from '@/components/incidents/ProgressTimeline'
 import WorkflowProgress from '@/components/incidents/WorkflowProgress'
+import RemindButton from '@/components/incidents/RemindButton'
 import StatusChip from '@/components/incidents/StatusChip'
 import { BackLink, UrgencyChip, DueDateChip, ClosedBanner } from '@/components/incidents/IncidentDetailChrome'
 import AssignForm from '@/components/incidents/AssignForm'
@@ -86,7 +87,7 @@ export default async function IncidentDetailPage({
         <div className="flex items-center gap-2 flex-wrap">
           <StatusChip status={status} />
           <UrgencyChip impact={incident.downtime_impact} color={urgency.color} fallbackLabel={urgency.label} />
-          <span className="text-xs text-gray-400 font-mono ml-auto">{incident.incident_no}</span>
+          <span className="text-sm text-gray-800 font-mono font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded">{incident.incident_no}</span>
         </div>
 
         <h1 className="text-lg font-bold text-gray-900 mt-2">
@@ -148,6 +149,11 @@ export default async function IncidentDetailPage({
         />
       ) : (
         <ClosedBanner closedAt={incident.closed_at} />
+      )}
+
+      {/* Nudge assignees via Telegram (supervisors+ only, open cases only) */}
+      {!isClosed && user && PERMISSIONS.remindProgress(user.role) && (
+        <RemindButton incidentId={id} />
       )}
 
       {/* Assignment (派工) — available even after close so a case can be

@@ -30,6 +30,12 @@
     "onlySupervisor": "Only supervisors can assign",
     "contactSupervisor": "Contact your supervisor to perform this action."
   },
+  "remind": {
+    "button": "Nudge for Progress (Telegram)",
+    "sent": "Reminder sent via Telegram ({count} recipients)",
+    "noRecipients": "Sent, but no subscribed Telegram recipients yet",
+    "failed": "Failed to send reminder"
+  },
   "report": {
     "title": "Report Issue",
     "subtitle": "Quickly report a site issue",

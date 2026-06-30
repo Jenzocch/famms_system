@@ -28,6 +28,8 @@ export const PERMISSIONS = {
   // case (add a colleague, hand it over) without waiting for a supervisor.
   assignIncident: (_role: UserRole) => true,
   closeIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
+  // Supervisors+ can poke the assignees via Telegram to update progress.
+  remindProgress: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   editIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   deleteIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
 

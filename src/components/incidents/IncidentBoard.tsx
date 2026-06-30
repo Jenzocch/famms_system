@@ -122,7 +122,7 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
                       {overdue ? ` ${t('board.overdue', '逾期')}` : ''}
                     </span>
                   )}
-                  <span className="text-xs text-gray-500 font-mono ml-auto">{inc.incident_no}</span>
+                  <span className="text-sm text-gray-800 font-mono font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded">{inc.incident_no}</span>
                 </div>
 
                 <p className="font-semibold text-base text-gray-900 mt-2 line-clamp-1">

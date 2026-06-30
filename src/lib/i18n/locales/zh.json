@@ -30,6 +30,12 @@
     "onlySupervisor": "只有主管可以派工",
     "contactSupervisor": "請聯繫您的主管執行此操作。"
   },
+  "remind": {
+    "button": "催進度（Telegram 通知負責人）",
+    "sent": "已透過 Telegram 催進度（{count} 位接收者）",
+    "noRecipients": "已送出，但目前沒有訂閱的 Telegram 接收者",
+    "failed": "催進度發送失敗"
+  },
   "report": {
     "title": "回報問題",
     "subtitle": "現場問題快速回報",

@@ -30,6 +30,12 @@
     "onlySupervisor": "Hanya supervisor yang bisa menugaskan",
     "contactSupervisor": "Hubungi supervisor Anda untuk melakukan ini."
   },
+  "remind": {
+    "button": "Ingatkan Progres (notifikasi Telegram)",
+    "sent": "Pengingat dikirim via Telegram ({count} penerima)",
+    "noRecipients": "Terkirim, tetapi belum ada penerima Telegram yang berlangganan",
+    "failed": "Gagal mengirim pengingat"
+  },
   "report": {
     "title": "Lapor Masalah",
     "subtitle": "Lapor masalah lapangan dengan cepat",

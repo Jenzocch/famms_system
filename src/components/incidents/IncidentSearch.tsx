@@ -420,7 +420,7 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
                       {t(`urgency.${inc.downtime_impact}`, urgency.label)}
                     </span>
                   )}
-                  <span className="text-xs text-gray-400 font-mono ml-auto">{inc.incident_no}</span>
+                  <span className="text-sm text-gray-800 font-mono font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded">{inc.incident_no}</span>
                 </div>
 
                 <p className="font-medium text-gray-900 mt-2 line-clamp-1">
