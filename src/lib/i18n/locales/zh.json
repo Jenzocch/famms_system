@@ -684,5 +684,18 @@
     "cancel": "取消",
     "updated": "案件已更新",
     "updateFailed": "更新失敗"
+  },
+  "incidentDetail": {
+    "backToBoard": "返回看板",
+    "progressLog": "處理紀錄",
+    "noRecords": "尚無處理紀錄",
+    "maintenanceStaff": "維修人員",
+    "expected": "預計",
+    "overdue": "逾期",
+    "closed": "此案件已結案",
+    "photoHint": "點擊圖片放大查看（{count} 張照片）",
+    "zoomOut": "縮小",
+    "zoomIn": "放大",
+    "download": "下載原圖"
   }
 }

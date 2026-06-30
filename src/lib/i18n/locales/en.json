@@ -685,5 +685,18 @@
     "cancel": "Cancel",
     "updated": "Case updated",
     "updateFailed": "Update failed"
+  },
+  "incidentDetail": {
+    "backToBoard": "Back to board",
+    "progressLog": "Progress log",
+    "noRecords": "No progress records yet",
+    "maintenanceStaff": "Maintenance staff",
+    "expected": "Due",
+    "overdue": "overdue",
+    "closed": "This case is closed",
+    "photoHint": "Tap an image to enlarge ({count} photos)",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "download": "Download original"
   }
 }

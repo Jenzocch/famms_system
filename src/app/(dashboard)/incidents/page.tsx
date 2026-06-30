@@ -25,16 +25,21 @@ export default async function IncidentsPage({
     .order('reported_at', { ascending: false })
     .limit(200)
 
-  // Scope to the user's factory. Admins see every factory's cases.
-  if (user?.factory_id && user.role !== 'admin') query = query.eq('factory_id', user.factory_id)
+  const isFullBoard = !user || PERMISSIONS.boardFull(user.role)
 
-  // Optional factory filter from the dashboard's per-factory rows.
-  if (factory) query = query.eq('factory_id', factory)
-
-  // Technicians (no full-board access) see cases assigned to them OR reported
-  // by them. Uses the canonical PostgREST array-contains syntax inside or()
-  // (assigned_user_ids @> {me}) so multi-assignee cases match reliably.
-  if (user && !PERMISSIONS.boardFull(user.role)) {
+  if (isFullBoard) {
+    // Supervisors/managers see the whole board, scoped to their factory.
+    // Admins see every factory's cases.
+    if (user?.factory_id && user.role !== 'admin') query = query.eq('factory_id', user.factory_id)
+    // Optional factory filter from the dashboard's per-factory rows.
+    if (factory) query = query.eq('factory_id', factory)
+  } else {
+    // Technicians (no full-board access) see cases assigned to them OR reported
+    // by them — across ALL factories, since they can be assigned cross-factory.
+    // No factory .eq() here, so this matches the nav badge count (which also
+    // ignores factory); otherwise an assigned case in another factory would be
+    // counted in the badge but hidden from the board. Canonical PostgREST
+    // array-contains (assigned_user_ids @> {me}) makes multi-assignee match.
     query = query.or(`assigned_user_ids.cs.{${user.id}},reported_by_id.eq.${user.id}`)
   }
 

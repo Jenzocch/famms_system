@@ -684,5 +684,18 @@
     "cancel": "Batal",
     "updated": "Kasus diperbarui",
     "updateFailed": "Gagal memperbarui"
+  },
+  "incidentDetail": {
+    "backToBoard": "Kembali ke papan",
+    "progressLog": "Catatan penanganan",
+    "noRecords": "Belum ada catatan penanganan",
+    "maintenanceStaff": "Petugas",
+    "expected": "Target",
+    "overdue": "Terlambat",
+    "closed": "Kasus ini sudah ditutup",
+    "photoHint": "Ketuk gambar untuk memperbesar ({count} foto)",
+    "zoomOut": "Perkecil",
+    "zoomIn": "Perbesar",
+    "download": "Unduh asli"
   }
 }
