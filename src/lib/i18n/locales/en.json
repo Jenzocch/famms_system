@@ -288,6 +288,18 @@
     "skipReason": "Skip Reason",
     "skipReasonRequired": "Please enter skip reason",
     "confirmSkip": "⏭️ Confirm Skip",
+    "checklist": "Checklist",
+    "selectReason": "Select a reason",
+    "savedComplete": "PM marked complete",
+    "savedSkip": "PM marked skipped",
+    "saveFailed": "Failed to save",
+    "delayReasons": {
+      "no_shutdown": "No shutdown window",
+      "no_manpower": "Not enough manpower",
+      "no_parts": "Parts unavailable",
+      "production_priority": "Production priority",
+      "forgot": "Forgotten"
+    },
     "showingTasks": "Showing today + next 7 days · {count} total",
     "trackFrequency": "Track machine maintenance frequency",
     "addMaintenance": "Add Maintenance",

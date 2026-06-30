@@ -287,6 +287,18 @@
     "skipReason": "Alasan Lewati",
     "skipReasonRequired": "Masukkan alasan melewati",
     "confirmSkip": "⏭️ Konfirmasi Lewati",
+    "checklist": "Checklist",
+    "selectReason": "Pilih alasan",
+    "savedComplete": "PM selesai dicatat",
+    "savedSkip": "PM ditandai skip",
+    "saveFailed": "Gagal menyimpan",
+    "delayReasons": {
+      "no_shutdown": "Tidak Ada Shutdown",
+      "no_manpower": "Kurang Tenaga Kerja",
+      "no_parts": "Parts Tidak Ada",
+      "production_priority": "Prioritas Produksi",
+      "forgot": "Terlupa"
+    },
     "showingTasks": "Hari ini + 7 hari ke depan · {count} total",
     "trackFrequency": "Pantau frekuensi perawatan mesin",
     "addMaintenance": "Tambah Perawatan",

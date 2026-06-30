@@ -15,11 +15,13 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Loader2, CheckCircle2, SkipForward } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 const DELAY_REASONS = Object.keys(PM_DELAY_REASON_LABELS) as PMDelayReason[]
 
 export default function PMRecordForm({ recordId, checklist }: { recordId: string; checklist: string[] }) {
   const router = useRouter()
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'completed' | 'skipped'>('completed')
   const [findings, setFindings] = useState('')
@@ -30,7 +32,7 @@ export default function PMRecordForm({ recordId, checklist }: { recordId: string
 
   async function submit() {
     if (mode === 'skipped' && !delayReason) {
-      toast.error('Pilih alasan skip')
+      toast.error(t('pm.skipReasonRequired', '請填寫跳過原因'))
       return
     }
     setSubmitting(true)
@@ -46,12 +48,12 @@ export default function PMRecordForm({ recordId, checklist }: { recordId: string
         }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Gagal menyimpan')
-      toast.success(mode === 'completed' ? 'PM selesai dicatat' : 'PM ditandai skip')
+      if (!res.ok) throw new Error(json.error || t('pm.saveFailed', '儲存失敗'))
+      toast.success(mode === 'completed' ? t('pm.savedComplete', '已記錄保養完成') : t('pm.savedSkip', '已標記為跳過'))
       setOpen(false)
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan')
+      toast.error(err instanceof Error ? err.message : t('pm.saveFailed', '儲存失敗'))
     } finally {
       setSubmitting(false)
     }
@@ -60,33 +62,33 @@ export default function PMRecordForm({ recordId, checklist }: { recordId: string
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
-        <CheckCircle2 className="w-4 h-4" /> Catat PM
+        <CheckCircle2 className="w-4 h-4" /> {t('pm.logMaintenance', '記錄保養')}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Catat Pelaksanaan PM</DialogTitle>
+          <DialogTitle>{t('pm.recordComplete', '記錄保養完成')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Mode toggle */}
+          {/* Mode toggle — two large, clearly distinct choices */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setMode('completed')}
-              className={`flex items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm transition ${
-                mode === 'completed' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:bg-gray-50'
+              className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                mode === 'completed' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <CheckCircle2 className="w-4 h-4" /> Selesai
+              <CheckCircle2 className="w-5 h-5" /> {t('pm.completeMaintenance', '完成保養')}
             </button>
             <button
               type="button"
               onClick={() => setMode('skipped')}
-              className={`flex items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm transition ${
-                mode === 'skipped' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 hover:bg-gray-50'
+              className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                mode === 'skipped' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <SkipForward className="w-4 h-4" /> Skip / Tunda
+              <SkipForward className="w-5 h-5" /> {t('pm.skipWithReason', '跳過（填原因）')}
             </button>
           </div>
 
@@ -94,7 +96,7 @@ export default function PMRecordForm({ recordId, checklist }: { recordId: string
             <>
               {checklist.length > 0 && (
                 <div>
-                  <Label>Checklist</Label>
+                  <Label>{t('pm.checklist', '檢查項目')}</Label>
                   <ul className="mt-1 space-y-1">
                     {checklist.map((item, idx) => (
                       <li key={idx}>
@@ -113,17 +115,17 @@ export default function PMRecordForm({ recordId, checklist }: { recordId: string
                 </div>
               )}
               <div>
-                <Label>Temuan / Findings</Label>
+                <Label>{t('pm.findingsNotes', '保養發現 / 備註（可選）')}</Label>
                 <Textarea
                   value={findings}
                   onChange={e => setFindings(e.target.value)}
-                  placeholder="Kondisi mesin, masalah ditemukan, dll."
+                  placeholder={t('pm.notePlaceholder', '更換零件、調整項目、發現問題...')}
                   rows={2}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label>Biaya (IDR)</Label>
+                <Label>{t('pm.maintenanceCost', '保養費用（可選）')}</Label>
                 <Input
                   type="number"
                   value={cost}
@@ -137,21 +139,25 @@ export default function PMRecordForm({ recordId, checklist }: { recordId: string
 
           {mode === 'skipped' && (
             <div>
-              <Label>Alasan Skip <span className="text-red-500">*</span></Label>
-              <Select value={delayReason} onValueChange={(v) => setDelayReason((v ?? '') as PMDelayReason)} items={Object.fromEntries(DELAY_REASONS.map(r => [r, PM_DELAY_REASON_LABELS[r]]))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih alasan" /></SelectTrigger>
+              <Label>{t('pm.skipReason', '跳過原因')} <span className="text-red-500">*</span></Label>
+              <Select value={delayReason} onValueChange={(v) => setDelayReason((v ?? '') as PMDelayReason)} items={Object.fromEntries(DELAY_REASONS.map(r => [r, t(`pm.delayReasons.${r}`, PM_DELAY_REASON_LABELS[r])]))}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={t('pm.selectReason', '選擇原因')} /></SelectTrigger>
                 <SelectContent>
                   {DELAY_REASONS.map(r => (
-                    <SelectItem key={r} value={r}>{PM_DELAY_REASON_LABELS[r]}</SelectItem>
+                    <SelectItem key={r} value={r}>{t(`pm.delayReasons.${r}`, PM_DELAY_REASON_LABELS[r])}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          <Button onClick={submit} disabled={submitting} className="w-full">
+          <Button
+            onClick={submit}
+            disabled={submitting}
+            className={`w-full ${mode === 'skipped' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
+          >
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Simpan
+            {mode === 'completed' ? t('pm.confirmComplete', '✅ 確認完成') : t('pm.confirmSkip', '⏭️ 確認跳過')}
           </Button>
         </div>
       </DialogContent>

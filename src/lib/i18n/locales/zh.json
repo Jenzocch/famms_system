@@ -287,6 +287,18 @@
     "skipReason": "跳過原因",
     "skipReasonRequired": "請填寫跳過原因",
     "confirmSkip": "⏭️ 確認跳過",
+    "checklist": "檢查項目",
+    "selectReason": "選擇原因",
+    "savedComplete": "已記錄保養完成",
+    "savedSkip": "已標記為跳過",
+    "saveFailed": "儲存失敗",
+    "delayReasons": {
+      "no_shutdown": "沒有停機時段",
+      "no_manpower": "人力不足",
+      "no_parts": "缺料件",
+      "production_priority": "生產優先",
+      "forgot": "遺漏忘記"
+    },
     "showingTasks": "顯示今日及未來7天 · 共{count}項",
     "trackFrequency": "追蹤機器保養頻率",
     "addMaintenance": "新增保養",
