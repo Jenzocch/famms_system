@@ -27,7 +27,8 @@
     "dueDate": "Tanggal target",
     "save": "Simpan penugasan",
     "saved": "Penugasan diperbarui",
-    "onlySupervisor": "Hanya supervisor yang bisa menugaskan"
+    "onlySupervisor": "Hanya supervisor yang bisa menugaskan",
+    "contactSupervisor": "Hubungi supervisor Anda untuk melakukan ini."
   },
   "report": {
     "title": "Lapor Masalah",
@@ -40,15 +41,15 @@
     "otherPlaceholder": "Jelaskan jenis masalah, mis. plafon bocor",
     "urgency": "Tingkat Urgensi",
     "urgencyCritical": "🔴 Kritis",
-    "urgencyCriticalDesc": "Produksi berhenti",
+    "urgencyCriticalDesc": "Pabrik berhenti, SLA hari ini",
     "urgencyHigh": "🟠 Tinggi",
-    "urgencyHighDesc": "Mempengaruhi produksi",
+    "urgencyHighDesc": "Line berhenti, SLA 1 hari",
     "urgencyMedium": "🟡 Sedang",
-    "urgencyMediumDesc": "Dampak sebagian",
+    "urgencyMediumDesc": "Kapasitas turun, SLA 3 hari",
     "urgencyLow": "🟢 Rendah",
-    "urgencyLowDesc": "Tidak mempengaruhi produksi",
+    "urgencyLowDesc": "Tidak berpengaruh, SLA 7 hari",
     "dueDate": "Tenggat waktu",
-    "dueDateHint": "Kosongkan untuk dihitung otomatis dari urgensi (Kritis=hari ini, Tinggi=1h, Sedang=3h, Rendah=7h)",
+    "dueDateHint": "Kosongkan untuk dihitung otomatis dari urgensi (Kritis=hari ini, Tinggi=1 hari, Sedang=3 hari, Rendah=7 hari)",
     "location": "Lokasi",
     "selectFactory": "Pilih pabrik",
     "selectArea": "Pilih area (opsional)",
@@ -594,10 +595,10 @@
     "other": "📋 Lainnya"
   },
   "urgency": {
-    "A": "🔴 Kritis",
-    "B": "🟠 Tinggi",
-    "C": "🟡 Sedang",
-    "D": "🟢 Rendah"
+    "A": "🔴 Kritis — Pabrik Berhenti",
+    "B": "🟠 Tinggi — Line Berhenti",
+    "C": "🟡 Sedang — Kapasitas Turun",
+    "D": "🟢 Rendah — Tidak Berpengaruh"
   },
   "boardFilters": {
     "all": "Semua",

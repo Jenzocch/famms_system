@@ -149,6 +149,12 @@ export default function AssignForm({
         <UserCheck className="w-4 h-4" /> {t('assign.title', '派工指派')}
       </h3>
 
+      {!canAssign && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+          🔒 {t('assign.onlySupervisor', '只有主管可以派工')}。{t('assign.contactSupervisor', '請聯繫您的主管執行此操作。')}
+        </div>
+      )}
+
       {/* Account multi-select */}
       <div>
         <div className="flex items-center justify-between gap-2">

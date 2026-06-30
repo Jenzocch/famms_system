@@ -320,7 +320,7 @@ export default function IncidentForm() {
         )}
       </div>
 
-      {/* Urgency — compact single row (4 levels) */}
+      {/* Urgency — shows label + description of production impact */}
       <div>
         <Label className="text-base">{t('report.urgency')} <span className="text-red-500">*</span></Label>
         <div className="grid grid-cols-3 gap-1.5 mt-1">
@@ -329,14 +329,14 @@ export default function IncidentForm() {
               key={u.value}
               type="button"
               onClick={() => setUrgency(u.value)}
-              title={t(u.descKey)}
-              className={`rounded-lg border px-1 py-2 text-sm font-medium text-center transition-colors ${
+              className={`rounded-lg border px-2 py-2 text-left transition-colors ${
                 urgency === u.value
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 bg-white text-gray-700'
               }`}
             >
-              {t(u.labelKey)}
+              <span className="text-xs font-semibold block">{t(u.labelKey)}</span>
+              <span className="text-xs text-gray-400 block mt-0.5 leading-tight">{t(u.descKey)}</span>
             </button>
           ))}
         </div>

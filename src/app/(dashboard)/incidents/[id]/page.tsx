@@ -3,6 +3,7 @@ import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import ProgressUpdate from '@/components/incidents/ProgressUpdate'
 import ProgressTimeline from '@/components/incidents/ProgressTimeline'
+import WorkflowProgress from '@/components/incidents/WorkflowProgress'
 import StatusChip from '@/components/incidents/StatusChip'
 import { BackLink, UrgencyChip, DueDateChip, ClosedBanner } from '@/components/incidents/IncidentDetailChrome'
 import AssignForm from '@/components/incidents/AssignForm'
@@ -127,6 +128,9 @@ export default async function IncidentDetailPage({
           </div>
         )}
       </div>
+
+      {/* Workflow progress bar — visual status pipeline */}
+      <WorkflowProgress status={status} />
 
       {/* Progress timeline (client component → labels follow app language) */}
       <ProgressTimeline

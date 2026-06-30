@@ -27,7 +27,8 @@
     "dueDate": "預計完成日",
     "save": "儲存派工",
     "saved": "派工已更新",
-    "onlySupervisor": "只有主管可以派工"
+    "onlySupervisor": "只有主管可以派工",
+    "contactSupervisor": "請聯繫您的主管執行此操作。"
   },
   "report": {
     "title": "回報問題",
@@ -40,13 +41,13 @@
     "otherPlaceholder": "請說明問題類型，例如：天花板漏水",
     "urgency": "緊急程度",
     "urgencyCritical": "🔴 緊急",
-    "urgencyCriticalDesc": "生產停線",
+    "urgencyCriticalDesc": "全廠停工，SLA 當天完成",
     "urgencyHigh": "🟠 高",
-    "urgencyHighDesc": "影響生產",
+    "urgencyHighDesc": "生產線停止，SLA 1 天",
     "urgencyMedium": "🟡 中",
-    "urgencyMediumDesc": "部分影響",
+    "urgencyMediumDesc": "產能下降，SLA 3 天",
     "urgencyLow": "🟢 低",
-    "urgencyLowDesc": "不影響生產",
+    "urgencyLowDesc": "不影響產能，SLA 7 天",
     "dueDate": "截止日",
     "dueDateHint": "留空則依緊急程度自動計算（緊急=當天、高=1天、中=3天、低=7天）",
     "location": "位置",
@@ -594,10 +595,10 @@
     "other": "📋 其他"
   },
   "urgency": {
-    "A": "🔴 緊急",
-    "B": "🟠 高",
-    "C": "🟡 中",
-    "D": "🟢 低"
+    "A": "🔴 緊急 — 全廠停工",
+    "B": "🟠 高 — 生產線停止",
+    "C": "🟡 中 — 產能下降",
+    "D": "🟢 低 — 不影響產能"
   },
   "boardFilters": {
     "all": "全部",

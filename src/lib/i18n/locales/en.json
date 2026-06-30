@@ -27,7 +27,8 @@
     "dueDate": "Due date",
     "save": "Save assignment",
     "saved": "Assignment updated",
-    "onlySupervisor": "Only supervisors can assign"
+    "onlySupervisor": "Only supervisors can assign",
+    "contactSupervisor": "Contact your supervisor to perform this action."
   },
   "report": {
     "title": "Report Issue",
@@ -40,13 +41,13 @@
     "otherPlaceholder": "Describe the issue type, e.g. ceiling leak",
     "urgency": "Urgency",
     "urgencyCritical": "🔴 Critical",
-    "urgencyCriticalDesc": "Production stopped",
+    "urgencyCriticalDesc": "Factory stopped, SLA today",
     "urgencyHigh": "🟠 High",
-    "urgencyHighDesc": "Affects production",
+    "urgencyHighDesc": "Line stopped, SLA 1 day",
     "urgencyMedium": "🟡 Medium",
-    "urgencyMediumDesc": "Partial impact",
+    "urgencyMediumDesc": "Reduced capacity, SLA 3 days",
     "urgencyLow": "🟢 Low",
-    "urgencyLowDesc": "No production impact",
+    "urgencyLowDesc": "No impact, SLA 7 days",
     "dueDate": "Due date",
     "dueDateHint": "Leave empty to auto-calculate from urgency (Critical=today, High=1d, Medium=3d, Low=7d)",
     "location": "Location",
@@ -595,10 +596,10 @@
     "other": "📋 Other"
   },
   "urgency": {
-    "A": "🔴 Critical",
-    "B": "🟠 High",
-    "C": "🟡 Medium",
-    "D": "🟢 Low"
+    "A": "🔴 Critical — Factory Stopped",
+    "B": "🟠 High — Line Stopped",
+    "C": "🟡 Medium — Reduced Capacity",
+    "D": "🟢 Low — No Impact"
   },
   "boardFilters": {
     "all": "All",

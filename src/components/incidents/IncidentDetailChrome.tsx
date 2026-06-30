@@ -26,7 +26,7 @@ export function UrgencyChip({ impact, color, fallbackLabel }: {
 }) {
   const { t } = useI18n()
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${color}`}>
+    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${color}`}>
       {t(`urgency.${impact}`, fallbackLabel)}
     </span>
   )
