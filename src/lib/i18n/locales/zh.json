@@ -4,7 +4,7 @@
     "overview": "案件與保養總覽",
     "open": "處理中案件",
     "urgent": "緊急案件",
-    "cases": "件",
+    "cases": "{count} 件",
     "openByFactory": "各廠處理中案件",
     "noOpen": "目前沒有處理中案件",
     "urgentCases": "緊急案件（A/B 級）",

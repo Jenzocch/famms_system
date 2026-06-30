@@ -4,7 +4,7 @@
     "overview": "Incidents & maintenance overview",
     "open": "Open cases",
     "urgent": "Urgent cases",
-    "cases": "cases",
+    "cases": "{count} cases",
     "openByFactory": "Open cases by factory",
     "noOpen": "No open cases",
     "urgentCases": "Urgent cases (A/B)",

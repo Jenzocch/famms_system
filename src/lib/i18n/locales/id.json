@@ -4,7 +4,7 @@
     "overview": "Ikhtisar insiden & pemeliharaan",
     "open": "Kasus aktif",
     "urgent": "Kasus mendesak",
-    "cases": "kasus",
+    "cases": "{count} kasus",
     "openByFactory": "Kasus aktif per pabrik",
     "noOpen": "Tidak ada kasus aktif",
     "urgentCases": "Kasus mendesak (A/B)",
