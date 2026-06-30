@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle2, ArrowRight, Clock } from 'lucide-react'
+import { ArrowRight, Clock } from 'lucide-react'
 import type { IncidentStatus, UserRole } from '@/types'
 import { useI18n } from '@/lib/i18n'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -67,18 +67,9 @@ export default function NextStepHint({
     )
   }
 
-  // ---- Banner: done variant ----
-  if (done || !next) {
-    return (
-      <div className="rounded-xl border border-green-200 bg-green-50 p-3 flex items-start gap-2.5">
-        <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-green-600" />
-        <div>
-          <p className="text-xs font-semibold text-green-700">{t('nextStep.doneLabel')}</p>
-          <p className="text-sm mt-0.5 text-green-900">{t('nextStep.doneNote')}</p>
-        </div>
-      </div>
-    )
-  }
+  // Closed / terminal cases render nothing here — the detail page shows the
+  // ClosedBanner (closure + KB suggestion) instead, so there's no banner to draw.
+  if (done || !next) return null
 
   // ---- Banner: awaiting your close (supervisor on an observation case) ----
   if (awaitingClose) {

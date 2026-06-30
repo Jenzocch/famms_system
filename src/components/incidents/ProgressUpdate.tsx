@@ -80,7 +80,12 @@ export default function ProgressUpdate({
 
   // Status options based on rollback setting. Only supervisors+ may move a case to "closed".
   const availableStatuses = allowedStatuses(currentStatus, allowRollback)
-  const selectableStatuses = canClose ? availableStatuses : availableStatuses.filter(s => s !== 'closed')
+  const base = canClose ? availableStatuses : availableStatuses.filter(s => s !== 'closed')
+  // Always include the current status as a (selected, no-op) option. Some
+  // statuses aren't forward targets in SELECTABLE (e.g. 'reported', or the
+  // waiting_vendor/approval/shutdown side-states), so without this the Select's
+  // default value would not match any item and render blank.
+  const selectableStatuses = base.includes(currentStatus) ? base : [currentStatus, ...base]
 
   async function addPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])

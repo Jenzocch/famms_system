@@ -96,6 +96,11 @@ export default function PMScheduleManager() {
   const factoryTechnicians = accounts.filter(
     a => a.role === 'technician' && (!factoryId || !a.factory_id || a.factory_id === factoryId)
   )
+  // Accounts selectable for this schedule's factory. Cross-factory accounts and
+  // anyone already assigned stay visible so they can still be de-selected.
+  const factoryAccounts = accounts.filter(
+    a => assignees.includes(a.id) || !factoryId || !a.factory_id || a.factory_id === factoryId
+  )
 
   useEffect(() => {
     if (!factoryId) { setAreas([]); setAreaId(''); return }
@@ -340,11 +345,11 @@ export default function PMScheduleManager() {
                 )}
               </div>
             </div>
-            {accounts.length === 0 ? (
+            {factoryAccounts.length === 0 ? (
               <p className="text-xs text-gray-400 mt-1">{t('assign.noAccounts', '尚無可指派的帳號')}</p>
             ) : (
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {accounts.map(a => {
+                {factoryAccounts.map(a => {
                   const on = assignees.includes(a.id)
                   return (
                     <button
