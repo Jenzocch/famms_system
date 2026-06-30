@@ -33,9 +33,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('zh')
 
   // Hydrate the saved choice on mount (client-only to avoid SSR mismatch).
+  // Default to 'zh' (Traditional Chinese) if not saved.
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null
-    if (saved === 'zh' || saved === 'en' || saved === 'id') setLocaleState(saved)
+    if (saved === 'zh' || saved === 'en' || saved === 'id') {
+      setLocaleState(saved)
+    }
+    // If saved is null or invalid, keep the default 'zh'
   }, [])
 
   const setLocale = useCallback((l: Locale) => {
