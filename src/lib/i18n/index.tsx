@@ -30,12 +30,16 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('zh')
+  const [locale, setLocaleState] = useState<Locale>('id')
 
   // Hydrate the saved choice on mount (client-only to avoid SSR mismatch).
+  // Default to 'id' (Bahasa Indonesia) if not saved.
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null
-    if (saved === 'zh' || saved === 'en' || saved === 'id') setLocaleState(saved)
+    if (saved === 'zh' || saved === 'en' || saved === 'id') {
+      setLocaleState(saved)
+    }
+    // If saved is null or invalid, keep the default 'id'
   }, [])
 
   const setLocale = useCallback((l: Locale) => {
@@ -43,9 +47,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, l)
   }, [])
 
-  // t() falls back to the zh value, then the explicit fallback, then the key.
+  // t() falls back to the id value, then the explicit fallback, then the key.
   const t = useCallback((key: string, fallback?: string): string => {
-    return lookup(DICTS[locale], key) ?? lookup(DICTS.zh, key) ?? fallback ?? key
+    return lookup(DICTS[locale], key) ?? lookup(DICTS.id, key) ?? fallback ?? key
   }, [locale])
 
   return (
@@ -60,9 +64,9 @@ export function useI18n(): I18nContextValue {
   // Safe fallback so components don't crash if used outside the provider.
   if (!ctx) {
     return {
-      locale: 'zh',
+      locale: 'id',
       setLocale: () => {},
-      t: (key: string, fallback?: string) => lookup(DICTS.zh, key) ?? fallback ?? key,
+      t: (key: string, fallback?: string) => lookup(DICTS.id, key) ?? fallback ?? key,
     }
   }
   return ctx

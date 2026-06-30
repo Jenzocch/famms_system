@@ -64,9 +64,18 @@ export default function Sidebar({ profile, incidentBadge = 0 }: SidebarProps) {
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {visibleNav.map(({ href, labelKey, icon: Icon }) => {
-          const active = href === '/incidents/new'
-            ? pathname === href
-            : pathname === href || (pathname.startsWith(href + '/') && href !== '/incidents/new')
+          // Active when the path matches exactly, or is a sub-path — but NOT
+          // when a more specific nav item (e.g. /incidents/new) matches better.
+          // This prevents both "Papan" (/incidents) and "Lapor" (/incidents/new)
+          // lighting up at the same time.
+          const active = pathname === href || (
+            pathname.startsWith(href + '/') &&
+            !visibleNav.some(o =>
+              o.href !== href &&
+              o.href.startsWith(href + '/') &&
+              (pathname === o.href || pathname.startsWith(o.href + '/'))
+            )
+          )
           const showBadge = href === '/incidents' && incidentBadge > 0
           return (
             <Link

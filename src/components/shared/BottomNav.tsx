@@ -39,9 +39,16 @@ export default function BottomNav({ userRole = 'technician', incidentBadge = 0 }
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {visibleNav.map(({ href, labelKey, icon: Icon, primary }) => {
           const label = t(labelKey)
-          const active = href === '/incidents/new'
-            ? pathname === href
-            : pathname === href || (pathname.startsWith(href + '/') && href !== '/incidents/new')
+          // Active on exact or sub-path match, unless a more specific nav item
+          // matches better (keeps /incidents and /incidents/new from both lighting).
+          const active = pathname === href || (
+            pathname.startsWith(href + '/') &&
+            !visibleNav.some(o =>
+              o.href !== href &&
+              o.href.startsWith(href + '/') &&
+              (pathname === o.href || pathname.startsWith(o.href + '/'))
+            )
+          )
 
           if (primary) {
             return (

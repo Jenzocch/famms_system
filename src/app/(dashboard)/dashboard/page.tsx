@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   // Scope incidents to the user's factory (admins without factory see all)
   let incidentQuery = supabase
     .from('incidents')
-    .select('id, incident_no, status, downtime_impact, incident_type, title, reported_at, updated_at, factory:factories(name)')
+    .select('id, incident_no, status, downtime_impact, incident_type, title, reported_at, updated_at, factory_id, factory:factories(name)')
     .order('reported_at', { ascending: false })
     .limit(500)
   if (user.factory_id && user.role !== 'admin') incidentQuery = incidentQuery.eq('factory_id', user.factory_id)
@@ -100,17 +100,22 @@ export default async function DashboardPage() {
     .sort((a, b) => b.days_overdue - a.days_overdue)
     .slice(0, 10)
 
-  // Open count per factory
-  const byFactory = new Map<string, number>()
+  // Open count per factory (keep factory_id so the row can link to a filtered list)
+  const byFactory = new Map<string, { count: number; factoryId: string | null }>()
   for (const r of open) {
     const name = r.factory?.name || UNSPECIFIED
-    byFactory.set(name, (byFactory.get(name) ?? 0) + 1)
+    const prev = byFactory.get(name)
+    byFactory.set(name, {
+      count: (prev?.count ?? 0) + 1,
+      factoryId: prev?.factoryId ?? (r as any).factory_id ?? null,
+    })
   }
 
   const urgent = open.filter(r => r.downtime_impact === 'A' || r.downtime_impact === 'B')
   const now = Date.now()
   const stale = open.filter(r => now - new Date(r.updated_at).getTime() > 3 * 86400000)
-  const byFactoryEntries: [string, number][] = [...byFactory.entries()]
+  const byFactoryEntries: [string, number, string | null][] =
+    [...byFactory.entries()].map(([name, v]) => [name, v.count, v.factoryId])
 
   return (
     <DashboardView

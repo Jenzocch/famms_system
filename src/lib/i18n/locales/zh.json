@@ -34,6 +34,8 @@
     "subtitle": "現場問題快速回報",
     "reporterName": "回報人姓名",
     "reporterPlaceholder": "您的姓名",
+    "selectReporter": "選擇帳號（或手動填寫）",
+    "unnamedAccount": "(未命名帳號)",
     "issueType": "問題類型",
     "otherPlaceholder": "請說明問題類型，例如：天花板漏水",
     "urgency": "緊急程度",

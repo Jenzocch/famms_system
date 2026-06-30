@@ -5,7 +5,12 @@ import IncidentsBoardWithSearch from '@/components/incidents/IncidentsBoardWithS
 
 export const metadata = { title: '案件看板 | 維修系統' }
 
-export default async function IncidentsPage() {
+export default async function IncidentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ factory?: string }>
+}) {
+  const { factory } = await searchParams
   const user = await getCurrentUser()
   const supabase = await createClient()
 
@@ -22,6 +27,9 @@ export default async function IncidentsPage() {
 
   // Scope to the user's factory. Admins see every factory's cases.
   if (user?.factory_id && user.role !== 'admin') query = query.eq('factory_id', user.factory_id)
+
+  // Optional factory filter from the dashboard's per-factory rows.
+  if (factory) query = query.eq('factory_id', factory)
 
   // Technicians (no full-board access) only see cases assigned to them.
   if (user && !PERMISSIONS.boardFull(user.role)) {
