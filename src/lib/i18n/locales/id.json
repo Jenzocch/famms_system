@@ -102,6 +102,7 @@
   "navigation": {
     "dashboard": "Dasbor",
     "incidents": "Papan",
+    "machines": "Mesin",
     "newIncident": "Lapor",
     "pm": "Perawatan",
     "knowledgeBase": "Pengetahuan",
@@ -115,6 +116,16 @@
     "manager": "Manajer",
     "director": "Direktur",
     "admin": "Admin"
+  },
+  "profile": {
+    "title": "Profil",
+    "fullName": "Nama Lengkap",
+    "factory": "Pabrik",
+    "selectFactory": "Pilih pabrik",
+    "role": "Role",
+    "contactAdmin": "Hubungi admin untuk ubah role",
+    "save": "Simpan",
+    "saved": "Profil berhasil disimpan"
   },
   "incidents": {
     "title": "Laporan",
@@ -299,6 +310,8 @@
       "production_priority": "Prioritas Produksi",
       "forgot": "Terlupa"
     },
+    "typeLabel": "Tipe PM",
+    "selectFrequency": "Pilih frekuensi",
     "showingTasks": "Hari ini + 7 hari ke depan · {count} total",
     "trackFrequency": "Pantau frekuensi perawatan mesin",
     "addMaintenance": "Tambah Perawatan",
@@ -630,6 +643,21 @@
     "B": "🟠 Line Berhenti",
     "C": "🟡 Kapasitas Turun",
     "D": "🟢 Tidak Berpengaruh"
+  },
+  "machineStatus": {
+    "running": "Beroperasi",
+    "repairing": "Perbaikan",
+    "standby": "Standby",
+    "scrapped": "Dihapus"
+  },
+  "pmType": {
+    "daily": "Harian",
+    "weekly": "Mingguan",
+    "monthly": "Bulanan",
+    "quarterly": "Per 3 Bulan",
+    "half_yearly": "Per 6 Bulan",
+    "yearly": "Tahunan",
+    "custom": "Custom (per N hari)"
   },
   "nextStepLabel": "Langkah berikutnya",
   "nextStep": {

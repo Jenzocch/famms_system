@@ -100,8 +100,9 @@
     "update": "更新"
   },
   "navigation": {
-    "dashboard": "主管",
+    "dashboard": "儀表板",
     "incidents": "看板",
+    "machines": "機器",
     "newIncident": "回報",
     "pm": "保養",
     "knowledgeBase": "知識庫",
@@ -115,6 +116,16 @@
     "manager": "經理",
     "director": "廠長",
     "admin": "系統管理員"
+  },
+  "profile": {
+    "title": "個人資料",
+    "fullName": "姓名",
+    "factory": "工廠",
+    "selectFactory": "選擇工廠",
+    "role": "角色",
+    "contactAdmin": "請聯繫管理員修改角色",
+    "save": "儲存",
+    "saved": "個人資料已儲存"
   },
   "incidents": {
     "title": "案件",
@@ -299,6 +310,8 @@
       "production_priority": "生產優先",
       "forgot": "遺漏忘記"
     },
+    "typeLabel": "保養類型",
+    "selectFrequency": "選擇頻率",
     "showingTasks": "顯示今日及未來7天 · 共{count}項",
     "trackFrequency": "追蹤機器保養頻率",
     "addMaintenance": "新增保養",
@@ -630,6 +643,21 @@
     "B": "🟠 產線停止",
     "C": "🟡 產能下降",
     "D": "🟢 不影響"
+  },
+  "machineStatus": {
+    "running": "運轉中",
+    "repairing": "維修中",
+    "standby": "待機",
+    "scrapped": "報廢"
+  },
+  "pmType": {
+    "daily": "每日",
+    "weekly": "每週",
+    "monthly": "每月",
+    "quarterly": "每季",
+    "half_yearly": "每半年",
+    "yearly": "每年",
+    "custom": "自訂天數"
   },
   "nextStepLabel": "下一步",
   "nextStep": {

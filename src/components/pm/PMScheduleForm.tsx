@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2, Plus, X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 interface MachineOption {
   id: string
@@ -25,6 +26,7 @@ const PM_TYPES = Object.keys(PM_TYPE_LABELS) as PMType[]
 export default function PMScheduleForm() {
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useI18n()
 
   const [machines, setMachines] = useState<MachineOption[]>([])
   const [machineId, setMachineId] = useState('')
@@ -110,11 +112,11 @@ export default function PMScheduleForm() {
           )}
         </div>
         <div>
-          <Label>Tipe PM <span className="text-red-500">*</span></Label>
-          <Select value={pmType} onValueChange={(v) => setPmType((v ?? '') as PMType)} items={Object.fromEntries(PM_TYPES.map(t => [t, PM_TYPE_LABELS[t]]))}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih frekuensi" /></SelectTrigger>
+          <Label>{t('pm.typeLabel', '保養類型')} <span className="text-red-500">*</span></Label>
+          <Select value={pmType} onValueChange={(v) => setPmType((v ?? '') as PMType)} items={Object.fromEntries(PM_TYPES.map(pt => [pt, t(`pmType.${pt}`, PM_TYPE_LABELS[pt])]))}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder={t('pm.selectFrequency', '選擇頻率')} /></SelectTrigger>
             <SelectContent>
-              {PM_TYPES.map(t => <SelectItem key={t} value={t}>{PM_TYPE_LABELS[t]}</SelectItem>)}
+              {PM_TYPES.map(pt => <SelectItem key={pt} value={pt}>{t(`pmType.${pt}`, PM_TYPE_LABELS[pt])}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

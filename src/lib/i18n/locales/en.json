@@ -117,6 +117,16 @@
     "director": "Plant Director",
     "admin": "System Admin"
   },
+  "profile": {
+    "title": "Profile",
+    "fullName": "Full Name",
+    "factory": "Factory",
+    "selectFactory": "Select factory",
+    "role": "Role",
+    "contactAdmin": "Contact an admin to change your role",
+    "save": "Save",
+    "saved": "Profile saved"
+  },
   "incidents": {
     "title": "Incidents",
     "newIncident": "New Incident",
@@ -300,6 +310,8 @@
       "production_priority": "Production priority",
       "forgot": "Forgotten"
     },
+    "typeLabel": "PM Type",
+    "selectFrequency": "Select frequency",
     "showingTasks": "Showing today + next 7 days · {count} total",
     "trackFrequency": "Track machine maintenance frequency",
     "addMaintenance": "Add Maintenance",
@@ -631,6 +643,21 @@
     "B": "🟠 Line Stopped",
     "C": "🟡 Reduced Capacity",
     "D": "🟢 No Impact"
+  },
+  "machineStatus": {
+    "running": "Running",
+    "repairing": "Repairing",
+    "standby": "Standby",
+    "scrapped": "Scrapped"
+  },
+  "pmType": {
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "half_yearly": "Half-yearly",
+    "yearly": "Yearly",
+    "custom": "Custom (per N days)"
   },
   "nextStepLabel": "Next step",
   "nextStep": {
