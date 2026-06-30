@@ -10,15 +10,17 @@ import {
 } from '@/components/ui/select'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Download, Search, X, ChevronRight, AlertCircle } from 'lucide-react'
+import { Download, Search, X, ChevronRight, AlertCircle, BellRing, Loader2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 import * as XLSX from 'xlsx'
-import type { IncidentStatus } from '@/types'
+import type { IncidentStatus, UserRole } from '@/types'
 import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH_COLOR } from '@/lib/incident-display'
+import { PERMISSIONS } from '@/lib/permissions'
 import { useI18n } from '@/lib/i18n'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
 import { useIncidentTypeLabel } from '@/lib/incident-type-label'
+import { useProgressNudge } from '@/lib/useProgressNudge'
 
 interface Factory { id: string; name: string }
 interface Area { id: string; name: string }
@@ -41,11 +43,14 @@ interface IncidentRow {
 
 interface IncidentSearchProps {
   onResults?: (results: IncidentRow[]) => void
+  userRole?: UserRole
 }
 
-export default function IncidentSearch({ onResults }: IncidentSearchProps) {
+export default function IncidentSearch({ onResults, userRole = 'technician' }: IncidentSearchProps) {
   const { t } = useI18n()
   const supabase = createClient()
+  const canRemind = PERMISSIONS.remindProgress(userRole)
+  const { remindingId, nudge } = useProgressNudge()
   // Issue types from the shared cache; fall back to the 7 built-ins if empty.
   // Labels follow the active app language via the shared resolver.
   const { types: cachedTypes } = useIncidentTypes()
@@ -440,6 +445,22 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
                   {inc.reporter_name ? `${inc.reporter_name} · ` : ''}
                   {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: zhTW })}
                 </p>
+
+                {/* Nudge for progress — supervisors+ only, open cases only */}
+                {canRemind && inc.status !== 'closed' && (
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); nudge(inc.id) }}
+                      disabled={remindingId === inc.id}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition disabled:opacity-50"
+                    >
+                      {remindingId === inc.id
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <BellRing className="w-3 h-3" />}
+                      {t('remind.cardButton', '催進度')}
+                    </button>
+                  </div>
+                )}
               </Link>
             )
           })}

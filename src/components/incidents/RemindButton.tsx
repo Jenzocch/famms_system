@@ -3,39 +3,22 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from 'sonner'
 import { Loader2, BellRing } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { useProgressNudge } from '@/lib/useProgressNudge'
 
 // Supervisor/admin "nudge" button — sends a Telegram progress reminder for this
 // incident, with an optional free-text note. Rendered only when the viewer has
 // the remindProgress permission (the parent page decides that).
 export default function RemindButton({ incidentId }: { incidentId: string }) {
   const { t } = useI18n()
-  const [sending, setSending] = useState(false)
+  const { remindingId, nudge } = useProgressNudge()
   const [note, setNote] = useState('')
+  const sending = remindingId === incidentId
 
   async function remind() {
-    setSending(true)
-    try {
-      const res = await fetch(`/api/incidents/${incidentId}/remind`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note: note.trim() || undefined }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json?.error || t('remind.failed', '催進度發送失敗'))
-      if ((json.sent ?? 0) === 0) {
-        toast.warning(t('remind.noRecipients', '已送出，但目前沒有訂閱的 Telegram 接收者'))
-      } else {
-        toast.success(t('remind.sent', '已透過 Telegram 催進度（{count} 位接收者）').replace('{count}', String(json.sent)))
-      }
-      setNote('')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('remind.failed', '催進度發送失敗'))
-    } finally {
-      setSending(false)
-    }
+    const ok = await nudge(incidentId, note)
+    if (ok) setNote('')
   }
 
   return (

@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { AlertCircle, ChevronRight, UserCheck, Lock, CalendarClock, BellRing, Loader2 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhTW, enUS, id as idLocale } from 'date-fns/locale'
-import { toast } from 'sonner'
 import type { IncidentStatus, UserRole } from '@/types'
 import {
   URGENCY_FROM_IMPACT, STATUS_ZH_COLOR, BOARD_FILTERS,
@@ -13,6 +12,7 @@ import {
 import { PERMISSIONS } from '@/lib/permissions'
 import { useI18n } from '@/lib/i18n'
 import { useIncidentTypeLabel } from '@/lib/incident-type-label'
+import { useProgressNudge } from '@/lib/useProgressNudge'
 
 export interface BoardRow {
   id: string
@@ -41,29 +41,15 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
   const [filter, setFilter] = useState('all')
   const canAssign = PERMISSIONS.assignIncident(userRole)
   const canRemind = PERMISSIONS.remindProgress(userRole)
-  const [remindingId, setRemindingId] = useState<string | null>(null)
+  const { remindingId, nudge } = useProgressNudge()
 
   // Nudge assignees via Telegram straight from the card — no need to open the
   // case. preventDefault/stopPropagation so the click doesn't follow the card's
   // <Link> to the detail page.
-  async function remind(e: React.MouseEvent, id: string) {
+  function remind(e: React.MouseEvent, id: string) {
     e.preventDefault()
     e.stopPropagation()
-    setRemindingId(id)
-    try {
-      const res = await fetch(`/api/incidents/${id}/remind`, { method: 'POST' })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json?.error || t('remind.failed', '催進度發送失敗'))
-      if ((json.sent ?? 0) === 0) {
-        toast.warning(t('remind.noRecipients', '已送出，但目前沒有訂閱的 Telegram 接收者'))
-      } else {
-        toast.success(t('remind.sent', '已透過 Telegram 催進度（{count} 位接收者）').replace('{count}', String(json.sent)))
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('remind.failed', '催進度發送失敗'))
-    } finally {
-      setRemindingId(null)
-    }
+    nudge(id)
   }
 
   const activeFilter = BOARD_FILTERS.find(f => f.key === filter)!

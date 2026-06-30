@@ -56,7 +56,7 @@ export default function IncidentsBoardWithSearch({
       {view === 'search' && (
         <div className="space-y-4">
           <h2 className="text-sm text-gray-600">{t('board.searchSubtitle')}</h2>
-          <IncidentSearch />
+          <IncidentSearch userRole={userRole} />
         </div>
       )}
     </div>
