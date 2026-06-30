@@ -17,6 +17,7 @@ import type { IncidentStatus, UserRole } from '@/types'
 import { STATUS_ZH } from '@/lib/incident-display'
 import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
+import { useI18n } from '@/lib/i18n'
 
 // Statuses a maintenance person can move an incident to (simplified set)
 const SELECTABLE: IncidentStatus[] = [
@@ -33,6 +34,8 @@ export default function ProgressUpdate({
 }) {
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useI18n()
+  const statusLabel = (s: IncidentStatus) => t(`boardStatus.${s}`, STATUS_ZH[s])
   const canClose = PERMISSIONS.closeIncident(userRole)
 
   // Only supervisors+ may move a case to "closed".
@@ -64,10 +67,10 @@ export default function ProgressUpdate({
       }
       setPhotos(prev => [...prev, ...compressed].slice(0, 5))
       if (compressed.length > 0) {
-        toast.success(`壓縮 ${compressed.length} 張圖片完成`)
+        toast.success(t('progressUpdate.compressedToast').replace('{count}', String(compressed.length)))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '圖片壓縮失敗')
+      toast.error(err instanceof Error ? err.message : t('progressUpdate.compressFailed'))
     } finally {
       setCompressing(false)
     }
@@ -76,11 +79,11 @@ export default function ProgressUpdate({
   async function submit() {
     const statusChanged = newStatus !== currentStatus
     if (!note.trim() && !statusChanged) {
-      toast.error('請更新狀態或填寫處理說明')
+      toast.error(t('progressUpdate.needStatusOrNote'))
       return
     }
     if (newStatus === 'closed' && !canClose) {
-      toast.error('只有主管可以結案')
+      toast.error(t('progressUpdate.onlySupervisorClose'))
       return
     }
     setSubmitting(true)
@@ -107,9 +110,9 @@ export default function ProgressUpdate({
         const json = await res.json().catch(() => ({}))
         if (!res.ok) {
           if (json?.rca_required) {
-            throw new Error(`需先完成 RCA 才能結案（同故障在90天內已發生 ${json.occurrence_count ?? '≥3'} 次）`)
+            throw new Error(t('progressUpdate.rcaRequired').replace('{count}', String(json.occurrence_count ?? '≥3')))
           }
-          throw new Error(json?.error || '結案失敗')
+          throw new Error(json?.error || t('progressUpdate.closeFailed'))
         }
       }
 
@@ -150,12 +153,12 @@ export default function ProgressUpdate({
         })
       }
 
-      toast.success('進度已更新')
+      toast.success(t('progressUpdate.updated'))
       setNote('')
       setPhotos([])
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '更新失敗')
+      toast.error(err instanceof Error ? err.message : t('progressUpdate.updateFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -163,43 +166,43 @@ export default function ProgressUpdate({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
-      <h3 className="font-semibold text-gray-900">更新處理進度</h3>
+      <h3 className="font-semibold text-gray-900">{t('progressUpdate.heading')}</h3>
 
       <div>
-        <Label>更新人員</Label>
+        <Label>{t('progressUpdate.updater')}</Label>
         <Input
           value={updaterName}
           onChange={e => setUpdaterName(e.target.value)}
-          placeholder="維修人員姓名"
+          placeholder={t('progressUpdate.updaterPlaceholder')}
           className="mt-1"
         />
       </div>
 
       <div>
-        <Label>新狀態</Label>
-        <Select value={newStatus} onValueChange={(v) => setNewStatus(v ?? currentStatus)} items={Object.fromEntries(selectableStatuses.map(s => [s, STATUS_ZH[s]]))}>
+        <Label>{t('progressUpdate.newStatus')}</Label>
+        <Select value={newStatus} onValueChange={(v) => setNewStatus(v ?? currentStatus)} items={Object.fromEntries(selectableStatuses.map(s => [s, statusLabel(s)]))}>
           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
           <SelectContent>
             {selectableStatuses.map(s => (
-              <SelectItem key={s} value={s}>{STATUS_ZH[s]}</SelectItem>
+              <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
       <div>
-        <Label>處理說明</Label>
+        <Label>{t('progressUpdate.note')}</Label>
         <Textarea
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="說明處理內容、發現的問題、更換的零件..."
+          placeholder={t('progressUpdate.notePlaceholder')}
           className="mt-1"
           rows={3}
         />
       </div>
 
       <div>
-        <Label>照片（最多 5 張，自動壓縮）</Label>
+        <Label>{t('progressUpdate.photos')}</Label>
         <div className="mt-1 space-y-2">
           {photos.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -233,7 +236,7 @@ export default function ProgressUpdate({
             }`}>
               <Camera className="w-5 h-5 text-gray-400" />
               <span className="text-sm text-gray-500">
-                {compressing ? '壓縮中...' : '新增照片'}
+                {compressing ? t('progressUpdate.compressing') : t('progressUpdate.addPhoto')}
               </span>
               <input
                 type="file"
@@ -248,7 +251,9 @@ export default function ProgressUpdate({
           )}
           {photos.length > 0 && (
             <p className="text-xs text-gray-400">
-              共 {photos.length} 張（{(photos.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(1)} MB）
+              {t('progressUpdate.photoCount')
+                .replace('{count}', String(photos.length))
+                .replace('{mb}', (photos.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(1))}
             </p>
           )}
         </div>
@@ -256,7 +261,7 @@ export default function ProgressUpdate({
 
       <Button onClick={submit} disabled={submitting} className="w-full h-11">
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-        送出更新
+        {t('progressUpdate.submit')}
       </Button>
     </div>
   )

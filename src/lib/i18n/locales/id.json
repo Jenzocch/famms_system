@@ -185,7 +185,26 @@
     "status": "Status Baru",
     "estimatedCompletion": "Estimasi Selesai",
     "update": "Perbarui",
-    "updateNote": "Catatan Perbaruan"
+    "updateNote": "Catatan Perbaruan",
+    "heading": "Perbarui kemajuan",
+    "updater": "Diperbarui oleh",
+    "updaterPlaceholder": "Nama petugas",
+    "newStatus": "Status baru",
+    "note": "Catatan penanganan",
+    "notePlaceholder": "Jelaskan penanganan, temuan, spare yang diganti...",
+    "photos": "Foto (maks 5, auto-kompres)",
+    "compressing": "Mengompres...",
+    "addPhoto": "Tambah foto",
+    "submit": "Kirim pembaruan",
+    "photoCount": "{count} foto ({mb} MB)",
+    "compressedToast": "{count} foto dikompres",
+    "compressFailed": "Kompresi gambar gagal",
+    "needStatusOrNote": "Perbarui status atau isi catatan penanganan",
+    "onlySupervisorClose": "Hanya supervisor yang bisa menutup kasus",
+    "rcaRequired": "RCA harus diselesaikan sebelum menutup (kerusakan sama terjadi {count} kali dalam 90 hari)",
+    "closeFailed": "Gagal menutup",
+    "updated": "Kemajuan diperbarui",
+    "updateFailed": "Gagal memperbarui"
   },
   "pm": {
     "manageTitle": "Manajemen PM",
@@ -642,5 +661,24 @@
     "observation": "Menunggu Konfirmasi",
     "closed": "Selesai"
   },
-  "appName": "Perawatan Pabrik"
+  "appName": "Perawatan Pabrik",
+  "caseEdit": {
+    "edit": "Edit kasus",
+    "delete": "Hapus",
+    "onlySupervisorDelete": "Hanya supervisor yang bisa menghapus kasus",
+    "confirmDelete": "Hapus kasus ini? Tindakan ini tidak bisa dibatalkan dan semua catatan penanganan ikut terhapus.",
+    "deleted": "Kasus dihapus",
+    "deleteFailed": "Gagal menghapus",
+    "title": "Judul",
+    "titleRequired": "Judul tidak boleh kosong",
+    "issueType": "Jenis masalah",
+    "urgency": "Urgensi",
+    "dueDate": "Tenggat",
+    "applyByUrgency": "Terapkan dari urgensi",
+    "description": "Deskripsi",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "updated": "Kasus diperbarui",
+    "updateFailed": "Gagal memperbarui"
+  }
 }

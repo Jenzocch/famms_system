@@ -185,7 +185,26 @@
     "status": "新状态",
     "estimatedCompletion": "预计完成",
     "update": "更新",
-    "updateNote": "更新备注"
+    "updateNote": "更新备注",
+    "heading": "更新處理進度",
+    "updater": "更新人員",
+    "updaterPlaceholder": "維修人員姓名",
+    "newStatus": "新狀態",
+    "note": "處理說明",
+    "notePlaceholder": "說明處理內容、發現的問題、更換的零件...",
+    "photos": "照片（最多 5 張，自動壓縮）",
+    "compressing": "壓縮中...",
+    "addPhoto": "新增照片",
+    "submit": "送出更新",
+    "photoCount": "共 {count} 張（{mb} MB）",
+    "compressedToast": "壓縮 {count} 張圖片完成",
+    "compressFailed": "圖片壓縮失敗",
+    "needStatusOrNote": "請更新狀態或填寫處理說明",
+    "onlySupervisorClose": "只有主管可以結案",
+    "rcaRequired": "需先完成 RCA 才能結案（同故障在 90 天內已發生 {count} 次）",
+    "closeFailed": "結案失敗",
+    "updated": "進度已更新",
+    "updateFailed": "更新失敗"
   },
   "pm": {
     "manageTitle": "保養管理",
@@ -642,5 +661,24 @@
     "observation": "待現場確認",
     "closed": "已結案"
   },
-  "appName": "工廠維修系統"
+  "appName": "工廠維修系統",
+  "caseEdit": {
+    "edit": "編輯案件",
+    "delete": "刪除",
+    "onlySupervisorDelete": "只有主管可以刪除案件",
+    "confirmDelete": "確認刪除此案件？此動作無法復原，所有處理紀錄也會一併刪除。",
+    "deleted": "案件已刪除",
+    "deleteFailed": "刪除失敗",
+    "title": "標題",
+    "titleRequired": "標題不可空白",
+    "issueType": "問題類型",
+    "urgency": "緊急度",
+    "dueDate": "截止日",
+    "applyByUrgency": "依緊急套用",
+    "description": "問題描述",
+    "save": "儲存",
+    "cancel": "取消",
+    "updated": "案件已更新",
+    "updateFailed": "更新失敗"
+  }
 }

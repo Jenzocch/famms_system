@@ -18,6 +18,7 @@ import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
 import { useIncidentTypeLabel } from '@/lib/incident-type-label'
+import { useI18n } from '@/lib/i18n'
 
 // Fallback types used if the incident_types table is empty
 const FALLBACK_ISSUE_TYPES = [
@@ -57,6 +58,7 @@ export default function IncidentActions({
   const canDelete = PERMISSIONS.deleteIncident(userRole)
   const router = useRouter()
   const supabase = createClient()
+  const { t: tr } = useI18n()
 
   const [editing, setEditing] = useState(false)
   const [t, setT] = useState(title || '')
@@ -76,7 +78,7 @@ export default function IncidentActions({
     : FALLBACK_ISSUE_TYPES
 
   async function saveEdit() {
-    if (!t.trim()) { toast.error('標題不可空白'); return }
+    if (!t.trim()) { toast.error(tr('caseEdit.titleRequired')); return }
     setSubmitting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -105,18 +107,18 @@ export default function IncidentActions({
         factoryId: factoryId ?? undefined,
       })
 
-      toast.success('案件已更新')
+      toast.success(tr('caseEdit.updated'))
       setEditing(false)
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '更新失敗')
+      toast.error(err instanceof Error ? err.message : tr('caseEdit.updateFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
   async function remove() {
-    if (!confirm('確認刪除此案件？此動作無法復原，所有處理紀錄也會一併刪除。')) return
+    if (!confirm(tr('caseEdit.confirmDelete'))) return
     setDeleting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -133,11 +135,11 @@ export default function IncidentActions({
       })
       const { error } = await supabase.from('incidents').delete().eq('id', incidentId)
       if (error) throw error
-      toast.success('案件已刪除')
+      toast.success(tr('caseEdit.deleted'))
       router.push('/incidents')
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '刪除失敗')
+      toast.error(err instanceof Error ? err.message : tr('caseEdit.deleteFailed'))
       setDeleting(false)
     }
   }
@@ -150,17 +152,17 @@ export default function IncidentActions({
           onClick={() => setEditing(true)}
           className="flex-1 gap-2"
         >
-          <Pencil className="w-4 h-4" /> 編輯案件
+          <Pencil className="w-4 h-4" /> {tr('caseEdit.edit')}
         </Button>
         <Button
           variant="outline"
           onClick={remove}
           disabled={deleting || !canDelete}
           className="gap-2 text-red-600"
-          title={!canDelete ? '只有主管可以刪除案件' : ''}
+          title={!canDelete ? tr('caseEdit.onlySupervisorDelete') : ''}
         >
           {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-          刪除
+          {tr('caseEdit.delete')}
         </Button>
       </div>
     )
@@ -168,10 +170,10 @@ export default function IncidentActions({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-      <h3 className="font-semibold text-gray-900">編輯案件</h3>
+      <h3 className="font-semibold text-gray-900">{tr('caseEdit.edit')}</h3>
 
       <div>
-        <Label>標題</Label>
+        <Label>{tr('caseEdit.title')}</Label>
         <Input value={t} onChange={e => setT(e.target.value)} className="mt-1" />
       </div>
 
@@ -179,7 +181,7 @@ export default function IncidentActions({
         <>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label>問題類型</Label>
+              <Label>{tr('caseEdit.issueType')}</Label>
               <Select value={type} onValueChange={(v) => setType(v ?? type)} items={Object.fromEntries(issueTypes.map(it => [it.value, it.label]))}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -188,11 +190,11 @@ export default function IncidentActions({
               </Select>
             </div>
             <div>
-              <Label>緊急度</Label>
-              <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(URGENCY.map(u => [u.value, u.label]))}>
+              <Label>{tr('caseEdit.urgency')}</Label>
+              <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(URGENCY.map(u => [u.value, tr(`urgency.${u.value}`, u.label)]))}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {URGENCY.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
+                  {URGENCY.map(u => <SelectItem key={u.value} value={u.value}>{tr(`urgency.${u.value}`, u.label)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -200,13 +202,13 @@ export default function IncidentActions({
 
           <div>
             <div className="flex items-center justify-between gap-2">
-              <Label>截止日</Label>
+              <Label>{tr('caseEdit.dueDate')}</Label>
               <button
                 type="button"
                 onClick={() => setDue(deadlineFromUrgency(urg))}
                 className="text-xs font-medium text-blue-600 hover:text-blue-700"
               >
-                依緊急套用
+                {tr('caseEdit.applyByUrgency')}
               </button>
             </div>
             <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" />
@@ -215,16 +217,16 @@ export default function IncidentActions({
       )}
 
       <div>
-        <Label>問題描述</Label>
+        <Label>{tr('caseEdit.description')}</Label>
         <Textarea value={d} onChange={e => setD(e.target.value)} rows={3} className="mt-1" />
       </div>
 
       <div className="flex gap-2">
         <Button onClick={saveEdit} disabled={submitting}>
           {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          儲存
+          {tr('caseEdit.save')}
         </Button>
-        <Button variant="outline" onClick={() => setEditing(false)}>取消</Button>
+        <Button variant="outline" onClick={() => setEditing(false)}>{tr('caseEdit.cancel')}</Button>
       </div>
     </div>
   )

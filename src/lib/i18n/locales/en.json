@@ -186,7 +186,26 @@
     "status": "New Status",
     "estimatedCompletion": "Estimated Completion",
     "update": "Update",
-    "updateNote": "Update Note"
+    "updateNote": "Update Note",
+    "heading": "Update progress",
+    "updater": "Updated by",
+    "updaterPlaceholder": "Maintenance staff name",
+    "newStatus": "New status",
+    "note": "Work notes",
+    "notePlaceholder": "Describe the work done, findings, parts replaced...",
+    "photos": "Photos (max 5, auto-compressed)",
+    "compressing": "Compressing...",
+    "addPhoto": "Add photo",
+    "submit": "Submit update",
+    "photoCount": "{count} photos ({mb} MB)",
+    "compressedToast": "Compressed {count} photo(s)",
+    "compressFailed": "Image compression failed",
+    "needStatusOrNote": "Update the status or add a note",
+    "onlySupervisorClose": "Only supervisors can close a case",
+    "rcaRequired": "RCA must be completed before closing (same failure occurred {count} times in 90 days)",
+    "closeFailed": "Close failed",
+    "updated": "Progress updated",
+    "updateFailed": "Update failed"
   },
   "pm": {
     "manageTitle": "PM Management",
@@ -643,5 +662,24 @@
     "observation": "Awaiting Confirmation",
     "closed": "Closed"
   },
-  "appName": "Factory Maintenance"
+  "appName": "Factory Maintenance",
+  "caseEdit": {
+    "edit": "Edit case",
+    "delete": "Delete",
+    "onlySupervisorDelete": "Only supervisors can delete a case",
+    "confirmDelete": "Delete this case? This cannot be undone and all progress records will be removed too.",
+    "deleted": "Case deleted",
+    "deleteFailed": "Delete failed",
+    "title": "Title",
+    "titleRequired": "Title cannot be empty",
+    "issueType": "Issue type",
+    "urgency": "Urgency",
+    "dueDate": "Due date",
+    "applyByUrgency": "Apply by urgency",
+    "description": "Description",
+    "save": "Save",
+    "cancel": "Cancel",
+    "updated": "Case updated",
+    "updateFailed": "Update failed"
+  }
 }
