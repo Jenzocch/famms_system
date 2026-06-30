@@ -148,19 +148,9 @@ export default function IncidentActions({
         <Button
           variant="outline"
           onClick={() => setEditing(true)}
-          disabled={!canEdit}
           className="flex-1 gap-2"
-          title={!canEdit ? '只有主管可以編輯案件' : ''}
         >
-          {canEdit ? (
-            <>
-              <Pencil className="w-4 h-4" /> 編輯案件
-            </>
-          ) : (
-            <>
-              <Lock className="w-4 h-4" /> 編輯案件
-            </>
-          )}
+          <Pencil className="w-4 h-4" /> 編輯案件
         </Button>
         <Button
           variant="outline"
@@ -185,40 +175,44 @@ export default function IncidentActions({
         <Input value={t} onChange={e => setT(e.target.value)} className="mt-1" />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>問題類型</Label>
-          <Select value={type} onValueChange={(v) => setType(v ?? type)} items={Object.fromEntries(issueTypes.map(it => [it.value, it.label]))}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {issueTypes.map(it => <SelectItem key={it.value} value={it.value}>{it.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>緊急度</Label>
-          <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(URGENCY.map(u => [u.value, u.label]))}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {URGENCY.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {canEdit && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>問題類型</Label>
+              <Select value={type} onValueChange={(v) => setType(v ?? type)} items={Object.fromEntries(issueTypes.map(it => [it.value, it.label]))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {issueTypes.map(it => <SelectItem key={it.value} value={it.value}>{it.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>緊急度</Label>
+              <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(URGENCY.map(u => [u.value, u.label]))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {URGENCY.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      <div>
-        <div className="flex items-center justify-between gap-2">
-          <Label>截止日</Label>
-          <button
-            type="button"
-            onClick={() => setDue(deadlineFromUrgency(urg))}
-            className="text-xs font-medium text-blue-600 hover:text-blue-700"
-          >
-            依緊急套用
-          </button>
-        </div>
-        <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" />
-      </div>
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <Label>截止日</Label>
+              <button
+                type="button"
+                onClick={() => setDue(deadlineFromUrgency(urg))}
+                className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                依緊急套用
+              </button>
+            </div>
+            <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" />
+          </div>
+        </>
+      )}
 
       <div>
         <Label>問題描述</Label>

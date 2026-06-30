@@ -64,7 +64,8 @@
     "fillRequired": "請填寫工廠、標題和問題描述",
     "specifyType": "請說明問題類型",
     "submitFailed": "送出失敗",
-    "compressFailed": "圖片壓縮失敗"
+    "compressFailed": "圖片壓縮失敗",
+    "locationOther": "其他位置（自行填寫，選填）"
   },
   "common": {
     "save": "保存",
@@ -487,7 +488,13 @@
     "activate": "啟用",
     "pmSectionTitle": "保養計畫",
     "pmSectionDesc": "新增定期保養排程",
-    "pwdResetHint": "🔒 為安全考量，系統不會顯示原密碼。要修改直接輸入新密碼即可；留空則維持不變。"
+    "pwdResetHint": "🔒 為安全考量，系統不會顯示原密碼。要修改直接輸入新密碼即可；留空則維持不變。",
+    "namePwdRequired": "登入名稱與密碼必填",
+    "loginName": "登入名稱",
+    "loginNamePlaceholder": "例如：teknisi1",
+    "loginNameHint": "使用者用這個名稱登入（英文或數字），由你設定。",
+    "loginNameShort": "登入",
+    "userFallback": "使用者"
   },
   "telegram": {
     "configured": "Telegram Bot 已設定（TELEGRAM_BOT_TOKEN 已啟用）。",
@@ -634,5 +641,6 @@
     "testing": "測試中",
     "observation": "待現場確認",
     "closed": "已結案"
-  }
+  },
+  "appName": "工廠維修系統"
 }

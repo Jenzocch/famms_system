@@ -33,18 +33,21 @@ export default function TopBar({ profile }: TopBarProps) {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 h-12 max-w-lg mx-auto">
-        <div className="flex items-center gap-2 text-blue-600 font-bold">
-          <Wrench className="w-4 h-4" />
-          <span className="text-sm">工廠維修系統</span>
+        <div className="flex items-center gap-2 text-blue-600 font-bold min-w-0">
+          <Wrench className="w-4 h-4 shrink-0" />
+          <span className="text-sm truncate">{t('appName', '工廠維修系統')}</span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
         <LanguageSwitcher />
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+          <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none max-w-[40vw]">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
               <span className="text-xs font-semibold text-blue-700">{initials}</span>
             </div>
+            <span className="text-sm font-medium text-gray-700 truncate">
+              {profile?.full_name || t('settings.userFallback', '使用者')}
+            </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <div className="px-3 py-2">

@@ -102,6 +102,7 @@ export default async function IncidentDetailPage({
           <p>
             📍 {factory?.name || '?'}
             {machine ? ` · ${machine.machine_code ? `[${machine.machine_code}] ` : ''}${machine.machine_name}` : ''}
+            {incident.location_note ? ` · ${incident.location_note}` : ''}
           </p>
           {incident.reporter_name && (
             <p className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {incident.reporter_name}</p>

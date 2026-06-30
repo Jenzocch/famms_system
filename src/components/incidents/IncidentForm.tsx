@@ -63,6 +63,7 @@ export default function IncidentForm() {
   const [factoryId, setFactoryId] = useState('')
   const [areaId, setAreaId] = useState('')
   const [assetId, setAssetId] = useState('')
+  const [locationNote, setLocationNote] = useState('')
   const [issueType, setIssueType] = useState('machine')
   const [customType, setCustomType] = useState('')
   const [urgency, setUrgency] = useState('medium')
@@ -160,6 +161,7 @@ export default function IncidentForm() {
           factory_id: factoryId,
           incident_type: incidentType,
           machine_id: assetId || null,
+          location_note: locationNote.trim() || null,
           incident_no,
           title,
           description,
@@ -296,23 +298,23 @@ export default function IncidentForm() {
         )}
       </div>
 
-      {/* Urgency */}
+      {/* Urgency — compact single row (4 levels) */}
       <div>
         <Label>{t('report.urgency')} <span className="text-red-500">*</span></Label>
-        <div className="grid grid-cols-2 gap-2 mt-1">
+        <div className="grid grid-cols-4 gap-1.5 mt-1">
           {URGENCY.map(u => (
             <button
               key={u.value}
               type="button"
               onClick={() => setUrgency(u.value)}
-              className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+              title={t(u.descKey)}
+              className={`rounded-lg border px-1 py-1.5 text-xs font-medium text-center transition-colors ${
                 urgency === u.value
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 bg-white text-gray-700'
               }`}
             >
-              <span className="font-medium">{t(u.labelKey)}</span>
-              <span className="block text-xs text-gray-500">{t(u.descKey)}</span>
+              {t(u.labelKey)}
             </button>
           ))}
         </div>
@@ -367,6 +369,14 @@ export default function IncidentForm() {
             </SelectContent>
           </Select>
         )}
+
+        {/* Free-text "other" location — for spots not in the lists above */}
+        <Input
+          value={locationNote}
+          onChange={e => setLocationNote(e.target.value)}
+          placeholder={t('report.locationOther', '其他位置（自行填寫，選填）')}
+          className="mt-1"
+        />
       </div>
 
       {/* Title */}

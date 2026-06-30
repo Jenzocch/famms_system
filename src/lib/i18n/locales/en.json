@@ -64,7 +64,8 @@
     "fillRequired": "Please fill in factory, title and description",
     "specifyType": "Please specify the issue type",
     "submitFailed": "Submit failed",
-    "compressFailed": "Image compression failed"
+    "compressFailed": "Image compression failed",
+    "locationOther": "Other location (type it yourself, optional)"
   },
   "common": {
     "save": "Save",
@@ -488,7 +489,13 @@
     "activate": "Activate",
     "pmSectionTitle": "PM Schedules",
     "pmSectionDesc": "Add preventive maintenance plans",
-    "pwdResetHint": "🔒 For security the current password cannot be shown. Type a new one to change it, or leave blank to keep it."
+    "pwdResetHint": "🔒 For security the current password cannot be shown. Type a new one to change it, or leave blank to keep it.",
+    "namePwdRequired": "Login name and password are required",
+    "loginName": "Login name",
+    "loginNamePlaceholder": "e.g. teknisi1",
+    "loginNameHint": "The user signs in with this name (letters/numbers), set by you.",
+    "loginNameShort": "Login",
+    "userFallback": "User"
   },
   "telegram": {
     "configured": "Telegram bot configured (TELEGRAM_BOT_TOKEN active).",
@@ -635,5 +642,6 @@
     "testing": "Testing",
     "observation": "Awaiting Confirmation",
     "closed": "Closed"
-  }
+  },
+  "appName": "Factory Maintenance"
 }

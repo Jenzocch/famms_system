@@ -64,7 +64,8 @@
     "fillRequired": "Harap isi pabrik, judul dan deskripsi",
     "specifyType": "Harap jelaskan jenis masalah",
     "submitFailed": "Gagal mengirim",
-    "compressFailed": "Kompresi gambar gagal"
+    "compressFailed": "Kompresi gambar gagal",
+    "locationOther": "Lokasi lain (isi sendiri, opsional)"
   },
   "common": {
     "save": "Simpan",
@@ -487,7 +488,13 @@
     "activate": "Aktifkan",
     "pmSectionTitle": "Jadwal PM",
     "pmSectionDesc": "Tambah rencana pemeliharaan preventif",
-    "pwdResetHint": "🔒 Demi keamanan, kata sandi lama tidak dapat ditampilkan. Ketik yang baru untuk mengubah, atau kosongkan untuk tetap."
+    "pwdResetHint": "🔒 Demi keamanan, kata sandi lama tidak dapat ditampilkan. Ketik yang baru untuk mengubah, atau kosongkan untuk tetap.",
+    "namePwdRequired": "Nama login dan kata sandi wajib diisi",
+    "loginName": "Nama login",
+    "loginNamePlaceholder": "mis. teknisi1",
+    "loginNameHint": "Pengguna masuk dengan nama ini (huruf/angka), Anda yang menentukan.",
+    "loginNameShort": "Login",
+    "userFallback": "Pengguna"
   },
   "telegram": {
     "configured": "Bot Telegram terkonfigurasi (TELEGRAM_BOT_TOKEN aktif).",
@@ -634,5 +641,6 @@
     "testing": "Pengujian",
     "observation": "Menunggu Konfirmasi",
     "closed": "Selesai"
-  }
+  },
+  "appName": "Perawatan Pabrik"
 }
