@@ -111,6 +111,8 @@ export default async function DashboardPage() {
     })
   }
 
+  // "Urgent" = Critical (A). New cases only use A/C/D; 'B' (legacy "High") is
+  // kept here so any older B-coded cases still surface as urgent.
   const urgent = open.filter(r => r.downtime_impact === 'A' || r.downtime_impact === 'B')
   const now = Date.now()
   const stale = open.filter(r => now - new Date(r.updated_at).getTime() > 3 * 86400000)

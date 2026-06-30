@@ -7,7 +7,7 @@
     "cases": "{count} kasus",
     "openByFactory": "Kasus aktif per pabrik",
     "noOpen": "Tidak ada kasus aktif",
-    "urgentCases": "Kasus mendesak (A/B)",
+    "urgentCases": "Kasus mendesak",
     "noUrgent": "Tidak ada kasus mendesak",
     "staleCases": "Kasus tertunda (tidak diperbarui 3+ hari)",
     "noStale": "Tidak ada kasus tertunda",

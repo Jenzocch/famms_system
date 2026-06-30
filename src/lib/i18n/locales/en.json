@@ -7,7 +7,7 @@
     "cases": "{count} cases",
     "openByFactory": "Open cases by factory",
     "noOpen": "No open cases",
-    "urgentCases": "Urgent cases (A/B)",
+    "urgentCases": "Urgent cases",
     "noUrgent": "No urgent cases",
     "staleCases": "Stale cases (no update in 3+ days)",
     "noStale": "No stale cases",

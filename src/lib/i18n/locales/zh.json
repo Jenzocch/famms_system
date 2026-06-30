@@ -7,7 +7,7 @@
     "cases": "{count} 件",
     "openByFactory": "各廠處理中案件",
     "noOpen": "目前沒有處理中案件",
-    "urgentCases": "緊急案件（A/B 級）",
+    "urgentCases": "緊急案件",
     "noUrgent": "沒有緊急案件",
     "staleCases": "停滯案件（逾 3 天未更新）",
     "noStale": "沒有停滯案件",
