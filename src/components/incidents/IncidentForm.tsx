@@ -155,22 +155,28 @@ export default function IncidentForm() {
       const seq = String((count ?? 0) + 1).padStart(3, '0')
       const incident_no = `FIT-${ym}-${seq}`
 
+      const insertPayload: Record<string, unknown> = {
+        factory_id: factoryId,
+        incident_type: incidentType,
+        machine_id: assetId || null,
+        incident_no,
+        title,
+        description,
+        reporter_name: reporterName || null,
+        downtime_impact: impactCode,
+        due_date: computedDueDate,
+        status: 'reported',
+        reported_by_id: user?.id ?? null,
+      }
+      // Only send location_note when actually filled, so reporting still works
+      // on databases where migration_incident_location_note.sql hasn't run yet
+      // (an unknown column would otherwise fail the whole insert).
+      const trimmedLocation = locationNote.trim()
+      if (trimmedLocation) insertPayload.location_note = trimmedLocation
+
       const { data: incident, error } = await supabase
         .from('incidents')
-        .insert({
-          factory_id: factoryId,
-          incident_type: incidentType,
-          machine_id: assetId || null,
-          location_note: locationNote.trim() || null,
-          incident_no,
-          title,
-          description,
-          reporter_name: reporterName || null,
-          downtime_impact: impactCode,
-          due_date: computedDueDate,
-          status: 'reported',
-          reported_by_id: user?.id ?? null,
-        })
+        .insert(insertPayload)
         .select('*')
         .single()
 
