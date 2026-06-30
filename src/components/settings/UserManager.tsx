@@ -25,7 +25,11 @@ interface ManagedUser {
   created_at: string
 }
 
-const ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
+// Manager / director were removed from the assignable set — only technician,
+// supervisor (the single elevated operational role) and admin remain. Legacy
+// accounts that still carry manager/director keep working (label maps below
+// still cover them); they just can't be picked for new/edited users.
+const ROLES: UserRole[] = ['technician', 'supervisor', 'admin']
 
 // Sentinel for "not bound to a single factory" (cross-factory). Base UI Select
 // can't use an empty-string value, so we map this <-> null factory_id.
@@ -50,7 +54,6 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
 
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<UserRole>('technician')
@@ -79,7 +82,6 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
 
   function startAdd() {
     setEditingId(null)
-    setEmail('')
     setPassword('')
     setFullName('')
     setRole('technician')
@@ -89,7 +91,6 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
 
   function startEdit(u: ManagedUser) {
     setEditingId(u.id)
-    setEmail(u.email)
     setPassword('')
     setFullName(u.full_name)
     setRole(u.role)
@@ -104,8 +105,8 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
   }
 
   async function submit() {
-    if (!editingId && (!email.trim() || !password)) {
-      toast.error(t('settings.emailPwdRequired'))
+    if (!editingId && (!fullName.trim() || !password)) {
+      toast.error(t('settings.namePwdRequired'))
       return
     }
     setSubmitting(true)
@@ -129,7 +130,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email, password, full_name: fullName, role, factory_id: factoryId || null,
+            password, full_name: fullName, role, factory_id: factoryId || null,
           }),
         })
         const json = await res.json()
@@ -194,16 +195,16 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
           </p>
 
           <div>
-            <Label>{t('settings.emailLabel')}</Label>
+            <Label>{t('settings.loginName')}</Label>
             <Input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="user@company.com"
-              disabled={!!editingId}
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder={t('settings.loginNamePlaceholder')}
+              autoCapitalize="none"
+              autoCorrect="off"
               className="mt-1"
             />
-            {editingId && <p className="text-xs text-gray-400 mt-1">{t('settings.emailImmutable')}</p>}
+            <p className="text-xs text-gray-400 mt-1">{t('settings.loginNameHint')}</p>
           </div>
 
           <div>
@@ -218,16 +219,9 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
               placeholder={editingId ? t('settings.pwdKeepPlaceholder') : t('settings.pwdMinPlaceholder')}
               className="mt-1 font-mono"
             />
-          </div>
-
-          <div>
-            <Label>{t('settings.fullName')}</Label>
-            <Input
-              value={fullName}
-              onChange={e => setFullName(e.target.value)}
-              placeholder={t('settings.fullNamePlaceholder')}
-              className="mt-1"
-            />
+            {editingId && (
+              <p className="text-xs text-gray-400 mt-1">{t('settings.pwdResetHint')}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -286,7 +280,9 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
                     <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500">{t('settings.deactivated')}</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                <p className="text-xs text-gray-500 truncate">
+                  {t('settings.loginNameShort')}: {u.email.endsWith('@famms.local') ? u.email.split('@')[0] : u.email}
+                </p>
                 <p className="text-xs text-gray-400">{factoryName(u.factory_id)}</p>
               </div>
               <div className="flex gap-1 shrink-0">

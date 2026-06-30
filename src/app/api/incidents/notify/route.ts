@@ -42,10 +42,21 @@ export async function POST(req: Request) {
   const factory = incident.factory as unknown as { name: string } | null
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+  // Resolve the type label (covers admin-added types). The message is in zh,
+  // so prefer the Chinese label; fall back to the built-in map, then the code.
+  // select('*') keeps this working before the i18n columns migration is run.
+  let typeLabel = ISSUE_TYPE_LABELS[incident.incident_type] || incident.incident_type
+  const { data: typeRow } = await supabase
+    .from('incident_types')
+    .select('*')
+    .eq('code', incident.incident_type)
+    .maybeSingle()
+  if (typeRow) typeLabel = (typeRow as any).label_zh || (typeRow as any).label || typeLabel
+
   const html = [
     `<b>🆕 新報修案件</b>`,
     `<b>編號:</b> ${incident.incident_no}`,
-    `<b>類型:</b> ${ISSUE_TYPE_LABELS[incident.incident_type] || incident.incident_type}`,
+    `<b>類型:</b> ${typeLabel}`,
     `<b>緊急度:</b> ${URGENCY_LABELS[incident.downtime_impact] || incident.downtime_impact}`,
     incident.title ? `<b>標題:</b> ${incident.title}` : '',
     `<b>位置:</b> ${factory?.name || '?'}${machine ? ` · ${machine.machine_name}` : ''}`,

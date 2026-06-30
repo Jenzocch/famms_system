@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { accountNameToEmail, isValidLoginName } from '@/lib/login-name'
 import type { UserRole } from '@/types'
 
 const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
@@ -36,6 +37,16 @@ export async function PATCH(
       return NextResponse.json({ error: '密碼至少 6 碼' }, { status: 400 })
     }
     const { error } = await admin.auth.admin.updateUserById(id, { password: body.password })
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  // The login name IS the full name, so keep the synthetic auth email in sync
+  // when the name changes (otherwise the login name would drift from display).
+  if (body.full_name !== undefined && body.full_name.trim()) {
+    if (!isValidLoginName(body.full_name)) {
+      return NextResponse.json({ error: '登入名稱請使用英文或數字' }, { status: 400 })
+    }
+    const { error } = await admin.auth.admin.updateUserById(id, { email: accountNameToEmail(body.full_name) })
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 

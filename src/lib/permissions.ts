@@ -24,7 +24,9 @@ export const PERMISSIONS = {
   reportIncident: (_role: UserRole) => true,
   boardFull: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   acceptIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
-  assignIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
+  // Anyone can assign / reassign — technicians often self-organize who handles a
+  // case (add a colleague, hand it over) without waiting for a supervisor.
+  assignIncident: (_role: UserRole) => true,
   closeIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   editIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   deleteIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),

@@ -8,11 +8,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Edit2 } from 'lucide-react'
+import { Loader2, Plus, Trash2, Edit2, Users, Check, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import type { UserRole } from '@/types'
+import { ROLE_ZH } from '@/lib/incident-display'
 
 interface Factory { id: string; name: string }
 interface Area { id: string; factory_id: string; name: string }
+interface Account { id: string; full_name: string | null; role: UserRole; factory_id: string | null }
 interface Machine {
   id: string
   machine_name: string
@@ -26,6 +29,8 @@ interface PMSchedule {
   interval_days: number | null
   description: string | null
   is_active: boolean
+  assigned_user_ids: string[]
+  assigned_to: string | null
   machine_name?: string
   machine_code?: string | null
 }
@@ -58,6 +63,7 @@ export default function PMScheduleManager() {
   const [factories, setFactories] = useState<Factory[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [machines, setMachines] = useState<Machine[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [schedules, setSchedules] = useState<PMSchedule[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -67,6 +73,7 @@ export default function PMScheduleManager() {
   const [pmType, setPmType] = useState('monthly')
   const [intervalDays, setIntervalDays] = useState('')
   const [description, setDescription] = useState('')
+  const [assignees, setAssignees] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -77,8 +84,18 @@ export default function PMScheduleManager() {
       if (data && data.length > 0) setFactoryId(data[0].id)
       setLoading(false)
     })
+    supabase.from('profiles').select('id, full_name, role, factory_id').eq('is_active', true).order('full_name')
+      .then(({ data }) => setAccounts((data ?? []) as Account[]))
     loadSchedules()
   }, [])
+
+  const accountName = (a: Account) => a.full_name || `(${ROLE_ZH[a.role] ?? a.role})`
+  const toggleAssignee = (id: string) =>
+    setAssignees(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  // Technicians in the selected schedule's factory (cross-factory accounts also qualify).
+  const factoryTechnicians = accounts.filter(
+    a => a.role === 'technician' && (!factoryId || !a.factory_id || a.factory_id === factoryId)
+  )
 
   useEffect(() => {
     if (!factoryId) { setAreas([]); setAreaId(''); return }
@@ -100,6 +117,7 @@ export default function PMScheduleManager() {
       .from('pm_schedules')
       .select(`
         id, machine_id, pm_type, interval_days, description, is_active,
+        assigned_user_ids, assigned_to,
         machines:machines(machine_name, machine_code)
       `)
       .eq('is_active', true)
@@ -113,6 +131,8 @@ export default function PMScheduleManager() {
         interval_days: s.interval_days ?? null,
         description: s.description,
         is_active: s.is_active,
+        assigned_user_ids: s.assigned_user_ids ?? [],
+        assigned_to: s.assigned_to ?? null,
         machine_name: s.machines?.machine_name || '',
         machine_code: s.machines?.machine_code || null,
       }))
@@ -133,12 +153,22 @@ export default function PMScheduleManager() {
     }
     const intervalValue = pmType === 'custom' ? days : null
 
+    // Display summary of assigned people (account names), kept in sync with ids.
+    const assignedTo = assignees
+      .map(id => accounts.find(a => a.id === id))
+      .filter(Boolean)
+      .map(a => accountName(a as Account))
+      .join(', ') || null
+
     setSubmitting(true)
     try {
       if (editingId) {
         const { error } = await supabase
           .from('pm_schedules')
-          .update({ pm_type: pmType, interval_days: intervalValue, description: description || null })
+          .update({
+            pm_type: pmType, interval_days: intervalValue, description: description || null,
+            assigned_user_ids: assignees, assigned_to: assignedTo,
+          })
           .eq('id', editingId)
         if (error) throw error
         toast.success(t('pm.scheduleUpdated'))
@@ -150,6 +180,8 @@ export default function PMScheduleManager() {
             pm_type: pmType,
             interval_days: intervalValue,
             description: description || null,
+            assigned_user_ids: assignees,
+            assigned_to: assignedTo,
             is_active: true,
           })
         if (error) throw error
@@ -159,6 +191,7 @@ export default function PMScheduleManager() {
       setPmType('monthly')
       setIntervalDays('')
       setDescription('')
+      setAssignees([])
       setShowForm(false)
       setEditingId(null)
       loadSchedules()
@@ -197,7 +230,14 @@ export default function PMScheduleManager() {
   return (
     <div className="space-y-4">
       {!showForm && (
-        <Button onClick={() => setShowForm(true)} className="gap-2 w-full">
+        <Button
+          onClick={() => {
+            setEditingId(null); setMachineId(''); setPmType('monthly')
+            setIntervalDays(''); setDescription(''); setAssignees([])
+            setShowForm(true)
+          }}
+          className="gap-2 w-full"
+        >
           <Plus className="w-4 h-4" /> {t('pm.addSchedulePlan')}
         </Button>
       )}
@@ -275,12 +315,61 @@ export default function PMScheduleManager() {
             />
           </div>
 
+          {/* Responsible person(s) — who this maintenance is assigned to */}
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <Label>{t('pm.responsible', '負責人（可多選）')}</Label>
+              <div className="flex items-center gap-3">
+                {factoryTechnicians.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAssignees(prev => Array.from(new Set([...prev, ...factoryTechnicians.map(a => a.id)])))}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    <Users className="w-3.5 h-3.5" /> {t('assign.allTechnicians', '指派給全部技師')} ({factoryTechnicians.length})
+                  </button>
+                )}
+                {assignees.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAssignees([])}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-600"
+                  >
+                    <X className="w-3.5 h-3.5" /> {t('assign.clearAll', '取消全部')}
+                  </button>
+                )}
+              </div>
+            </div>
+            {accounts.length === 0 ? (
+              <p className="text-xs text-gray-400 mt-1">{t('assign.noAccounts', '尚無可指派的帳號')}</p>
+            ) : (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {accounts.map(a => {
+                  const on = assignees.includes(a.id)
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => toggleAssignee(a.id)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                        on ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      {on && <Check className="w-3 h-3" />}
+                      {accountName(a)}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-2">
             <Button onClick={submit} disabled={submitting || !machineId}>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingId ? t('pm.updatePlan') : t('pm.createPlan')}
             </Button>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null) }}>{t('pm.cancelBtn')}</Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); setAssignees([]) }}>{t('pm.cancelBtn')}</Button>
           </div>
         </div>
       )}
@@ -299,6 +388,11 @@ export default function PMScheduleManager() {
                   {pmTypeLabel(s.pm_type, s.interval_days)}
                   {s.description && ` · ${s.description}`}
                 </p>
+                {s.assigned_to && (
+                  <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                    <Users className="w-3 h-3 shrink-0" /> {s.assigned_to}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button
@@ -310,6 +404,7 @@ export default function PMScheduleManager() {
                     setPmType(s.pm_type)
                     setIntervalDays(s.interval_days ? String(s.interval_days) : '')
                     setDescription(s.description || '')
+                    setAssignees(s.assigned_user_ids ?? [])
                     setShowForm(true)
                   }}
                 >

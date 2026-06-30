@@ -50,6 +50,17 @@ export default function AssignForm({
       .then(({ data }) => setAccounts((data ?? []) as Account[]))
   }, [])
 
+  // Re-sync the editable fields to the saved assignment whenever the incident's
+  // stored value changes (e.g. after a save + router.refresh, or if the parent
+  // reuses this component for another case). Keeps "add / swap assignee" edits
+  // reflecting the real DB state instead of going stale.
+  useEffect(() => {
+    setSelectedIds(assignedUserIds ?? [])
+    setDept(assignedDept || '')
+    setDue(dueDate || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidentId, (assignedUserIds ?? []).join(','), assignedDept, dueDate])
+
   // Technicians in this incident's factory (cross-factory accounts always
   // qualify). Used by the "assign all technicians" shortcut.
   const factoryTechnicians = accounts.filter(

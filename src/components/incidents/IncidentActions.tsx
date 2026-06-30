@@ -10,6 +10,9 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Loader2, Pencil, Trash2, Lock } from 'lucide-react'
 import type { UserRole } from '@/types'
@@ -17,6 +20,8 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
+import { useI18n } from '@/lib/i18n'
 
 // Fallback types used if the incident_types table is empty
 const FALLBACK_ISSUE_TYPES = [
@@ -29,12 +34,14 @@ const FALLBACK_ISSUE_TYPES = [
   { value: 'other', label: '其他' },
 ]
 
+// Three urgency levels (A / C / D). Legacy "B" (High) is added back only when
+// editing a case that already carries it, so it still displays and saves.
 const URGENCY = [
   { value: 'A', label: '🔴 緊急' },
-  { value: 'B', label: '🟠 高' },
   { value: 'C', label: '🟡 中' },
   { value: 'D', label: '🟢 低' },
 ]
+const URGENCY_LEGACY = { value: 'B', label: '🟠 高' }
 
 interface IncidentActionsProps {
   incidentId: string
@@ -56,8 +63,10 @@ export default function IncidentActions({
   const canDelete = PERMISSIONS.deleteIncident(userRole)
   const router = useRouter()
   const supabase = createClient()
+  const { t: tr } = useI18n()
 
   const [editing, setEditing] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [t, setT] = useState(title || '')
   const [d, setD] = useState(description || '')
   const [type, setType] = useState(incidentType)
@@ -67,13 +76,15 @@ export default function IncidentActions({
   const [deleting, setDeleting] = useState(false)
 
   // Issue types from the shared cache; fall back to built-ins if empty.
+  // Labels follow the active app language.
   const { types: cachedTypes } = useIncidentTypes()
+  const typeLabel = useIncidentTypeLabel()
   const issueTypes = cachedTypes.length > 0
-    ? cachedTypes.map(t => ({ value: t.code, label: t.label }))
+    ? cachedTypes.map(t => ({ value: t.code, label: typeLabel(t.code) }))
     : FALLBACK_ISSUE_TYPES
 
   async function saveEdit() {
-    if (!t.trim()) { toast.error('標題不可空白'); return }
+    if (!t.trim()) { toast.error(tr('caseEdit.titleRequired')); return }
     setSubmitting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -102,18 +113,17 @@ export default function IncidentActions({
         factoryId: factoryId ?? undefined,
       })
 
-      toast.success('案件已更新')
+      toast.success(tr('caseEdit.updated'))
       setEditing(false)
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '更新失敗')
+      toast.error(err instanceof Error ? err.message : tr('caseEdit.updateFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
-  async function remove() {
-    if (!confirm('確認刪除此案件？此動作無法復原，所有處理紀錄也會一併刪除。')) return
+  async function confirmDelete() {
     setDeleting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -130,12 +140,14 @@ export default function IncidentActions({
       })
       const { error } = await supabase.from('incidents').delete().eq('id', incidentId)
       if (error) throw error
-      toast.success('案件已刪除')
+      toast.success(tr('caseEdit.deleted'))
+      setShowDeleteConfirm(false)
       router.push('/incidents')
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '刪除失敗')
+      toast.error(err instanceof Error ? err.message : tr('caseEdit.deleteFailed'))
       setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -145,89 +157,116 @@ export default function IncidentActions({
         <Button
           variant="outline"
           onClick={() => setEditing(true)}
-          disabled={!canEdit}
           className="flex-1 gap-2"
-          title={!canEdit ? '只有主管可以編輯案件' : ''}
         >
-          {canEdit ? (
-            <>
-              <Pencil className="w-4 h-4" /> 編輯案件
-            </>
-          ) : (
-            <>
-              <Lock className="w-4 h-4" /> 編輯案件
-            </>
-          )}
+          <Pencil className="w-4 h-4" /> {tr('caseEdit.edit')}
         </Button>
         <Button
           variant="outline"
-          onClick={remove}
-          disabled={deleting || !canDelete}
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={!canDelete}
           className="gap-2 text-red-600"
-          title={!canDelete ? '只有主管可以刪除案件' : ''}
+          title={!canDelete ? tr('caseEdit.onlySupervisorDelete') : ''}
         >
-          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-          刪除
+          {canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+          {tr('caseEdit.delete')}
         </Button>
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-red-600">{tr('caseEdit.delete')}</DialogTitle>
+              <DialogDescription>{tr('caseEdit.confirmDelete')}</DialogDescription>
+            </DialogHeader>
+            {title && <p className="text-sm text-gray-600 px-6">{title}</p>}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                {tr('common.cancel')}
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {tr('caseEdit.delete')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-      <h3 className="font-semibold text-gray-900">編輯案件</h3>
+      <h3 className="font-semibold text-gray-900">{tr('caseEdit.edit')}</h3>
 
       <div>
-        <Label>標題</Label>
+        <Label>{tr('caseEdit.title')}</Label>
         <Input value={t} onChange={e => setT(e.target.value)} className="mt-1" />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>問題類型</Label>
-          <Select value={type} onValueChange={(v) => setType(v ?? type)} items={Object.fromEntries(issueTypes.map(it => [it.value, it.label]))}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {issueTypes.map(it => <SelectItem key={it.value} value={it.value}>{it.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>緊急度</Label>
-          <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(URGENCY.map(u => [u.value, u.label]))}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {URGENCY.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {canEdit && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>{tr('caseEdit.issueType')}</Label>
+              <Select value={type} onValueChange={(v) => setType(v ?? type)} items={Object.fromEntries(issueTypes.map(it => [it.value, it.label]))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {issueTypes.map(it => <SelectItem key={it.value} value={it.value}>{it.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{tr('caseEdit.urgency')}</Label>
+              {(() => {
+                const choices = URGENCY.some(u => u.value === urg) ? URGENCY : [...URGENCY, URGENCY_LEGACY]
+                return (
+                  <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(choices.map(u => [u.value, tr(`urgency.${u.value}`, u.label)]))}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {choices.map(u => <SelectItem key={u.value} value={u.value}>{tr(`urgency.${u.value}`, u.label)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )
+              })()}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <Label>{tr('caseEdit.dueDate')}</Label>
+              <button
+                type="button"
+                onClick={() => setDue(deadlineFromUrgency(urg))}
+                className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                {tr('caseEdit.applyByUrgency')}
+              </button>
+            </div>
+            <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" />
+          </div>
+        </>
+      )}
 
       <div>
-        <div className="flex items-center justify-between gap-2">
-          <Label>截止日</Label>
-          <button
-            type="button"
-            onClick={() => setDue(deadlineFromUrgency(urg))}
-            className="text-xs font-medium text-blue-600 hover:text-blue-700"
-          >
-            依緊急套用
-          </button>
-        </div>
-        <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" />
-      </div>
-
-      <div>
-        <Label>問題描述</Label>
+        <Label>{tr('caseEdit.description')}</Label>
         <Textarea value={d} onChange={e => setD(e.target.value)} rows={3} className="mt-1" />
       </div>
 
       <div className="flex gap-2">
         <Button onClick={saveEdit} disabled={submitting}>
           {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          儲存
+          {tr('caseEdit.save')}
         </Button>
-        <Button variant="outline" onClick={() => setEditing(false)}>取消</Button>
+        <Button variant="outline" onClick={() => setEditing(false)}>{tr('caseEdit.cancel')}</Button>
       </div>
     </div>
   )

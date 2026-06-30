@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     // Active schedules for this factory (optionally filtered by machine)
     let scheduleQuery = supabase
       .from('pm_schedules')
-      .select('id, machine_id, pm_type, interval_days, description, created_at')
+      .select('id, machine_id, pm_type, interval_days, description, created_at, assigned_user_ids, assigned_to')
       .eq('factory_id', factoryId)
       .eq('is_active', true)
     if (machineId) scheduleQuery = scheduleQuery.eq('machine_id', machineId)
@@ -128,6 +128,8 @@ export async function GET(req: Request) {
           status,
           cost: r.cost,
           delay_reason: r.delay_reason,
+          assigned_user_ids: schedule.assigned_user_ids ?? [],
+          assigned_to: schedule.assigned_to ?? null,
         })
       }
 
@@ -158,6 +160,8 @@ export async function GET(req: Request) {
             status,
             cost: null,
             delay_reason: null,
+            assigned_user_ids: (s as any).assigned_user_ids ?? [],
+            assigned_to: (s as any).assigned_to ?? null,
           })
         }
       }

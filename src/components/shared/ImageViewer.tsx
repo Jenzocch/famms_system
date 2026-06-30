@@ -4,6 +4,7 @@ import { PhotoProvider, PhotoView } from 'react-photo-view'
 import 'react-photo-view/dist/react-photo-view.css'
 import Image from 'next/image'
 import { Download, ZoomIn } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 interface Props {
   paths: string[]
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function ImageViewer({ paths, supabaseUrl, bucket = 'incident-photos' }: Props) {
+  const { t } = useI18n()
   if (!paths || paths.length === 0) return null
 
   function getUrl(path: string) {
@@ -25,7 +27,7 @@ export default function ImageViewer({ paths, supabaseUrl, bucket = 'incident-pho
           <button
             onClick={() => onScale(scale - 0.5)}
             className="hover:opacity-70 transition-opacity text-lg font-bold"
-            title="縮小"
+            title={t('incidentDetail.zoomOut')}
           >
             −
           </button>
@@ -33,7 +35,7 @@ export default function ImageViewer({ paths, supabaseUrl, bucket = 'incident-pho
           <button
             onClick={() => onScale(scale + 0.5)}
             className="hover:opacity-70 transition-opacity text-lg font-bold"
-            title="放大"
+            title={t('incidentDetail.zoomIn')}
           >
             +
           </button>
@@ -42,7 +44,7 @@ export default function ImageViewer({ paths, supabaseUrl, bucket = 'incident-pho
             href={(imgs as { src?: string }[])[index]?.src}
             download={`photo-${index + 1}.jpg`}
             className="hover:opacity-70 transition-opacity"
-            title="下載原圖"
+            title={t('incidentDetail.download')}
           >
             <Download className="w-5 h-5" />
           </a>
@@ -54,7 +56,7 @@ export default function ImageViewer({ paths, supabaseUrl, bucket = 'incident-pho
     >
       <div className="space-y-2">
         <p className="text-xs text-gray-400">
-          點擊圖片放大查看（{paths.length} 張照片）
+          {t('incidentDetail.photoHint').replace('{count}', String(paths.length))}
         </p>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
           {paths.map((path, i) => (
@@ -64,6 +66,7 @@ export default function ImageViewer({ paths, supabaseUrl, bucket = 'incident-pho
                   src={getUrl(path)}
                   alt={`Photo ${i + 1}`}
                   fill
+                  unoptimized
                   className="object-cover group-hover:scale-110 transition-transform duration-300"
                   sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 20vw"
                 />

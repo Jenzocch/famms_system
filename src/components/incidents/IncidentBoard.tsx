@@ -4,13 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { AlertCircle, ChevronRight, UserCheck, Lock, CalendarClock } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
-import { zhTW } from 'date-fns/locale'
+import { zhTW, enUS, id as idLocale } from 'date-fns/locale'
 import type { IncidentStatus, UserRole } from '@/types'
 import {
   URGENCY_FROM_IMPACT, STATUS_ZH_COLOR, BOARD_FILTERS,
 } from '@/lib/incident-display'
 import { PERMISSIONS } from '@/lib/permissions'
 import { useI18n } from '@/lib/i18n'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 export interface BoardRow {
   id: string
@@ -33,7 +34,9 @@ interface IncidentBoardProps {
 }
 
 export default function IncidentBoard({ rows, userRole = 'technician' }: IncidentBoardProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const dateLocale = locale === 'en' ? enUS : locale === 'id' ? idLocale : zhTW
+  const typeLabel = useIncidentTypeLabel()
   const [filter, setFilter] = useState('all')
   const canAssign = PERMISSIONS.assignIncident(userRole)
 
@@ -93,7 +96,7 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
           <p className="text-sm">{t('board.noIncidents')}</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {sorted.map(inc => {
             const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact]
             const overdue = isOverdue(inc)
@@ -101,7 +104,7 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
               <Link
                 key={inc.id}
                 href={`/incidents/${inc.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-3 active:bg-gray-50"
+                className="block bg-white rounded-xl border border-gray-300 shadow-sm p-3.5 hover:shadow-md hover:border-gray-400 active:bg-gray-50 transition-shadow"
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_ZH_COLOR[inc.status]}`}>
@@ -119,26 +122,26 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
                       {overdue ? ` ${t('board.overdue', '逾期')}` : ''}
                     </span>
                   )}
-                  <span className="text-xs text-gray-400 font-mono ml-auto">{inc.incident_no}</span>
+                  <span className="text-xs text-gray-500 font-mono ml-auto">{inc.incident_no}</span>
                 </div>
 
-                <p className="font-medium text-gray-900 mt-2 line-clamp-1">
-                  {inc.title || t(`issueTypes.${inc.incident_type}`, t('board.problem')) }
+                <p className="font-semibold text-base text-gray-900 mt-2 line-clamp-1">
+                  {inc.title || typeLabel(inc.incident_type, t('board.problem')) }
                 </p>
 
                 <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-500 truncate">
-                    {t(`issueTypes.${inc.incident_type}`, inc.incident_type)}
+                  <p className="text-sm text-gray-700 truncate">
+                    {typeLabel(inc.incident_type)}
                     {inc.factory ? ` · ${inc.factory.name}` : ''}
                     {inc.machine ? ` · ${inc.machine.machine_name}` : ''}
                   </p>
-                  <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                 </div>
 
                 <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-600">
                     {inc.reporter_name ? `${inc.reporter_name} · ` : ''}
-                    {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: zhTW })}
+                    {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: dateLocale })}
                   </p>
                   {inc.status !== 'closed' && (
                     inc.assigned_to ? (

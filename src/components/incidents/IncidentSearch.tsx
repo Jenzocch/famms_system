@@ -18,6 +18,7 @@ import type { IncidentStatus } from '@/types'
 import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH_COLOR } from '@/lib/incident-display'
 import { useI18n } from '@/lib/i18n'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 interface Factory { id: string; name: string }
 interface Area { id: string; name: string }
@@ -46,15 +47,14 @@ export default function IncidentSearch({ onResults }: IncidentSearchProps) {
   const { t } = useI18n()
   const supabase = createClient()
   // Issue types from the shared cache; fall back to the 7 built-ins if empty.
+  // Labels follow the active app language via the shared resolver.
   const { types: cachedTypes } = useIncidentTypes()
+  const typeLabel = useIncidentTypeLabel()
   const issueTypes: IssueType[] = cachedTypes.length > 0
-    ? cachedTypes.map(it => ({ code: it.code, label: it.label }))
+    ? cachedTypes.map(it => ({ code: it.code, label: typeLabel(it.code) }))
     : Object.keys(ISSUE_TYPE_LABELS).map(code => ({ code, label: ISSUE_TYPE_LABELS[code] }))
-  // Built-in codes stay translatable via i18n; admin-added types (where the
-  // entered text is stored as both code and label) display their label as-is.
-  const dbLabels: Record<string, string> = Object.fromEntries(issueTypes.map(it => [it.code, it.label]))
   const typeLabelOf = (key: string, fallback?: string) =>
-    t(`issueTypes.${key}`, dbLabels[key] ?? fallback ?? key ?? t('board.unknown'))
+    typeLabel(key, fallback ?? t('board.unknown'))
   const statusLabelOf = (key: string) => t(`boardStatus.${key}`, key)
 
   const [factories, setFactories] = useState<Factory[]>([])

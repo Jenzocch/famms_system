@@ -17,6 +17,7 @@ import { useI18n } from '@/lib/i18n'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 interface Factory { id: string; name: string; code: string }
 interface Area { id: string; factory_id: string; name: string }
@@ -35,9 +36,10 @@ const DEFAULT_ISSUE_TYPES: IssueType[] = [
   { value: 'other', label: '📋 其他' },
 ]
 
+// Three urgency levels (mapped to impact codes A / C / D). "High" (B) is
+// retired from the picker but still renders for any legacy incident that has it.
 const URGENCY = [
   { value: 'critical', labelKey: 'report.urgencyCritical', descKey: 'report.urgencyCriticalDesc' },
-  { value: 'high', labelKey: 'report.urgencyHigh', descKey: 'report.urgencyHighDesc' },
   { value: 'medium', labelKey: 'report.urgencyMedium', descKey: 'report.urgencyMediumDesc' },
   { value: 'low', labelKey: 'report.urgencyLow', descKey: 'report.urgencyLowDesc' },
 ]
@@ -53,13 +55,16 @@ export default function IncidentForm() {
   const [accounts, setAccounts] = useState<Account[]>([])
 
   const { types: cachedTypes } = useIncidentTypes()
-  // Use shared cache when populated; otherwise the built-in defaults.
+  const typeLabel = useIncidentTypeLabel()
+  // Use shared cache when populated; otherwise the built-in defaults. Labels
+  // follow the active app language.
   const issueTypes: IssueType[] = cachedTypes.length > 0
-    ? cachedTypes.map(t => ({ value: t.code, label: t.label }))
+    ? cachedTypes.map(t => ({ value: t.code, label: typeLabel(t.code) }))
     : DEFAULT_ISSUE_TYPES
   const [factoryId, setFactoryId] = useState('')
   const [areaId, setAreaId] = useState('')
   const [assetId, setAssetId] = useState('')
+  const [locationNote, setLocationNote] = useState('')
   const [issueType, setIssueType] = useState('machine')
   const [customType, setCustomType] = useState('')
   const [urgency, setUrgency] = useState('medium')
@@ -105,16 +110,26 @@ export default function IncidentForm() {
       const compressed: File[] = []
       for (const file of files) {
         if (!file.type.startsWith('image/')) continue
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 2000,
-          useWebWorker: true,
+        try {
+          const options = {
+            maxSizeMB: 0.8,
+            maxWidthOrHeight: 1280,
+            useWebWorker: true,
+          }
+          const compressedFile = await imageCompression(file, options)
+          compressed.push(compressedFile)
+        } catch (fileErr) {
+          // Skip individual files that fail compression (e.g., very large images on low-end devices)
+          console.warn('Failed to compress individual file:', file.name, fileErr)
         }
-        const compressedFile = await imageCompression(file, options)
-        compressed.push(compressedFile)
       }
-      setPhotos(prev => [...prev, ...compressed].slice(0, 5))
-      toast.success(`壓縮完成（節省 ${Math.round(files.reduce((s, f) => s + f.size, 0) / 1024 / 1024)}MB）`)
+      if (compressed.length > 0) {
+        setPhotos(prev => [...prev, ...compressed].slice(0, 5))
+        toast.success(t('report.compressedToast', `壓縮 ${compressed.length} 張完成`))
+      }
+      if (compressed.length < files.length) {
+        toast.warning(`${files.length - compressed.length} ${t('report.compressSkipped', 'file(s) could not be compressed (too large for device)')}`)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('report.compressFailed'))
     } finally {
@@ -135,7 +150,7 @@ export default function IncidentForm() {
     const incidentType = issueType === 'other' ? customType.trim() : issueType
 
     // Deadline = manual pick if given, else auto-derived from urgency (SLA).
-    const impactCode = urgency === 'critical' ? 'A' : urgency === 'high' ? 'B' : urgency === 'medium' ? 'C' : 'D'
+    const impactCode = urgency === 'critical' ? 'A' : urgency === 'medium' ? 'C' : 'D'
     const computedDueDate = dueDate || deadlineFromUrgency(impactCode)
 
     setSubmitting(true)
@@ -151,21 +166,28 @@ export default function IncidentForm() {
       const seq = String((count ?? 0) + 1).padStart(3, '0')
       const incident_no = `FIT-${ym}-${seq}`
 
+      const insertPayload: Record<string, unknown> = {
+        factory_id: factoryId,
+        incident_type: incidentType,
+        machine_id: assetId || null,
+        incident_no,
+        title,
+        description,
+        reporter_name: reporterName || null,
+        downtime_impact: impactCode,
+        due_date: computedDueDate,
+        status: 'reported',
+        reported_by_id: user?.id ?? null,
+      }
+      // Only send location_note when actually filled, so reporting still works
+      // on databases where migration_incident_location_note.sql hasn't run yet
+      // (an unknown column would otherwise fail the whole insert).
+      const trimmedLocation = locationNote.trim()
+      if (trimmedLocation) insertPayload.location_note = trimmedLocation
+
       const { data: incident, error } = await supabase
         .from('incidents')
-        .insert({
-          factory_id: factoryId,
-          incident_type: incidentType,
-          machine_id: assetId || null,
-          incident_no,
-          title,
-          description,
-          reporter_name: reporterName || null,
-          downtime_impact: impactCode,
-          due_date: computedDueDate,
-          status: 'reported',
-          reported_by_id: user?.id ?? null,
-        })
+        .insert(insertPayload)
         .select('*')
         .single()
 
@@ -222,15 +244,20 @@ export default function IncidentForm() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 lg:space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">{t('report.title')}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t('report.subtitle')}</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('report.title')}</h1>
+        <p className="text-base text-gray-500 mt-1">{t('report.subtitle')}</p>
       </div>
 
+      {/* Two-column on desktop so the form uses the horizontal space instead of
+          a single narrow stack; collapses to one column on mobile. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-6 gap-y-5 lg:items-start">
+      {/* ---- Left column ---- */}
+      <div className="space-y-5">
       {/* Reporter — pick a registered account or type a name manually */}
       <div>
-        <Label>{t('report.reporterName')}</Label>
+        <Label className="text-base">{t('report.reporterName')}</Label>
         {accounts.length > 0 && (
           <Select
             value={reporterAccountId}
@@ -266,14 +293,14 @@ export default function IncidentForm() {
 
       {/* Issue Type */}
       <div>
-        <Label>{t('report.issueType')} <span className="text-red-500">*</span></Label>
+        <Label className="text-base">{t('report.issueType')} <span className="text-red-500">*</span></Label>
         <div className="grid grid-cols-2 gap-2 mt-1">
           {issueTypes.map(t => (
             <button
               key={t.value}
               type="button"
               onClick={() => setIssueType(t.value)}
-              className={`text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`text-left rounded-lg border px-3 py-2.5 text-base font-medium transition-colors ${
                 issueType === t.value
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 bg-white text-gray-700'
@@ -293,23 +320,23 @@ export default function IncidentForm() {
         )}
       </div>
 
-      {/* Urgency */}
+      {/* Urgency — compact single row (4 levels) */}
       <div>
-        <Label>{t('report.urgency')} <span className="text-red-500">*</span></Label>
-        <div className="grid grid-cols-2 gap-2 mt-1">
+        <Label className="text-base">{t('report.urgency')} <span className="text-red-500">*</span></Label>
+        <div className="grid grid-cols-3 gap-1.5 mt-1">
           {URGENCY.map(u => (
             <button
               key={u.value}
               type="button"
               onClick={() => setUrgency(u.value)}
-              className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+              title={t(u.descKey)}
+              className={`rounded-lg border px-1 py-2 text-sm font-medium text-center transition-colors ${
                 urgency === u.value
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 bg-white text-gray-700'
               }`}
             >
-              <span className="font-medium">{t(u.labelKey)}</span>
-              <span className="block text-xs text-gray-500">{t(u.descKey)}</span>
+              {t(u.labelKey)}
             </button>
           ))}
         </div>
@@ -317,7 +344,7 @@ export default function IncidentForm() {
 
       {/* Deadline (optional — auto-derived from urgency if left empty) */}
       <div>
-        <Label>{t('report.dueDate', '截止日')}</Label>
+        <Label className="text-base">{t('report.dueDate', '截止日')}</Label>
         <Input
           type="date"
           value={dueDate}
@@ -328,10 +355,13 @@ export default function IncidentForm() {
           {t('report.dueDateHint', '留空則依緊急程度自動計算（緊急=當天、高=1天、中=3天、低=7天）')}
         </p>
       </div>
+      </div>
+      {/* ---- Right column ---- */}
+      <div className="space-y-5">
 
-      {/* Location */}
+      {/* Location (required) */}
       <div className="space-y-3">
-        <Label>{t('report.location')}</Label>
+        <Label className="text-base">{t('report.location')} <span className="text-red-500">*</span></Label>
         <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')} items={Object.fromEntries(factories.map(f => [f.id, f.name]))}>
           <SelectTrigger><SelectValue placeholder={t('report.selectFactory')} /></SelectTrigger>
           <SelectContent>
@@ -364,11 +394,19 @@ export default function IncidentForm() {
             </SelectContent>
           </Select>
         )}
+
+        {/* Free-text "other" location — for spots not in the lists above */}
+        <Input
+          value={locationNote}
+          onChange={e => setLocationNote(e.target.value)}
+          placeholder={t('report.locationOther', '其他位置（自行填寫，選填）')}
+          className="mt-1"
+        />
       </div>
 
       {/* Title */}
       <div>
-        <Label>{t('report.problemTitle')} <span className="text-red-500">*</span></Label>
+        <Label className="text-base">{t('report.problemTitle')} <span className="text-red-500">*</span></Label>
         <Input
           value={title}
           onChange={e => setTitle(e.target.value)}
@@ -379,7 +417,7 @@ export default function IncidentForm() {
 
       {/* Description */}
       <div>
-        <Label>{t('report.problemDesc')} <span className="text-red-500">*</span></Label>
+        <Label className="text-base">{t('report.problemDesc')} <span className="text-red-500">*</span></Label>
         <Textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
@@ -388,10 +426,13 @@ export default function IncidentForm() {
           rows={4}
         />
       </div>
+      </div>
+      {/* ---- End two-column grid ---- */}
+      </div>
 
-      {/* Photos */}
+      {/* Photos (full width) */}
       <div>
-        <Label>{t('report.photos')}</Label>
+        <Label className="text-base">{t('report.photos')}</Label>
         <div className="mt-1 space-y-2">
           {photos.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -448,7 +489,11 @@ export default function IncidentForm() {
         </div>
       </div>
 
-      <Button onClick={submit} disabled={submitting} className="w-full h-12 text-base">
+      <Button
+        onClick={submit}
+        disabled={submitting || !factoryId || !title.trim() || !description.trim() || (issueType === 'other' && !customType.trim())}
+        className="w-full h-12 text-base"
+      >
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         {t('report.submit')}
       </Button>

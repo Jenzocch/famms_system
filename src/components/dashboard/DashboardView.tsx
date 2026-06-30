@@ -5,8 +5,9 @@ import { AlertTriangle, Clock, Factory, ChevronRight, CheckCircle2, Wrench } fro
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW, enUS, id as idLocale } from 'date-fns/locale'
 import { IncidentStatus } from '@/types'
-import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR } from '@/lib/incident-display'
+import { URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR } from '@/lib/incident-display'
 import { useI18n } from '@/lib/i18n'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 export interface DashboardRow {
   id: string
@@ -171,6 +172,7 @@ function CaseList({
   t: (key: string, fallback?: string) => string
   dateLocale: Locale
 }) {
+  const typeLabel = useIncidentTypeLabel()
   return (
     <div className="space-y-1.5">
       {rows.map(r => {
@@ -183,7 +185,7 @@ function CaseList({
               <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
             </div>
             <p className="text-sm font-medium text-gray-900 mt-1.5 line-clamp-1">
-              {r.title || t(`issueTypes.${r.incident_type}`, ISSUE_TYPE_LABELS[r.incident_type] || r.incident_type || t('board.problem'))}
+              {r.title || typeLabel(r.incident_type, t('board.problem'))}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
               {r.factory?.name || ''} · {formatDistanceToNow(new Date(r.updated_at), { addSuffix: true, locale: dateLocale })}

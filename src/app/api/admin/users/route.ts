@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { accountNameToEmail, isValidLoginName } from '@/lib/login-name'
 import type { UserRole } from '@/types'
 
 const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
@@ -65,15 +66,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '無效的請求' }, { status: 400 })
   }
 
-  const email = body.email?.trim().toLowerCase()
   const password = body.password ?? ''
   const full_name = body.full_name?.trim() || null
   const role = (body.role ?? 'technician') as UserRole
   const factory_id = body.factory_id || null
 
-  if (!email || !password) {
-    return NextResponse.json({ error: '帳號與密碼必填' }, { status: 400 })
+  // Login name (= the assigned full name) is the credential; the email is a
+  // synthetic value derived from it. An explicit email is still honored if sent.
+  const loginName = body.email?.trim() || full_name || ''
+  if (!loginName || !password) {
+    return NextResponse.json({ error: '登入名稱與密碼必填' }, { status: 400 })
   }
+  if (!isValidLoginName(loginName)) {
+    return NextResponse.json({ error: '登入名稱請使用英文或數字' }, { status: 400 })
+  }
+  const email = accountNameToEmail(loginName)
   if (password.length < 6) {
     return NextResponse.json({ error: '密碼至少 6 碼' }, { status: 400 })
   }
