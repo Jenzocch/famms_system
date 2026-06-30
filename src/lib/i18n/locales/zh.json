@@ -442,6 +442,8 @@
     "editIncidentType": "編輯問題類型",
     "incidentTypeUpdated": "問題類型已更新",
     "incidentTypeNameUnchanged": "名稱未變更",
+    "incidentTypeAtLeastOne": "請至少填寫一種語言",
+    "incidentTypeMultiHint": "只填一種語言也可以，其他語言會自動使用已填寫的內容。",
     "addFailed": "新增失敗",
     "cannotDeleteOther": "「其他」為系統預設類型，無法刪除",
     "cannotEditOther": "「其他」為系統預設類型，無法編輯",

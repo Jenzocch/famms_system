@@ -17,6 +17,7 @@ import { useI18n } from '@/lib/i18n'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 interface Factory { id: string; name: string; code: string }
 interface Area { id: string; factory_id: string; name: string }
@@ -53,9 +54,11 @@ export default function IncidentForm() {
   const [accounts, setAccounts] = useState<Account[]>([])
 
   const { types: cachedTypes } = useIncidentTypes()
-  // Use shared cache when populated; otherwise the built-in defaults.
+  const typeLabel = useIncidentTypeLabel()
+  // Use shared cache when populated; otherwise the built-in defaults. Labels
+  // follow the active app language.
   const issueTypes: IssueType[] = cachedTypes.length > 0
-    ? cachedTypes.map(t => ({ value: t.code, label: t.label }))
+    ? cachedTypes.map(t => ({ value: t.code, label: typeLabel(t.code) }))
     : DEFAULT_ISSUE_TYPES
   const [factoryId, setFactoryId] = useState('')
   const [areaId, setAreaId] = useState('')

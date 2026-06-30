@@ -7,6 +7,11 @@ export interface IncidentType {
   id: string
   code: string
   label: string
+  // Per-language labels (added by migration_incident_type_i18n.sql). May be
+  // null/undefined on older databases; consumers fall back to `label`.
+  label_zh?: string | null
+  label_en?: string | null
+  label_id?: string | null
   sort_order: number
   is_active: boolean
 }
@@ -22,9 +27,11 @@ const listeners = new Set<(types: IncidentType[]) => void>()
 
 async function fetchTypes(): Promise<IncidentType[]> {
   const supabase = createClient()
+  // select('*') so the query still works on databases where the per-language
+  // label columns haven't been added yet (the migration is optional/rolling).
   const { data } = await supabase
     .from('incident_types')
-    .select('id, code, label, sort_order, is_active')
+    .select('*')
     .eq('is_active', true)
     .order('sort_order')
   // De-dupe by code in case legacy duplicate rows still exist.

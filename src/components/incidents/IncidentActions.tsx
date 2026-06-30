@@ -17,6 +17,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 // Fallback types used if the incident_types table is empty
 const FALLBACK_ISSUE_TYPES = [
@@ -67,9 +68,11 @@ export default function IncidentActions({
   const [deleting, setDeleting] = useState(false)
 
   // Issue types from the shared cache; fall back to built-ins if empty.
+  // Labels follow the active app language.
   const { types: cachedTypes } = useIncidentTypes()
+  const typeLabel = useIncidentTypeLabel()
   const issueTypes = cachedTypes.length > 0
-    ? cachedTypes.map(t => ({ value: t.code, label: t.label }))
+    ? cachedTypes.map(t => ({ value: t.code, label: typeLabel(t.code) }))
     : FALLBACK_ISSUE_TYPES
 
   async function saveEdit() {

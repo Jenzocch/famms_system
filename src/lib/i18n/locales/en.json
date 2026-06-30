@@ -443,6 +443,8 @@
     "editIncidentType": "Edit issue type",
     "incidentTypeUpdated": "Issue type updated",
     "incidentTypeNameUnchanged": "Name unchanged",
+    "incidentTypeAtLeastOne": "Fill in at least one language",
+    "incidentTypeMultiHint": "Filling one language is enough; the others reuse it automatically.",
     "addFailed": "Failed to add",
     "cannotDeleteOther": "\"Other\" is a system default type and cannot be deleted",
     "cannotEditOther": "\"Other\" is a system default type and cannot be edited",

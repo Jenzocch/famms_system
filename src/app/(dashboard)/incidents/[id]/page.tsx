@@ -7,9 +7,10 @@ import AssignForm from '@/components/incidents/AssignForm'
 import IncidentActions from '@/components/incidents/IncidentActions'
 import ImageViewer from '@/components/shared/ImageViewer'
 import AuditTrail from '@/components/incidents/AuditTrail'
+import IncidentTypeText from '@/components/incidents/IncidentTypeText'
 import { IncidentStatus } from '@/types'
 import {
-  ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR,
+  URGENCY_FROM_IMPACT, STATUS_ZH, STATUS_ZH_COLOR,
 } from '@/lib/incident-display'
 import { ChevronLeft, Clock, User, UserCheck, CalendarClock } from 'lucide-react'
 import { format } from 'date-fns'
@@ -93,11 +94,11 @@ export default async function IncidentDetailPage({
         </div>
 
         <h1 className="text-lg font-bold text-gray-900 mt-2">
-          {incident.title || ISSUE_TYPE_LABELS[incident.incident_type] || '問題'}
+          {incident.title || <IncidentTypeText code={incident.incident_type} problemFallback />}
         </h1>
 
         <div className="mt-2 space-y-1 text-sm text-gray-600">
-          <p>{ISSUE_TYPE_LABELS[incident.incident_type] || incident.incident_type}</p>
+          <p><IncidentTypeText code={incident.incident_type} /></p>
           <p>
             📍 {factory?.name || '?'}
             {machine ? ` · ${machine.machine_code ? `[${machine.machine_code}] ` : ''}${machine.machine_name}` : ''}

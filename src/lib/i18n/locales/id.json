@@ -442,6 +442,8 @@
     "editIncidentType": "Edit jenis masalah",
     "incidentTypeUpdated": "Jenis masalah diperbarui",
     "incidentTypeNameUnchanged": "Nama tidak berubah",
+    "incidentTypeAtLeastOne": "Isi setidaknya satu bahasa",
+    "incidentTypeMultiHint": "Mengisi satu bahasa saja cukup; bahasa lain otomatis memakainya.",
     "addFailed": "Gagal menambahkan",
     "cannotDeleteOther": "\"Lainnya\" adalah jenis default sistem dan tidak dapat dihapus",
     "cannotEditOther": "\"Lainnya\" adalah jenis default sistem dan tidak dapat diedit",

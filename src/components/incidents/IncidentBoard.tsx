@@ -11,6 +11,7 @@ import {
 } from '@/lib/incident-display'
 import { PERMISSIONS } from '@/lib/permissions'
 import { useI18n } from '@/lib/i18n'
+import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 
 export interface BoardRow {
   id: string
@@ -34,6 +35,7 @@ interface IncidentBoardProps {
 
 export default function IncidentBoard({ rows, userRole = 'technician' }: IncidentBoardProps) {
   const { t } = useI18n()
+  const typeLabel = useIncidentTypeLabel()
   const [filter, setFilter] = useState('all')
   const canAssign = PERMISSIONS.assignIncident(userRole)
 
@@ -123,12 +125,12 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
                 </div>
 
                 <p className="font-medium text-gray-900 mt-2 line-clamp-1">
-                  {inc.title || t(`issueTypes.${inc.incident_type}`, t('board.problem')) }
+                  {inc.title || typeLabel(inc.incident_type, t('board.problem')) }
                 </p>
 
                 <div className="flex items-center justify-between mt-1">
                   <p className="text-xs text-gray-500 truncate">
-                    {t(`issueTypes.${inc.incident_type}`, inc.incident_type)}
+                    {typeLabel(inc.incident_type)}
                     {inc.factory ? ` · ${inc.factory.name}` : ''}
                     {inc.machine ? ` · ${inc.machine.machine_name}` : ''}
                   </p>
