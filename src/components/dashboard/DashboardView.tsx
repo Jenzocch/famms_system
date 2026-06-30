@@ -32,7 +32,8 @@ interface DashboardViewProps {
   openCount: number
   urgentCount: number
   staleCount: number
-  byFactory: [string, number][]
+  // [factory name, open count, factory id (null = unspecified)]
+  byFactory: [string, number, (string | null)?][]
   urgent: DashboardRow[]
   stale: DashboardRow[]
   overdue: OverdueRow[]
@@ -70,12 +71,31 @@ export default function DashboardView({
           <Empty text={t('dash.noOpen')} />
         ) : (
           <div className="space-y-1.5">
-            {byFactory.map(([name, count]) => (
-              <div key={name} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
-                <span className="text-sm font-medium text-gray-700">{name}</span>
-                <span className="text-sm font-bold text-blue-600">{t('dash.cases').replace('{count}', String(count))}</span>
-              </div>
-            ))}
+            {byFactory.map(([name, count, factoryId]) => {
+              const content = (
+                <>
+                  <span className="text-sm font-medium text-gray-700">{name}</span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-sm font-bold text-blue-600">{t('dash.cases').replace('{count}', String(count))}</span>
+                    {factoryId && <ChevronRight className="w-4 h-4 text-gray-300" />}
+                  </span>
+                </>
+              )
+              // Clickable when we know the factory id → jump to a filtered board.
+              return factoryId ? (
+                <Link
+                  key={name}
+                  href={`/incidents?factory=${factoryId}`}
+                  className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5 active:bg-gray-50 hover:border-blue-300 transition-colors"
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div key={name} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
+                  {content}
+                </div>
+              )
+            })}
           </div>
         )}
       </Section>
