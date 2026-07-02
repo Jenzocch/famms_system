@@ -16,6 +16,13 @@ const URGENCY_LABELS: Record<string, string> = {
   A: '🔴 緊急', B: '🟠 高', C: '🟡 中', D: '🟢 低',
 }
 
+// Escape user-supplied text before it goes into Telegram HTML parse mode.
+// Without this, a title/name containing <, >, or & makes Telegram reject the
+// whole message (400), silently dropping the factory-wide alert.
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 // POST /api/incidents/notify — send Telegram alert for a new report
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -62,12 +69,12 @@ export async function POST(req: Request) {
 
   const html = [
     `<b>🆕 新報修案件</b>`,
-    `<b>編號:</b> ${incident.incident_no}`,
-    `<b>類型:</b> ${typeLabel}`,
-    `<b>緊急度:</b> ${URGENCY_LABELS[incident.downtime_impact] || incident.downtime_impact}`,
-    incident.title ? `<b>標題:</b> ${incident.title}` : '',
-    `<b>位置:</b> ${factory?.name || '?'}${machine ? ` · ${machine.machine_name}` : ''}`,
-    incident.reporter_name ? `<b>回報人:</b> ${incident.reporter_name}` : '',
+    `<b>編號:</b> ${esc(incident.incident_no)}`,
+    `<b>類型:</b> ${esc(typeLabel)}`,
+    `<b>緊急度:</b> ${URGENCY_LABELS[incident.downtime_impact] || esc(incident.downtime_impact)}`,
+    incident.title ? `<b>標題:</b> ${esc(incident.title)}` : '',
+    `<b>位置:</b> ${esc(factory?.name || '?')}${machine ? ` · ${esc(machine.machine_name)}` : ''}`,
+    incident.reporter_name ? `<b>回報人:</b> ${esc(incident.reporter_name)}` : '',
     `<a href="${appUrl}/incidents/${incident.id}">查看詳情 →</a>`,
   ].filter(Boolean).join('\n')
 
