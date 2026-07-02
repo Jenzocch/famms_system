@@ -1,593 +1,240 @@
 -- ============================================================================
--- RLS — PHASE 2: enforce per-role data access (fine-grained control)
+-- RLS — PHASE 2: per-role row policies (run AFTER migration_rls_phase1.sql)
 -- ============================================================================
--- Problem: Phase 1 allows any authenticated user to read/write ALL data.
--- Phase 2 narrows access by role:
---   * technician: own incidents (reported_by_id OR assigned_user_ids) + own PM assignments
---   * supervisor: factory-wide incidents/PM (can manage team)
---   * manager: factory-wide + can approve PM/incidents
---   * director: factory-wide + RCA override
---   * admin: bypass everything (service_role unaffected)
+-- Phase 1 = any logged-in user can touch everything; anon fully blocked.
+-- Phase 2 tightens the tables that matter, mirroring src/lib/permissions.ts:
 --
--- Non-Data Tables (no RLS): factories, areas, departments, failure_categories,
--- failure_codes, facility_issue_categories (reference data, all roles read)
+--   profiles        read: all logged-in (needed for name joins / assignee pickers)
+--                   update: self (role change blocked!) or admin — closes the
+--                   "technician PATCHes own role to admin via REST" escalation.
+--   incidents       read/update: supervisor+ see all; technician sees only cases
+--                   they reported or are assigned to (matches the board filter).
+--                   insert: everyone (report). delete: supervisor+.
+--   incident_updates / incident_actions / incident_comments /
+--   incident_relations / work_order_blocks
+--                   follow their parent incident's visibility automatically.
+--   pm_schedules    read: everyone (PM calendar). write: supervisor+ backstop
+--                   (app UI further limits schedule management to admin).
+--   audit_logs      insert-only for users; read supervisor+; NO update/delete
+--                   policy at all → audit trail is tamper-proof from clients.
 --
--- Safe to re-run: DROP POLICY IF EXISTS before CREATE.
--- Rollback: Run migration_rls_phase1.sql to revert to Phase 1 (blanket authenticated).
+-- Everything else (machines, areas, factories, failure codes, spare parts,
+-- knowledge base, telegram, pm_records, …) keeps the Phase 1 blanket
+-- "authenticated_all" policy — reference data all roles legitimately need.
+--
+-- PERFORMANCE: helper functions are LANGUAGE sql + STABLE, and every policy
+-- wraps them in (SELECT …) so Postgres evaluates them ONCE per query (initplan)
+-- instead of once per row — page loads stay fast. Child tables join their
+-- parent by primary key. Supporting indexes added at the bottom.
+--
+-- NULL factory_id (cross-factory admin/director accounts and cross-factory
+-- incidents) is respected: Phase 2 scopes by ROLE, not by factory, because the
+-- dashboard's factory-comparison view legitimately reads across factories.
+--
+-- Safe to re-run. Rollback: re-run migration_rls_phase1.sql (restores the
+-- blanket policy), then drop the policies created here if desired.
 -- ============================================================================
 
 -- ============================================================================
--- HELPER FUNCTIONS
+-- HELPER FUNCTIONS (public schema — Supabase does not allow creating in auth.*)
+-- SECURITY DEFINER lets them read profiles without recursive RLS lookups.
 -- ============================================================================
 
--- Get current user's role
 CREATE OR REPLACE FUNCTION public.user_role()
 RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE
-  user_role TEXT;
-BEGIN
-  SELECT role INTO user_role FROM profiles WHERE id = auth.uid();
-  RETURN COALESCE(user_role, 'technician');
-END;
+  SELECT COALESCE((SELECT role FROM profiles WHERE id = auth.uid()), 'technician')
 $$;
 
--- Get current user's factory_id
-CREATE OR REPLACE FUNCTION public.user_factory_id()
-RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE
-  factory_id UUID;
-BEGIN
-  SELECT factory_id INTO factory_id FROM profiles WHERE id = auth.uid();
-  RETURN factory_id;
-END;
-$$;
-
--- Check if current user is admin
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-BEGIN
-  RETURN public.user_role() = 'admin';
-END;
+  SELECT public.user_role() = 'admin'
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_supervisor_up()
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
+$$;
+
+-- Remove Phase 2 v1 leftovers if an earlier attempt partially ran.
+DROP FUNCTION IF EXISTS public.user_factory_id();
+
 -- ============================================================================
--- PROFILES — User can read own profile + admin can read all
+-- PROFILES — read open (name joins everywhere); self-update cannot change role
 -- ============================================================================
 
-DROP POLICY IF EXISTS profiles_own_read ON profiles;
-CREATE POLICY profiles_own_read ON profiles FOR SELECT
-  USING (
-    id = auth.uid()
-    OR public.is_admin()
-  );
+DROP POLICY IF EXISTS authenticated_all ON profiles;
 
-DROP POLICY IF EXISTS profiles_own_update ON profiles;
-CREATE POLICY profiles_own_update ON profiles FOR UPDATE
-  USING (
-    id = auth.uid()
-    OR public.is_admin()
-  )
+DROP POLICY IF EXISTS profiles_read ON profiles;
+CREATE POLICY profiles_read ON profiles FOR SELECT TO authenticated
+  USING (true);
+
+-- WITH CHECK compares the NEW row's role against the CURRENT stored role via
+-- user_role() (SECURITY DEFINER reads the pre-update value) → a user can edit
+-- their own name/settings but CANNOT change their own role. Admin can.
+DROP POLICY IF EXISTS profiles_update ON profiles;
+CREATE POLICY profiles_update ON profiles FOR UPDATE TO authenticated
+  USING (id = (SELECT auth.uid()) OR (SELECT public.is_admin()))
   WITH CHECK (
-    id = auth.uid()
-    OR public.is_admin()
+    (SELECT public.is_admin())
+    OR (id = (SELECT auth.uid()) AND role = (SELECT public.user_role()))
   );
 
--- Admin can insert new profiles (e.g., for tests)
-DROP POLICY IF EXISTS profiles_admin_insert ON profiles;
-CREATE POLICY profiles_admin_insert ON profiles FOR INSERT
-  WITH CHECK (public.is_admin());
+-- Signup inserts go through the on_auth_user_created trigger (SECURITY DEFINER,
+-- table owner → bypasses RLS). Client-side inserts: admin only.
+DROP POLICY IF EXISTS profiles_insert ON profiles;
+CREATE POLICY profiles_insert ON profiles FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.is_admin()));
+
+DROP POLICY IF EXISTS profiles_delete ON profiles;
+CREATE POLICY profiles_delete ON profiles FOR DELETE TO authenticated
+  USING ((SELECT public.is_admin()));
 
 -- ============================================================================
--- MACHINES — Read: own factory + supervisor/manager/director. Write: supervisor+
+-- INCIDENTS — supervisor+ full; technician/staff only own (reported or assigned)
 -- ============================================================================
 
-DROP POLICY IF EXISTS machines_factory_read ON machines;
-CREATE POLICY machines_factory_read ON machines FOR SELECT
+DROP POLICY IF EXISTS authenticated_all ON incidents;
+
+DROP POLICY IF EXISTS incidents_read ON incidents;
+CREATE POLICY incidents_read ON incidents FOR SELECT TO authenticated
   USING (
-    factory_id = public.user_factory_id()
-    OR public.is_admin()
+    (SELECT public.is_supervisor_up())
+    OR reported_by_id = (SELECT auth.uid())
+    OR assigned_user_ids @> ARRAY[(SELECT auth.uid())]
   );
 
-DROP POLICY IF EXISTS machines_supervisor_write ON machines;
-CREATE POLICY machines_supervisor_write ON machines FOR UPDATE
-  USING (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  )
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS machines_supervisor_insert ON machines;
-CREATE POLICY machines_supervisor_insert ON machines FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- FACILITIES — Same as machines (factory-scoped read, supervisor+ write)
--- ============================================================================
-
-DROP POLICY IF EXISTS facilities_factory_read ON facilities;
-CREATE POLICY facilities_factory_read ON facilities FOR SELECT
-  USING (
-    factory_id = public.user_factory_id()
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS facilities_supervisor_write ON facilities;
-CREATE POLICY facilities_supervisor_write ON facilities FOR UPDATE
-  USING (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  )
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS facilities_supervisor_insert ON facilities;
-CREATE POLICY facilities_supervisor_insert ON facilities FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- INCIDENTS — Complex: technician sees own, supervisor+ sees factory
--- ============================================================================
--- Technician: incidents where (reported_by_id = me OR me in assigned_user_ids)
---             + factory_id = my_factory
--- Supervisor+: all factory incidents
--- Admin: all incidents
--- Write rules more restrictive (add later, for now allow as Phase 1)
-
-DROP POLICY IF EXISTS incidents_technician_read ON incidents;
-CREATE POLICY incidents_technician_read ON incidents FOR SELECT
-  USING (
-    factory_id = public.user_factory_id()
-    AND (
-      public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-      OR reported_by_id = auth.uid()
-      OR assigned_user_ids @> ARRAY[auth.uid()]
-    )
-  );
-
-DROP POLICY IF EXISTS incidents_admin_all ON incidents;
-CREATE POLICY incidents_admin_all ON incidents FOR ALL
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
--- For now, allow authenticated to write incidents (will be tightened in Phase 3)
-DROP POLICY IF EXISTS incidents_write ON incidents;
-CREATE POLICY incidents_write ON incidents FOR INSERT
-  WITH CHECK (factory_id = public.user_factory_id());
+DROP POLICY IF EXISTS incidents_insert ON incidents;
+CREATE POLICY incidents_insert ON incidents FOR INSERT TO authenticated
+  WITH CHECK (true);  -- everyone can report (PERMISSIONS.reportIncident)
 
 DROP POLICY IF EXISTS incidents_update ON incidents;
-CREATE POLICY incidents_update ON incidents FOR UPDATE
-  USING (factory_id = public.user_factory_id())
-  WITH CHECK (factory_id = public.user_factory_id());
-
--- ============================================================================
--- INCIDENT_ACTIONS — Same as incidents (tied to incident visibility)
--- ============================================================================
-
-DROP POLICY IF EXISTS incident_actions_via_incident ON incident_actions;
-CREATE POLICY incident_actions_via_incident ON incident_actions FOR SELECT
+CREATE POLICY incidents_update ON incidents FOR UPDATE TO authenticated
   USING (
-    incident_id IN (
-      SELECT id FROM incidents
-      WHERE factory_id = public.user_factory_id()
-        AND (
-          public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-          OR reported_by_id = auth.uid()
-          OR assigned_user_ids @> ARRAY[auth.uid()]
-        )
-    )
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS incident_actions_write ON incident_actions;
-CREATE POLICY incident_actions_write ON incident_actions FOR INSERT
-  WITH CHECK (
-    incident_id IN (
-      SELECT id FROM incidents WHERE factory_id = public.user_factory_id()
-    )
-  );
-
-DROP POLICY IF EXISTS incident_actions_update ON incident_actions;
-CREATE POLICY incident_actions_update ON incident_actions FOR UPDATE
-  USING (
-    incident_id IN (
-      SELECT id FROM incidents WHERE factory_id = public.user_factory_id()
-    )
+    (SELECT public.is_supervisor_up())
+    OR reported_by_id = (SELECT auth.uid())
+    OR assigned_user_ids @> ARRAY[(SELECT auth.uid())]
   )
   WITH CHECK (
-    incident_id IN (
-      SELECT id FROM incidents WHERE factory_id = public.user_factory_id()
-    )
+    (SELECT public.is_supervisor_up())
+    OR reported_by_id = (SELECT auth.uid())
+    OR assigned_user_ids @> ARRAY[(SELECT auth.uid())]
   );
 
--- ============================================================================
--- INCIDENT_RELATIONS — Same visibility as incidents
--- ============================================================================
-
-DROP POLICY IF EXISTS incident_relations_read ON incident_relations;
-CREATE POLICY incident_relations_read ON incident_relations FOR SELECT
-  USING (
-    incident_id IN (
-      SELECT id FROM incidents
-      WHERE factory_id = public.user_factory_id()
-        AND (
-          public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-          OR reported_by_id = auth.uid()
-          OR assigned_user_ids @> ARRAY[auth.uid()]
-        )
-    )
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS incident_relations_write ON incident_relations;
-CREATE POLICY incident_relations_write ON incident_relations FOR INSERT
-  WITH CHECK (
-    incident_id IN (
-      SELECT id FROM incidents WHERE factory_id = public.user_factory_id()
-    )
-  );
+DROP POLICY IF EXISTS incidents_delete ON incidents;
+CREATE POLICY incidents_delete ON incidents FOR DELETE TO authenticated
+  USING ((SELECT public.is_supervisor_up()));
 
 -- ============================================================================
--- INCIDENT_COMMENTS — Tied to incident visibility
+-- INCIDENT CHILD TABLES — visibility follows the parent incident.
+-- The EXISTS subquery runs under the caller's RLS, so if you can't see the
+-- incident, you can't see (or write) its updates/actions/comments either.
 -- ============================================================================
 
-DROP POLICY IF EXISTS incident_comments_read ON incident_comments;
-CREATE POLICY incident_comments_read ON incident_comments FOR SELECT
-  USING (
-    incident_id IN (
-      SELECT id FROM incidents
-      WHERE factory_id = public.user_factory_id()
-        AND (
-          public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-          OR reported_by_id = auth.uid()
-          OR assigned_user_ids @> ARRAY[auth.uid()]
-        )
-    )
-    OR public.is_admin()
-  );
+-- ---- incident_updates (處理紀錄時間軸) ----
+DROP POLICY IF EXISTS authenticated_all ON incident_updates;
 
-DROP POLICY IF EXISTS incident_comments_write ON incident_comments;
-CREATE POLICY incident_comments_write ON incident_comments FOR INSERT
-  WITH CHECK (
-    incident_id IN (
-      SELECT id FROM incidents WHERE factory_id = public.user_factory_id()
-    )
-  );
+DROP POLICY IF EXISTS incident_updates_rw ON incident_updates;
+CREATE POLICY incident_updates_rw ON incident_updates FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id))
+  WITH CHECK (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id));
 
--- ============================================================================
--- WORK_ORDER_BLOCKS — Tied to incident_action → incident
--- ============================================================================
+-- ---- incident_actions ----
+DROP POLICY IF EXISTS authenticated_all ON incident_actions;
 
-DROP POLICY IF EXISTS work_order_blocks_read ON work_order_blocks;
-CREATE POLICY work_order_blocks_read ON work_order_blocks FOR SELECT
-  USING (
-    incident_action_id IN (
-      SELECT id FROM incident_actions
-      WHERE incident_id IN (
-        SELECT id FROM incidents
-        WHERE factory_id = public.user_factory_id()
-          AND (
-            public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-            OR reported_by_id = auth.uid()
-            OR assigned_user_ids @> ARRAY[auth.uid()]
-          )
-      )
-    )
-    OR public.is_admin()
-  );
+DROP POLICY IF EXISTS incident_actions_rw ON incident_actions;
+CREATE POLICY incident_actions_rw ON incident_actions FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id))
+  WITH CHECK (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id));
 
-DROP POLICY IF EXISTS work_order_blocks_write ON work_order_blocks;
-CREATE POLICY work_order_blocks_write ON work_order_blocks FOR INSERT
-  WITH CHECK (
-    incident_action_id IN (
-      SELECT id FROM incident_actions
-      WHERE incident_id IN (
-        SELECT id FROM incidents WHERE factory_id = public.user_factory_id()
-      )
-    )
-  );
+-- ---- incident_comments ----
+DROP POLICY IF EXISTS authenticated_all ON incident_comments;
+
+DROP POLICY IF EXISTS incident_comments_rw ON incident_comments;
+CREATE POLICY incident_comments_rw ON incident_comments FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id))
+  WITH CHECK (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id));
+
+-- ---- incident_relations ----
+DROP POLICY IF EXISTS authenticated_all ON incident_relations;
+
+DROP POLICY IF EXISTS incident_relations_rw ON incident_relations;
+CREATE POLICY incident_relations_rw ON incident_relations FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id))
+  WITH CHECK (EXISTS (SELECT 1 FROM incidents i WHERE i.id = incident_id));
+
+-- ---- work_order_blocks (parent = incident_actions → incidents) ----
+DROP POLICY IF EXISTS authenticated_all ON work_order_blocks;
+
+DROP POLICY IF EXISTS work_order_blocks_rw ON work_order_blocks;
+CREATE POLICY work_order_blocks_rw ON work_order_blocks FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM incident_actions a WHERE a.id = incident_action_id))
+  WITH CHECK (EXISTS (SELECT 1 FROM incident_actions a WHERE a.id = incident_action_id));
 
 -- ============================================================================
--- PM_SCHEDULES — Technician sees own assignments, supervisor+ sees all
+-- PM_SCHEDULES — everyone reads (calendar); supervisor+ writes (backstop;
+-- the app UI further restricts schedule management to admin)
 -- ============================================================================
 
-DROP POLICY IF EXISTS pm_schedules_tech_read ON pm_schedules;
-CREATE POLICY pm_schedules_tech_read ON pm_schedules FOR SELECT
-  USING (
-    factory_id = public.user_factory_id()
-    AND (
-      public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-      OR assigned_user_ids @> ARRAY[auth.uid()]
-    )
-  );
+DROP POLICY IF EXISTS authenticated_all ON pm_schedules;
 
-DROP POLICY IF EXISTS pm_schedules_admin_all ON pm_schedules;
-CREATE POLICY pm_schedules_admin_all ON pm_schedules FOR ALL
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS pm_schedules_read ON pm_schedules;
+CREATE POLICY pm_schedules_read ON pm_schedules FOR SELECT TO authenticated
+  USING (true);
 
-DROP POLICY IF EXISTS pm_schedules_supervisor_write ON pm_schedules;
-CREATE POLICY pm_schedules_supervisor_write ON pm_schedules FOR UPDATE
-  USING (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  )
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
+DROP POLICY IF EXISTS pm_schedules_insert ON pm_schedules;
+CREATE POLICY pm_schedules_insert ON pm_schedules FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.is_supervisor_up()));
 
-DROP POLICY IF EXISTS pm_schedules_supervisor_insert ON pm_schedules;
-CREATE POLICY pm_schedules_supervisor_insert ON pm_schedules FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
+DROP POLICY IF EXISTS pm_schedules_update ON pm_schedules;
+CREATE POLICY pm_schedules_update ON pm_schedules FOR UPDATE TO authenticated
+  USING ((SELECT public.is_supervisor_up()))
+  WITH CHECK ((SELECT public.is_supervisor_up()));
+
+DROP POLICY IF EXISTS pm_schedules_delete ON pm_schedules;
+CREATE POLICY pm_schedules_delete ON pm_schedules FOR DELETE TO authenticated
+  USING ((SELECT public.is_supervisor_up()));
+
+-- pm_records intentionally keep the Phase 1 blanket policy — technicians must
+-- freely insert/update completion records.
 
 -- ============================================================================
--- PM_RECORDS — Technician can complete own assignments, supervisor+ manage all
+-- AUDIT_LOGS — insert-only for users; supervisor+ read; NO update/delete
+-- policies → clients cannot tamper with the audit trail. (service_role and
+-- the incident_audit_trail view, owned by postgres, are unaffected.)
 -- ============================================================================
 
-DROP POLICY IF EXISTS pm_records_via_schedule ON pm_records;
-CREATE POLICY pm_records_via_schedule ON pm_records FOR SELECT
-  USING (
-    pm_schedule_id IN (
-      SELECT id FROM pm_schedules
-      WHERE factory_id = public.user_factory_id()
-        AND (
-          public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-          OR assigned_user_ids @> ARRAY[auth.uid()]
-        )
-    )
-    OR public.is_admin()
-  );
+DROP POLICY IF EXISTS authenticated_all ON audit_logs;
 
-DROP POLICY IF EXISTS pm_records_insert ON pm_records;
-CREATE POLICY pm_records_insert ON pm_records FOR INSERT
-  WITH CHECK (
-    pm_schedule_id IN (
-      SELECT id FROM pm_schedules WHERE factory_id = public.user_factory_id()
-    )
-  );
+DROP POLICY IF EXISTS audit_logs_insert ON audit_logs;
+CREATE POLICY audit_logs_insert ON audit_logs FOR INSERT TO authenticated
+  WITH CHECK (true);
 
-DROP POLICY IF EXISTS pm_records_update ON pm_records;
-CREATE POLICY pm_records_update ON pm_records FOR UPDATE
-  USING (
-    pm_schedule_id IN (
-      SELECT id FROM pm_schedules WHERE factory_id = public.user_factory_id()
-    )
-  )
-  WITH CHECK (
-    pm_schedule_id IN (
-      SELECT id FROM pm_schedules WHERE factory_id = public.user_factory_id()
-    )
-  );
+DROP POLICY IF EXISTS audit_logs_read ON audit_logs;
+CREATE POLICY audit_logs_read ON audit_logs FOR SELECT TO authenticated
+  USING ((SELECT public.is_supervisor_up()));
 
 -- ============================================================================
--- SPARE_PARTS — All factory users can read, supervisor+ write
+-- SUPPORTING INDEXES (policy predicates must stay index-backed)
 -- ============================================================================
 
-DROP POLICY IF EXISTS spare_parts_factory_read ON spare_parts;
-CREATE POLICY spare_parts_factory_read ON spare_parts FOR SELECT
-  USING (factory_id = public.user_factory_id());
-
-DROP POLICY IF EXISTS spare_parts_supervisor_write ON spare_parts;
-CREATE POLICY spare_parts_supervisor_write ON spare_parts FOR UPDATE
-  USING (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  )
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS spare_parts_supervisor_insert ON spare_parts;
-CREATE POLICY spare_parts_supervisor_insert ON spare_parts FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- SPARE_PART_TRANSACTIONS — Tied to incident_action visibility
--- ============================================================================
-
-DROP POLICY IF EXISTS spare_part_transactions_factory ON spare_part_transactions;
-CREATE POLICY spare_part_transactions_factory ON spare_part_transactions FOR SELECT
-  USING (factory_id = public.user_factory_id());
-
-DROP POLICY IF EXISTS spare_part_transactions_write ON spare_part_transactions;
-CREATE POLICY spare_part_transactions_write ON spare_part_transactions FOR INSERT
-  WITH CHECK (factory_id = public.user_factory_id());
-
--- ============================================================================
--- NOTIFICATION TABLES (telegram_users, telegram_groups) — Users see own subs
--- ============================================================================
-
-DROP POLICY IF EXISTS telegram_users_own ON telegram_users;
-CREATE POLICY telegram_users_own ON telegram_users FOR SELECT
-  USING (
-    user_id = auth.uid()
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS telegram_users_manage_own ON telegram_users;
-CREATE POLICY telegram_users_manage_own ON telegram_users FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-
-DROP POLICY IF EXISTS telegram_users_update_own ON telegram_users;
-CREATE POLICY telegram_users_update_own ON telegram_users FOR UPDATE
-  USING (
-    user_id = auth.uid()
-    OR public.is_admin()
-  )
-  WITH CHECK (
-    user_id = auth.uid()
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS telegram_groups_factory ON telegram_groups;
-CREATE POLICY telegram_groups_factory ON telegram_groups FOR SELECT
-  USING (
-    factory_id = public.user_factory_id()
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS telegram_groups_supervisor ON telegram_groups;
-CREATE POLICY telegram_groups_supervisor ON telegram_groups FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- KNOWLEDGE_BASE — All factory users can read (reference), supervisor+ write
--- ============================================================================
-
-DROP POLICY IF EXISTS knowledge_base_factory_read ON knowledge_base;
-CREATE POLICY knowledge_base_factory_read ON knowledge_base FOR SELECT
-  USING (factory_id = public.user_factory_id());
-
-DROP POLICY IF EXISTS knowledge_base_supervisor_write ON knowledge_base;
-CREATE POLICY knowledge_base_supervisor_write ON knowledge_base FOR UPDATE
-  USING (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  )
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS knowledge_base_supervisor_insert ON knowledge_base;
-CREATE POLICY knowledge_base_supervisor_insert ON knowledge_base FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- EQUIPMENT_HEALTH_SCORES — All factory users read, system write only
--- ============================================================================
-
-DROP POLICY IF EXISTS equipment_health_scores_read ON equipment_health_scores;
-CREATE POLICY equipment_health_scores_read ON equipment_health_scores FOR SELECT
-  USING (factory_id = public.user_factory_id());
-
--- Health scores auto-updated by trigger, no user write
-
--- ============================================================================
--- RCA_RECORDS — Tied to incident visibility, director+ write
--- ============================================================================
-
-DROP POLICY IF EXISTS rca_records_via_incident ON rca_records;
-CREATE POLICY rca_records_via_incident ON rca_records FOR SELECT
-  USING (
-    incident_id IN (
-      SELECT id FROM incidents
-      WHERE factory_id = public.user_factory_id()
-        AND (
-          public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-          OR reported_by_id = auth.uid()
-          OR assigned_user_ids @> ARRAY[auth.uid()]
-        )
-    )
-    OR public.is_admin()
-  );
-
-DROP POLICY IF EXISTS rca_records_director_write ON rca_records;
-CREATE POLICY rca_records_director_write ON rca_records FOR INSERT
-  WITH CHECK (
-    (public.user_role() IN ('director', 'manager', 'admin')
-     AND incident_id IN (SELECT id FROM incidents WHERE factory_id = public.user_factory_id()))
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- NOTIFICATION_LOGS — Supervisor+ only (audit trail)
--- ============================================================================
-
-DROP POLICY IF EXISTS notification_logs_supervisor ON notification_logs;
-CREATE POLICY notification_logs_supervisor ON notification_logs FOR SELECT
-  USING (
-    (public.user_role() IN ('supervisor', 'manager', 'director', 'admin')
-     AND factory_id = public.user_factory_id())
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- MACHINE_QR_CODES — Tied to machine visibility
--- ============================================================================
-
-DROP POLICY IF EXISTS machine_qr_codes_via_machine ON machine_qr_codes;
-CREATE POLICY machine_qr_codes_via_machine ON machine_qr_codes FOR SELECT
-  USING (
-    machine_id IN (
-      SELECT id FROM machines WHERE factory_id = public.user_factory_id()
-    )
-    OR public.is_admin()
-  );
-
--- ============================================================================
--- CLEANUP: Drop Phase 1 blanket policies (kept from Phase 1 migration)
--- ============================================================================
--- Phase 1 created a blanket "authenticated_all" policy on every table.
--- Now that Phase 2 has role-specific policies, drop the old blanket policy
--- to prevent it from bypassing Phase 2 rules.
-
-DO $$
-DECLARE r RECORD;
-BEGIN
-  FOR r IN
-    SELECT tablename FROM pg_tables
-    WHERE schemaname = 'public'
-      AND EXISTS (SELECT 1 FROM pg_policies WHERE tablename = pg_tables.tablename AND policyname = 'authenticated_all')
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS authenticated_all ON public.%I', r.tablename);
-  END LOOP;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_incidents_reported_by ON incidents(reported_by_id);
+-- GIN index on incidents.assigned_user_ids already exists (migration_multi_assignee).
 
 NOTIFY pgrst, 'reload schema';
 
 -- ============================================================================
--- ROLLBACK (revert to Phase 1) — uncomment and run:
+-- VERIFY — should list only the tables above with their new policies
 -- ============================================================================
--- Run migration_rls_phase1.sql to re-enable the blanket authenticated policy
--- and drop all Phase 2 fine-grained policies. This will restore full factory
--- access to all authenticated users.
+SELECT tablename, policyname, cmd
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename IN ('profiles','incidents','incident_updates','incident_actions',
+                    'incident_comments','incident_relations','work_order_blocks',
+                    'pm_schedules','audit_logs')
+ORDER BY tablename, policyname;
