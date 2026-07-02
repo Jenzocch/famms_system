@@ -357,7 +357,7 @@ CREATE POLICY pm_schedules_supervisor_insert ON pm_schedules FOR INSERT
 -- ============================================================================
 
 DROP POLICY IF EXISTS pm_records_via_schedule ON pm_records;
-CREATE POLICY pm_records_via_schedule FOR SELECT
+CREATE POLICY pm_records_via_schedule ON pm_records FOR SELECT
   USING (
     pm_schedule_id IN (
       SELECT id FROM pm_schedules
@@ -425,7 +425,7 @@ CREATE POLICY spare_parts_supervisor_insert ON spare_parts FOR INSERT
 -- ============================================================================
 
 DROP POLICY IF EXISTS spare_part_transactions_factory ON spare_part_transactions;
-CREATE POLICY spare_part_transactions_factory FOR SELECT
+CREATE POLICY spare_part_transactions_factory ON spare_part_transactions FOR SELECT
   USING (factory_id = auth.user_factory_id());
 
 DROP POLICY IF EXISTS spare_part_transactions_write ON spare_part_transactions;
@@ -517,7 +517,7 @@ CREATE POLICY equipment_health_scores_read ON equipment_health_scores FOR SELECT
 -- ============================================================================
 
 DROP POLICY IF EXISTS rca_records_via_incident ON rca_records;
-CREATE POLICY rca_records_via_incident FOR SELECT
+CREATE POLICY rca_records_via_incident ON rca_records FOR SELECT
   USING (
     incident_id IN (
       SELECT id FROM incidents
@@ -556,7 +556,7 @@ CREATE POLICY notification_logs_supervisor ON notification_logs FOR SELECT
 -- ============================================================================
 
 DROP POLICY IF EXISTS machine_qr_codes_via_machine ON machine_qr_codes;
-CREATE POLICY machine_qr_codes_via_machine FOR SELECT
+CREATE POLICY machine_qr_codes_via_machine ON machine_qr_codes FOR SELECT
   USING (
     machine_id IN (
       SELECT id FROM machines WHERE factory_id = auth.user_factory_id()
