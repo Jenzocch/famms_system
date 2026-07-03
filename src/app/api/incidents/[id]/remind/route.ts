@@ -55,16 +55,17 @@ export async function POST(
   const factory = incident.factory as unknown as { name: string } | null
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+  // Telegram messages are in Bahasa Indonesia — the factory floor audience.
   const html = [
-    `<b>⏰ 進度提醒</b>`,
-    `<b>編號:</b> ${incident.incident_no}`,
-    incident.title ? `<b>標題:</b> ${incident.title}` : '',
-    `<b>位置:</b> ${factory?.name || '?'}${machine ? ` · ${machine.machine_name}` : ''}`,
-    incident.assigned_to ? `<b>負責人:</b> ${incident.assigned_to}` : '<b>負責人:</b> （尚未指派）',
-    incident.due_date ? `<b>預計完成:</b> ${incident.due_date}` : '',
-    `${profile?.full_name || '主管'} 請您更新此案件的處理進度。`,
-    note ? `<b>📝 補充:</b> ${esc(note)}` : '',
-    `<a href="${appUrl}/incidents/${incident.id}">更新進度 →</a>`,
+    `<b>⏰ Pengingat Progres</b>`,
+    `<b>No:</b> ${esc(incident.incident_no)}`,
+    incident.title ? `<b>Judul:</b> ${esc(incident.title)}` : '',
+    `<b>Lokasi:</b> ${esc(factory?.name || '?')}${machine ? ` · ${esc(machine.machine_name)}` : ''}`,
+    incident.assigned_to ? `<b>PIC:</b> ${esc(incident.assigned_to)}` : '<b>PIC:</b> (belum ditugaskan)',
+    incident.due_date ? `<b>Target selesai:</b> ${esc(incident.due_date)}` : '',
+    `${esc(profile?.full_name || 'Supervisor')} meminta Anda memperbarui progres kasus ini.`,
+    note ? `<b>📝 Catatan:</b> ${esc(note)}` : '',
+    `<a href="${appUrl}/incidents/${incident.id}">Perbarui progres →</a>`,
   ].filter(Boolean).join('\n')
 
   const assignedIds = Array.isArray(incident.assigned_user_ids) ? (incident.assigned_user_ids as string[]) : []
