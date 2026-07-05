@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import MachineForm from '@/components/machines/MachineForm'
 
-export const metadata = { title: 'Edit Mesin | FAMMS' }
+export const metadata = { title: 'Edit Machine | FAMMS' }
 
 export default async function EditMachinePage({ params }: { params: { id: string } }) {
   const supabase = await createClient()

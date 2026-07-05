@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n'
+import { useDateLocale } from '@/lib/date-locale'
 import { Clock, User, Edit3, CheckCircle, AlertCircle, Trash2 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
-import { zhTW } from 'date-fns/locale'
 
 interface AuditEntry {
   id: string
@@ -18,6 +18,9 @@ interface AuditEntry {
 interface AuditTrailProps {
   resourceId: string
   resourceType: string
+  // Hide the internal heading when the parent already renders a title
+  // (e.g. inside a CollapsibleSection).
+  showHeading?: boolean
 }
 
 const ACTION_ICONS = {
@@ -40,9 +43,10 @@ const ACTION_LABELS = {
   comment: '評論',
 }
 
-export default function AuditTrail({ resourceId, resourceType }: AuditTrailProps) {
+export default function AuditTrail({ resourceId, resourceType, showHeading = true }: AuditTrailProps) {
   const supabase = createClient()
   const { t } = useI18n()
+  const dateLocale = useDateLocale()
   const [logs, setLogs] = useState<AuditEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -83,10 +87,12 @@ export default function AuditTrail({ resourceId, resourceType }: AuditTrailProps
 
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-        <Clock className="w-4 h-4" />
-        {t('audit.heading', '操作歷史')}
-      </h3>
+      {showHeading && (
+        <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          {t('audit.heading', '操作歷史')}
+        </h3>
+      )}
 
       <div className="space-y-2">
         {logs.map((log, idx) => {
@@ -127,18 +133,18 @@ export default function AuditTrail({ resourceId, resourceType }: AuditTrailProps
 
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                       <User className="w-3 h-3" />
-                      {log.user_name || '系統'}
+                      {log.user_name || t('audit.system', '系統')}
                     </p>
                   </div>
 
                   <p className="text-xs text-gray-400 whitespace-nowrap text-right">
                     {formatDistanceToNow(new Date(log.timestamp), {
                       addSuffix: true,
-                      locale: zhTW,
+                      locale: dateLocale,
                     })}
                     <br />
                     <span className="text-gray-500">
-                      {format(new Date(log.timestamp), 'HH:mm', { locale: zhTW })}
+                      {format(new Date(log.timestamp), 'HH:mm', { locale: dateLocale })}
                     </span>
                   </p>
                 </div>

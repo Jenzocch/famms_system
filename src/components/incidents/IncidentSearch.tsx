@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/select'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Download, Search, X, ChevronRight, AlertCircle, BellRing, Loader2 } from 'lucide-react'
+import { Download, Search, X, ChevronRight, AlertCircle } from 'lucide-react'
+import NudgeCardButton from '@/components/incidents/NudgeCardButton'
 import { formatDistanceToNow } from 'date-fns'
-import { zhTW } from 'date-fns/locale'
+import { useDateLocale } from '@/lib/date-locale'
 import * as XLSX from 'xlsx'
 import type { IncidentStatus, UserRole } from '@/types'
 import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH_COLOR } from '@/lib/incident-display'
@@ -48,6 +49,7 @@ interface IncidentSearchProps {
 
 export default function IncidentSearch({ onResults, userRole = 'technician' }: IncidentSearchProps) {
   const { t } = useI18n()
+  const dateLocale = useDateLocale()
   const supabase = createClient()
   const canRemind = PERMISSIONS.remindProgress(userRole)
   const { remindingId, nudge } = useProgressNudge()
@@ -411,10 +413,12 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
             const typeLabel = typeLabelOf(inc.incident_type, inc.incident_type)
 
             return (
+              // Wrapper div holds the card chrome; the nudge button is a
+              // sibling of the Link, not nested inside it (valid HTML).
+              <div key={inc.id} className="bg-white rounded-xl border border-gray-200">
               <Link
-                key={inc.id}
                 href={`/incidents/${inc.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-3 active:bg-gray-50"
+                className="block p-3 rounded-xl active:bg-gray-50"
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
@@ -443,25 +447,23 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
 
                 <p className="text-xs text-gray-400 mt-1">
                   {inc.reporter_name ? `${inc.reporter_name} · ` : ''}
-                  {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: zhTW })}
+                  {formatDistanceToNow(new Date(inc.reported_at), { addSuffix: true, locale: dateLocale })}
                 </p>
 
-                {/* Nudge for progress — supervisors+ only, open cases only */}
-                {canRemind && inc.status !== 'closed' && (
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); nudge(inc.id) }}
-                      disabled={remindingId === inc.id}
-                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition disabled:opacity-50"
-                    >
-                      {remindingId === inc.id
-                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : <BellRing className="w-3 h-3" />}
-                      {t('remind.cardButton', '催進度')}
-                    </button>
-                  </div>
-                )}
               </Link>
+
+              {/* Nudge for progress — supervisors+ only, open cases only.
+                  Sibling of the Link with a 2-tap confirm. */}
+              {canRemind && inc.status !== 'closed' && (
+                <div className="px-3 pb-2.5 -mt-1 flex justify-end">
+                  <NudgeCardButton
+                    incidentId={inc.id}
+                    sending={remindingId === inc.id}
+                    onNudge={nudge}
+                  />
+                </div>
+              )}
+              </div>
             )
           })}
         </div>

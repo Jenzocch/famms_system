@@ -4,7 +4,7 @@ import { Plus, Edit2, Trash2, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/components/shared/StatusBadge'
 
-export const metadata = { title: 'Mesin | FAMMS' }
+export const metadata = { title: 'Machines | FAMMS' }
 
 export default async function MachinesPage() {
   const supabase = await createClient()

@@ -11,7 +11,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2, Plus, Wrench, Clock, CheckCircle, Settings } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { zhTW } from 'date-fns/locale'
+import { useDateLocale } from '@/lib/date-locale'
 import OverdueMaintenanceAlert from './OverdueMaintenanceAlert'
 import PMScheduleManager from './PMScheduleManager'
 import PMFullCalendar from './PMFullCalendar'
@@ -56,6 +56,7 @@ const PM_TYPE_KEYS: Record<string, string> = {
 export default function PMPage() {
   const supabase = createClient()
   const { t } = useI18n()
+  const dateLocale = useDateLocale()
 
   const [factories, setFactories] = useState<Factory[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -322,7 +323,7 @@ export default function PMPage() {
                   )}
                   <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {formatDistanceToNow(new Date(item.when), { addSuffix: true, locale: zhTW })}
+                    {formatDistanceToNow(new Date(item.when), { addSuffix: true, locale: dateLocale })}
                     {typeof item.cost === 'number' && item.cost > 0 && (
                       <span className="ml-1">· ${item.cost}</span>
                     )}

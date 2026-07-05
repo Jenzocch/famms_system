@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, ChevronRight, UserCheck, Lock, CalendarClock, BellRing, Loader2 } from 'lucide-react'
+import { AlertCircle, ChevronRight, UserCheck, Lock, CalendarClock } from 'lucide-react'
+import NudgeCardButton from '@/components/incidents/NudgeCardButton'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhTW, enUS, id as idLocale } from 'date-fns/locale'
 import type { IncidentStatus, UserRole } from '@/types'
@@ -42,15 +43,6 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
   const canAssign = PERMISSIONS.assignIncident(userRole)
   const canRemind = PERMISSIONS.remindProgress(userRole)
   const { remindingId, nudge } = useProgressNudge()
-
-  // Nudge assignees via Telegram straight from the card — no need to open the
-  // case. preventDefault/stopPropagation so the click doesn't follow the card's
-  // <Link> to the detail page.
-  function remind(e: React.MouseEvent, id: string) {
-    e.preventDefault()
-    e.stopPropagation()
-    nudge(id)
-  }
 
   const activeFilter = BOARD_FILTERS.find(f => f.key === filter)!
   const filtered = activeFilter.statuses
@@ -113,10 +105,16 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
             const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact]
             const overdue = isOverdue(inc)
             return (
-              <Link
+              // Card chrome lives on the wrapper div; the Link only covers the
+              // readable content so the nudge button below is NOT nested inside
+              // the anchor (invalid HTML + screen-reader confusion).
+              <div
                 key={inc.id}
+                className="bg-white rounded-xl border border-gray-300 shadow-sm hover:shadow-md hover:border-gray-400 transition-all"
+              >
+              <Link
                 href={`/incidents/${inc.id}`}
-                className="block bg-white rounded-xl border border-gray-300 shadow-sm p-3.5 hover:shadow-md hover:border-gray-400 active:bg-gray-50 transition-shadow"
+                className="block p-3.5 rounded-xl active:bg-gray-50"
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_ZH_COLOR[inc.status]}`}>
@@ -170,24 +168,31 @@ export default function IncidentBoard({ rows, userRole = 'technician' }: Inciden
                   )}
                 </div>
 
-                {/* Nudge for progress — supervisors+ only, open cases only */}
-                {canRemind && inc.status !== 'closed' && (
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      onClick={(e) => remind(e, inc.id)}
-                      disabled={remindingId === inc.id}
-                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition disabled:opacity-50"
-                    >
-                      {remindingId === inc.id
-                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : <BellRing className="w-3 h-3" />}
-                      {t('remind.cardButton', '催進度')}
-                    </button>
-                  </div>
-                )}
               </Link>
+
+              {/* Nudge for progress — supervisors+ only, open cases only.
+                  Outside the Link (sibling, not nested) with a 2-tap confirm. */}
+              {canRemind && inc.status !== 'closed' && (
+                <div className="px-3.5 pb-3 -mt-1 flex justify-end">
+                  <NudgeCardButton
+                    incidentId={inc.id}
+                    sending={remindingId === inc.id}
+                    onNudge={nudge}
+                  />
+                </div>
+              )}
+              </div>
             )
           })}
+
+          {/* The server query caps at 200 rows — tell the user older cases
+              exist but are only reachable via search, instead of silently
+              truncating. */}
+          {rows.length >= 200 && (
+            <p className="text-center text-xs text-gray-400 py-2">
+              {t('board.limitNote', '僅顯示最近 200 筆案件，較舊案件請使用搜尋')}
+            </p>
+          )}
         </div>
       )}
     </div>

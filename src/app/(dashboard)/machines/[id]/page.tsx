@@ -8,7 +8,7 @@ import HealthScoreBadge from '@/components/shared/HealthScoreBadge'
 import { formatDistance } from 'date-fns'
 import { id } from 'date-fns/locale'
 
-export const metadata = { title: 'Detail Mesin | FAMMS' }
+export const metadata = { title: 'Machine | FAMMS' }
 
 export default async function MachineDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()

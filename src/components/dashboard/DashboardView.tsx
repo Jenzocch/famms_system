@@ -59,11 +59,11 @@ export default function DashboardView({
         <p className="text-sm text-gray-500 mt-1">{t('dash.overview')}</p>
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards — each jumps to its detail (board / section below) */}
       <div className="grid grid-cols-3 gap-2">
-        <SummaryCard label={t('dash.open')} value={openCount} color="text-blue-600" />
-        <SummaryCard label={t('dash.urgent')} value={urgentCount} color="text-red-600" />
-        <SummaryCard label={t('dash.stale')} value={staleCount} color="text-amber-600" />
+        <SummaryCard label={t('dash.open')} value={openCount} color="text-blue-600" href="/incidents" />
+        <SummaryCard label={t('dash.urgent')} value={urgentCount} color="text-red-600" href="#dash-urgent" />
+        <SummaryCard label={t('dash.stale')} value={staleCount} color="text-amber-600" href="#dash-stale" />
       </div>
 
       {/* Per-factory open counts */}
@@ -102,12 +102,12 @@ export default function DashboardView({
       </Section>
 
       {/* Urgent cases */}
-      <Section icon={<AlertTriangle className="w-4 h-4 text-red-500" />} title={t('dash.urgentCases')}>
+      <Section id="dash-urgent" icon={<AlertTriangle className="w-4 h-4 text-red-500" />} title={t('dash.urgentCases')}>
         {urgent.length === 0 ? <Empty text={t('dash.noUrgent')} /> : <CaseList rows={urgent} t={t} dateLocale={dateLocale} />}
       </Section>
 
       {/* Stale cases */}
-      <Section icon={<Clock className="w-4 h-4 text-amber-500" />} title={t('dash.staleCases')}>
+      <Section id="dash-stale" icon={<Clock className="w-4 h-4 text-amber-500" />} title={t('dash.staleCases')}>
         {stale.length === 0 ? <Empty text={t('dash.noStale')} /> : <CaseList rows={stale} t={t} dateLocale={dateLocale} />}
       </Section>
 
@@ -139,18 +139,24 @@ export default function DashboardView({
   )
 }
 
-function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+function SummaryCard({ label, value, color, href }: { label: string; value: number; color: string; href?: string }) {
+  const body = (
+    <>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-    </div>
+    </>
   )
+  const cls = 'block bg-white rounded-xl border border-gray-200 p-3 text-center'
+  if (!href) return <div className={cls}>{body}</div>
+  // In-page anchors jump to the section below; the board link navigates.
+  return href.startsWith('#')
+    ? <a href={href} className={`${cls} active:bg-gray-50`}>{body}</a>
+    : <Link href={href} className={`${cls} active:bg-gray-50`}>{body}</Link>
 }
 
-function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Section({ id, icon, title, children }: { id?: string; icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div id={id} className="scroll-mt-16">
       <h2 className="font-semibold text-gray-700 text-sm mb-2 flex items-center gap-1.5">{icon} {title}</h2>
       {children}
     </div>

@@ -38,7 +38,8 @@
     "sentPersonal": "DM'd {count} assignee(s) directly & notified the group",
     "unregistered": "{count} assignee(s) have no personal Telegram set up — only got the group notice",
     "noRecipients": "Sent, but no subscribed Telegram recipients yet",
-    "failed": "Failed to send reminder"
+    "failed": "Failed to send reminder",
+    "confirmTap": "Tap again to confirm"
   },
   "report": {
     "title": "Report Issue",
@@ -821,7 +822,8 @@
     "colReporter": "Reporter",
     "colAssignedTo": "Assigned To",
     "colReportedAt": "Reported At",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "limitNote": "Showing the latest 200 cases — use search for older ones"
   },
   "boardStatus": {
     "reported": "New",
@@ -890,7 +892,8 @@
     "photoHint": "Tap an image to enlarge ({count} photos)",
     "zoomOut": "Zoom out",
     "zoomIn": "Zoom in",
-    "download": "Download original"
+    "download": "Download original",
+    "manageSection": "Edit / Delete Case"
   },
   "audit": {
     "heading": "Activity History",
@@ -901,7 +904,8 @@
     "delete": "Deleted",
     "status_change": "Status changed",
     "assign": "Assigned",
-    "comment": "Comment"
+    "comment": "Comment",
+    "system": "System"
   },
   "accountDisabled": {
     "title": "Account disabled",

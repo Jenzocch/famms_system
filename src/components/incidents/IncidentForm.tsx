@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import imageCompression from 'browser-image-compression'
@@ -76,6 +76,11 @@ export default function IncidentForm() {
   const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [compressing, setCompressing] = useState(false)
+
+  // Stable preview URLs — created once per photo list and revoked when the
+  // list changes/unmounts, instead of leaking a new blob URL every render.
+  const photoPreviews = useMemo(() => photos.map(p => URL.createObjectURL(p)), [photos])
+  useEffect(() => () => { photoPreviews.forEach(u => URL.revokeObjectURL(u)) }, [photoPreviews])
 
   useEffect(() => {
     supabase.from('factories').select('*').order('name').then(({ data }) => setFactories(data ?? []))
@@ -456,7 +461,7 @@ export default function IncidentForm() {
               {photos.map((p, i) => (
                 <div key={i} className="relative group">
                   <img
-                    src={URL.createObjectURL(p)}
+                    src={photoPreviews[i]}
                     alt=""
                     className="w-24 h-24 object-cover rounded-lg border border-gray-200 group-hover:opacity-80 transition-opacity"
                   />

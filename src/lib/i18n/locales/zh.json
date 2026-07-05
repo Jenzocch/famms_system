@@ -38,7 +38,8 @@
     "sentPersonal": "已私訊 {count} 位負責人並通知群組",
     "unregistered": "{count} 位負責人尚未設定個人 Telegram，只收到群組通知",
     "noRecipients": "已送出，但目前沒有訂閱的 Telegram 接收者",
-    "failed": "催進度發送失敗"
+    "failed": "催進度發送失敗",
+    "confirmTap": "再按一次確認"
   },
   "report": {
     "title": "回報問題",
@@ -821,7 +822,8 @@
     "colReporter": "回報者",
     "colAssignedTo": "指派給",
     "colReportedAt": "回報時間",
-    "unknown": "未知"
+    "unknown": "未知",
+    "limitNote": "僅顯示最近 200 筆案件，較舊案件請使用搜尋"
   },
   "boardStatus": {
     "reported": "新回報",
@@ -890,7 +892,8 @@
     "photoHint": "點擊圖片放大查看（{count} 張照片）",
     "zoomOut": "縮小",
     "zoomIn": "放大",
-    "download": "下載原圖"
+    "download": "下載原圖",
+    "manageSection": "編輯 / 刪除案件"
   },
   "audit": {
     "heading": "操作歷史",
@@ -901,7 +904,8 @@
     "delete": "刪除",
     "status_change": "狀態變更",
     "assign": "指派",
-    "comment": "評論"
+    "comment": "評論",
+    "system": "系統"
   },
   "accountDisabled": {
     "title": "帳號已停用",

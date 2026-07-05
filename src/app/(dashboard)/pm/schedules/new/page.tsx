@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 
-export const metadata = { title: 'Jadwal PM Baru | FAMMS' }
+export const metadata = { title: 'New PM Schedule | FAMMS' }
 
 export default function NewPMSchedulePage() {
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import imageCompression from 'browser-image-compression'
@@ -77,6 +77,11 @@ export default function ProgressUpdate({
   const [completionType, setCompletionType] = useState<'temporary_fix' | 'permanent_fix' | ''>('')
   const [submitting, setSubmitting] = useState(false)
   const [compressing, setCompressing] = useState(false)
+
+  // Stable preview URLs — created once per photo list and revoked when the
+  // list changes/unmounts, instead of leaking a new blob URL every render.
+  const photoPreviews = useMemo(() => photos.map(p => URL.createObjectURL(p)), [photos])
+  useEffect(() => () => { photoPreviews.forEach(u => URL.revokeObjectURL(u)) }, [photoPreviews])
 
   // Status options based on rollback setting. Only supervisors+ may move a case to "closed".
   const availableStatuses = allowedStatuses(currentStatus, allowRollback)
@@ -228,18 +233,22 @@ export default function ProgressUpdate({
         />
       </div>
 
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="allowRollback"
-          checked={allowRollback}
-          onChange={e => setAllowRollback(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300"
-        />
-        <Label htmlFor="allowRollback" className="mb-0 text-sm cursor-pointer">
-          {t('progressUpdate.allowRollback')}
-        </Label>
-      </div>
+      {/* Moving a case backwards is an exceptional action — supervisors+ only
+          (same gate as closing), so technicians can't undo workflow progress. */}
+      {canClose && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="allowRollback"
+            checked={allowRollback}
+            onChange={e => setAllowRollback(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300"
+          />
+          <Label htmlFor="allowRollback" className="mb-0 text-sm cursor-pointer">
+            {t('progressUpdate.allowRollback')}
+          </Label>
+        </div>
+      )}
 
       <div>
         <Label>{t('progressUpdate.newStatus')}</Label>
@@ -306,7 +315,7 @@ export default function ProgressUpdate({
               {photos.map((p, i) => (
                 <div key={i} className="relative group">
                   <img
-                    src={URL.createObjectURL(p)}
+                    src={photoPreviews[i]}
                     alt=""
                     className="w-20 h-20 object-cover rounded-lg border border-gray-200 group-hover:opacity-80 transition-opacity"
                   />

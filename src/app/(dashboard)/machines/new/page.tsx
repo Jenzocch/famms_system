@@ -1,6 +1,6 @@
 import MachineForm from '@/components/machines/MachineForm'
 
-export const metadata = { title: 'Tambah Mesin | FAMMS' }
+export const metadata = { title: 'New Machine | FAMMS' }
 
 export default function NewMachinePage() {
   return (

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 
-export const metadata = { title: 'Tambah Knowledge Base | FAMMS' }
+export const metadata = { title: 'New KB Entry | FAMMS' }
 
 export default async function NewKBPage({
   searchParams,

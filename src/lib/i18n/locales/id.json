@@ -38,7 +38,8 @@
     "sentPersonal": "Sudah DM {count} penanggung jawab & notifikasi group",
     "unregistered": "{count} penanggung jawab belum set Telegram pribadi, hanya dapat notifikasi group",
     "noRecipients": "Terkirim, tetapi belum ada penerima Telegram yang berlangganan",
-    "failed": "Gagal mengirim pengingat"
+    "failed": "Gagal mengirim pengingat",
+    "confirmTap": "Ketuk lagi untuk konfirmasi"
   },
   "report": {
     "title": "Lapor Masalah",
@@ -821,7 +822,8 @@
     "colReporter": "Pelapor",
     "colAssignedTo": "Ditugaskan ke",
     "colReportedAt": "Waktu Lapor",
-    "unknown": "Tidak diketahui"
+    "unknown": "Tidak diketahui",
+    "limitNote": "Menampilkan 200 kasus terbaru — gunakan pencarian untuk kasus lama"
   },
   "boardStatus": {
     "reported": "Baru",
@@ -890,7 +892,8 @@
     "photoHint": "Ketuk gambar untuk memperbesar ({count} foto)",
     "zoomOut": "Perkecil",
     "zoomIn": "Perbesar",
-    "download": "Unduh asli"
+    "download": "Unduh asli",
+    "manageSection": "Edit / Hapus Kasus"
   },
   "audit": {
     "heading": "Riwayat Aktivitas",
@@ -901,7 +904,8 @@
     "delete": "Dihapus",
     "status_change": "Status diubah",
     "assign": "Ditugaskan",
-    "comment": "Komentar"
+    "comment": "Komentar",
+    "system": "Sistem"
   },
   "accountDisabled": {
     "title": "Akun dinonaktifkan",

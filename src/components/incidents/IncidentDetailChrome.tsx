@@ -55,3 +55,22 @@ export function ClosedBanner({ closedAt }: { closedAt: string | null }) {
     </div>
   )
 }
+
+// Collapsible wrapper for low-frequency sections (edit/delete, audit trail) so
+// the detail page stays short on mobile. Native <details> keeps it zero-JS.
+export function CollapsibleSection({ titleKey, fallback, children }: {
+  titleKey: string
+  fallback: string
+  children: React.ReactNode
+}) {
+  const { t } = useI18n()
+  return (
+    <details className="bg-white rounded-xl border border-gray-200 group">
+      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-gray-700 flex items-center justify-between">
+        {t(titleKey, fallback)}
+        <span className="text-gray-400 transition-transform group-open:rotate-90">›</span>
+      </summary>
+      <div className="px-4 pb-4">{children}</div>
+    </details>
+  )
+}
