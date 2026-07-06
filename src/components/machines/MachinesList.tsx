@@ -20,9 +20,11 @@ export interface MachineRow {
 interface MachinesListProps {
   machines: MachineRow[]
   deleteAction: (machineId: string) => Promise<void>
+  /** manager/admin only — hides add/edit/delete for viewers (PERMISSIONS.manageMachines) */
+  canManage?: boolean
 }
 
-export default function MachinesList({ machines, deleteAction }: MachinesListProps) {
+export default function MachinesList({ machines, deleteAction, canManage = false }: MachinesListProps) {
   const { t } = useI18n()
   const router = useRouter()
 
@@ -30,10 +32,12 @@ export default function MachinesList({ machines, deleteAction }: MachinesListPro
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">{t('machines.title', '機器列表')}</h1>
-        <Button onClick={() => router.push('/machines/new')} className="gap-2">
-          <Plus className="w-4 h-4" />
-          {t('machines.addBtn', '新增機器')}
-        </Button>
+        {canManage && (
+          <Button onClick={() => router.push('/machines/new')} className="gap-2">
+            <Plus className="w-4 h-4" />
+            {t('machines.addBtn', '新增機器')}
+          </Button>
+        )}
       </div>
 
       {machines.length === 0 ? (
@@ -66,15 +70,19 @@ export default function MachinesList({ machines, deleteAction }: MachinesListPro
                 >
                   <QrCode className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label={t('common.edit', '編輯')}
-                  onClick={() => router.push(`/machines/${m.id}/edit`)}
-                >
-                  <Edit2 className="w-4 h-4" />
-                </Button>
-                <DeleteMachineButton machineId={m.id} deleteAction={deleteAction} />
+                {canManage && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label={t('common.edit', '編輯')}
+                      onClick={() => router.push(`/machines/${m.id}/edit`)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <DeleteMachineButton machineId={m.id} deleteAction={deleteAction} />
+                  </>
+                )}
               </div>
             </div>
           ))}
