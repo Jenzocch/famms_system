@@ -472,7 +472,9 @@
     "badgeInDays": "{count} 天後",
     "searchMachine": "搜尋機器名稱或代碼...",
     "noMatchingMachines": "找不到符合的機器",
-    "noUpcoming": "近期沒有待辦保養"
+    "noUpcoming": "近期沒有待辦保養",
+    "confirmDone": "確認完成",
+    "done": "完成"
   },
   "weekdays": {
     "0": "日",

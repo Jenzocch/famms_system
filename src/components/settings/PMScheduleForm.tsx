@@ -77,15 +77,22 @@ export default function PMScheduleForm({ factoryId, onSaved }: PMScheduleFormPro
 
     setSubmitting(true)
     try {
-      const { error } = await supabase.from('pm_schedules').insert([{
-        factory_id: selectedFactory,
-        machine_id: selectedMachine,
-        pm_type: pmType,
-        interval_days: pmType === 'custom' ? parseInt(intervalDays, 10) : null,
-        description: description || null,
-        is_active: true,
-      }])
-      if (error) throw error
+      // Create through the API so the first pending pm_record is generated
+      // too (schedules without records only show as projected calendar tasks).
+      const res = await fetch('/api/pm/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          machine_id: selectedMachine,
+          pm_type: pmType,
+          interval_days: pmType === 'custom' ? parseInt(intervalDays, 10) : null,
+          description: description || undefined,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        throw new Error(j?.error || t('pmForm.createFailedShort', '建立失敗'))
+      }
 
       toast.success(t('pmForm.created', '保養計畫已建立'))
       setSelectedMachine('')

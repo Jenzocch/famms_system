@@ -11,13 +11,15 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { machine_id, pm_type, interval_days, description, checklist, first_due_date } = body as {
+  const { machine_id, pm_type, interval_days, description, checklist, first_due_date, assigned_user_ids, assigned_to } = body as {
     machine_id?: string
     pm_type?: PMType
     interval_days?: number | null
     description?: string
     checklist?: string[]
     first_due_date?: string
+    assigned_user_ids?: string[]
+    assigned_to?: string | null
   }
 
   if (!machine_id || !pm_type) {
@@ -34,22 +36,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Mesin tidak ditemukan' }, { status: 404 })
   }
 
-  const { data: schedule, error: scheduleErr } = await supabase
+  const base = {
+    factory_id: machine.factory_id,
+    machine_id,
+    pm_type,
+    interval_days: pm_type === 'custom' ? (interval_days || null) : null,
+    description: description || null,
+    checklist: checklist && checklist.length ? JSON.stringify(checklist) : null,
+    is_active: true,
+  }
+
+  // Assignee columns are added by SYNC_SCHEMA_LATEST.sql — try with them,
+  // retry without if the migration hasn't run so creation never hard-fails.
+  let { data: schedule, error: scheduleErr } = await supabase
     .from('pm_schedules')
-    .insert({
-      factory_id: machine.factory_id,
-      machine_id,
-      pm_type,
-      interval_days: pm_type === 'custom' ? (interval_days || null) : null,
-      description: description || null,
-      checklist: checklist && checklist.length ? JSON.stringify(checklist) : null,
-      is_active: true,
-    })
+    .insert({ ...base, assigned_user_ids: assigned_user_ids ?? [], assigned_to: assigned_to ?? null })
     .select('*')
     .single()
-
   if (scheduleErr) {
-    return NextResponse.json({ error: scheduleErr.message }, { status: 500 })
+    ({ data: schedule, error: scheduleErr } = await supabase
+      .from('pm_schedules')
+      .insert(base)
+      .select('*')
+      .single())
+  }
+
+  if (scheduleErr || !schedule) {
+    return NextResponse.json({ error: scheduleErr?.message ?? 'Insert failed' }, { status: 500 })
   }
 
   // Generate the first pending record. Use first_due_date if provided,

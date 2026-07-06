@@ -199,23 +199,25 @@ export default function PMScheduleManager() {
         if (error) throw error
         toast.success(t('pm.scheduleUpdated'))
       } else {
-        // factory_id is NOT NULL — derive it from the selected factory (the
-        // machine's factory). Without it the insert always failed.
-        const base = {
-          factory_id: factoryId,
-          machine_id: machineId,
-          pm_type: pmType,
-          interval_days: intervalValue,
-          description: description || null,
-          is_active: true,
+        // Create through the API so the first pending pm_record is generated
+        // too — a schedule without records only ever shows projected calendar
+        // tasks. One code path for every creation source.
+        const res = await fetch('/api/pm/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            machine_id: machineId,
+            pm_type: pmType,
+            interval_days: intervalValue,
+            description: description || undefined,
+            assigned_user_ids: assignees,
+            assigned_to: assignedTo,
+          }),
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => null)
+          throw new Error(j?.error || t('pm.operationFailed'))
         }
-        let { error } = await supabase
-          .from('pm_schedules')
-          .insert({ ...base, assigned_user_ids: assignees, assigned_to: assignedTo })
-        if (error) {
-          ({ error } = await supabase.from('pm_schedules').insert(base))
-        }
-        if (error) throw error
         toast.success(t('pm.scheduleCreated'))
       }
       setMachineId('')

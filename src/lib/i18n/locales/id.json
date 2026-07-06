@@ -472,7 +472,9 @@
     "badgeInDays": "{count} hr lagi",
     "searchMachine": "Cari nama atau kode mesin...",
     "noMatchingMachines": "Tidak ada mesin yang cocok",
-    "noUpcoming": "Tidak ada pemeliharaan mendatang"
+    "noUpcoming": "Tidak ada pemeliharaan mendatang",
+    "confirmDone": "Konfirmasi selesai",
+    "done": "Selesai"
   },
   "weekdays": {
     "0": "Min",

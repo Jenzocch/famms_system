@@ -14,6 +14,7 @@ import { useI18n } from '@/lib/i18n'
 
 interface PMTask {
   record_id: string
+  schedule_id?: string
   projected: boolean
   ad_hoc?: boolean
   machine_id: string
@@ -90,9 +91,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 const DAY_ABBRS = ['日', '一', '二', '三', '四', '五', '六']
 
-// A task can be actioned (completed/skipped) only if it's a real, not-yet-done record.
+// A task can be actioned (completed/skipped) if it's not yet done. Projected
+// occurrences (no stored record yet) are actionable too — the API materialises
+// the record on save, so nothing shown on the calendar is ever a dead end.
 function isActionable(task: PMTask) {
-  return !task.projected && (task.status === 'pending' || task.status === 'overdue')
+  if (task.ad_hoc) return false
+  return task.status === 'pending' || task.status === 'overdue' || task.status === 'scheduled'
 }
 
 function getWeekDates(date: Date): string[] {
@@ -134,8 +138,9 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
     createClient().auth.getUser().then(({ data }) => setMyId(data.user?.id ?? null))
   }, [])
 
-  // Inline action state for completing/skipping a real task from the detail panel
-  const [action, setAction] = useState<{ taskId: string; mode: 'complete' | 'skip'; findings: string; cost: string; reason: string } | null>(null)
+  // Inline action state for completing/skipping a task from the detail panel.
+  // `task` is kept so projected occurrences can be materialised on save.
+  const [action, setAction] = useState<{ taskId: string; task: PMTask; mode: 'complete' | 'skip'; findings: string; cost: string; reason: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const year = currentDate.getFullYear()
@@ -178,17 +183,33 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
     }
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/pm/records/${action.taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: action.mode === 'complete' ? 'completed' : 'skipped',
-          findings: action.findings || undefined,
-          cost: action.cost ? parseFloat(action.cost) : undefined,
-          delay_reason: action.mode === 'skip' ? action.reason : undefined,
-        }),
-      })
-      if (!res.ok) throw new Error('failed')
+      const payload = {
+        status: action.mode === 'complete' ? 'completed' : 'skipped',
+        findings: action.findings || undefined,
+        cost: action.cost ? parseFloat(action.cost) : undefined,
+        delay_reason: action.mode === 'skip' ? action.reason : undefined,
+      }
+      // Projected occurrences have no stored record yet — POST materialises
+      // one for (schedule, date). Stored records PATCH in place.
+      const res = action.task.projected
+        ? await fetch('/api/pm/records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...payload,
+              pm_schedule_id: action.task.schedule_id,
+              scheduled_date: action.task.scheduled_date,
+            }),
+          })
+        : await fetch(`/api/pm/records/${action.taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        throw new Error(j?.error || 'failed')
+      }
       toast.success(action.mode === 'complete' ? t('pm.completedMaintenance') : t('pm.skippedDone'))
       setAction(null)
       loadData()
@@ -489,7 +510,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
                             <Button
                               size="sm"
                               className="h-7 gap-1 bg-green-600 hover:bg-green-700 text-xs"
-                              onClick={() => setAction({ taskId: task.record_id, mode: 'complete', findings: '', cost: '', reason: '' })}
+                              onClick={() => setAction({ taskId: task.record_id, task, mode: 'complete', findings: '', cost: '', reason: '' })}
                             >
                               <CheckCircle className="w-3.5 h-3.5" /> {t('pm.complete')}
                             </Button>
@@ -497,7 +518,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
                               size="sm"
                               variant="outline"
                               className="h-7 gap-1 border-orange-300 text-orange-600 hover:bg-orange-50 text-xs"
-                              onClick={() => setAction({ taskId: task.record_id, mode: 'skip', findings: '', cost: '', reason: '' })}
+                              onClick={() => setAction({ taskId: task.record_id, task, mode: 'skip', findings: '', cost: '', reason: '' })}
                             >
                               <SkipForward className="w-3.5 h-3.5" /> {t('pm.skip')}
                             </Button>

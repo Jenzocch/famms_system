@@ -472,7 +472,9 @@
     "badgeInDays": "in {count}d",
     "searchMachine": "Search machine name or code...",
     "noMatchingMachines": "No matching machines",
-    "noUpcoming": "No upcoming maintenance"
+    "noUpcoming": "No upcoming maintenance",
+    "confirmDone": "Confirm done",
+    "done": "Done"
   },
   "weekdays": {
     "0": "Sun",

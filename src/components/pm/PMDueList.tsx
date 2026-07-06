@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Search, CalendarClock } from 'lucide-react'
+import { Loader2, Search, CalendarClock, CheckCircle, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
+import { toast } from 'sonner'
 
 interface PMDueListProps {
   factoryId: string
@@ -10,6 +12,8 @@ interface PMDueListProps {
 
 interface Task {
   record_id: string
+  schedule_id?: string
+  projected?: boolean
   machine_id: string
   machine_name: string
   machine_code: string | null
@@ -57,6 +61,10 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
   }
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  // Quick complete: first tap arms the confirm, second tap saves.
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!factoryId) { setTasks([]); return }
@@ -72,14 +80,21 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
           return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
         })
 
+        // Fetch all months in parallel (sequential fetches made the list slow).
+        const results = await Promise.all(
+          months.map(month =>
+            fetch(`/api/pm/calendar?factory_id=${factoryId}&month=${month}`)
+              .then(res => (res.ok ? res.json() : null))
+              .catch(() => null)
+          )
+        )
+
         const all: Task[] = []
-        for (const month of months) {
-          const res = await fetch(`/api/pm/calendar?factory_id=${factoryId}&month=${month}`)
-          if (!res.ok) continue
-          const data = await res.json()
+        for (const data of results) {
+          if (!data) continue
           for (const day of (data.events || [])) {
-            for (const t of (day.tasks || [])) {
-              if (ACTIONABLE.has(t.status)) all.push(t as Task)
+            for (const task of (day.tasks || [])) {
+              if (ACTIONABLE.has(task.status)) all.push(task as Task)
             }
           }
         }
@@ -102,7 +117,41 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
 
     load()
     return () => { cancelled = true }
-  }, [factoryId])
+  }, [factoryId, reloadKey])
+
+  // Complete a task straight from the list. Projected occurrences are
+  // materialised by POST /api/pm/records; stored ones PATCH in place.
+  async function completeTask(task: Task) {
+    setSavingId(task.record_id)
+    try {
+      const res = task.projected
+        ? await fetch('/api/pm/records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pm_schedule_id: task.schedule_id,
+              scheduled_date: task.scheduled_date,
+              status: 'completed',
+            }),
+          })
+        : await fetch(`/api/pm/records/${task.record_id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'completed' }),
+          })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        throw new Error(j?.error || 'failed')
+      }
+      toast.success(t('pm.completedMaintenance', '保養已完成'))
+      setReloadKey(k => k + 1)
+    } catch (err) {
+      toast.error(err instanceof Error && err.message !== 'failed' ? err.message : t('pm.saveFailed2', '儲存失敗'))
+    } finally {
+      setSavingId(null)
+      setConfirmId(null)
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -149,6 +198,8 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
         <div className="space-y-2">
           {filtered.map(task => {
             const meta = dueMeta(task.scheduled_date)
+            const arming = confirmId === task.record_id
+            const saving = savingId === task.record_id
             return (
               <div
                 key={task.record_id}
@@ -167,6 +218,36 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
                 <span className={`text-xs font-medium px-2 py-1 rounded shrink-0 ${meta.cls}`}>
                   {meta.text}
                 </span>
+                {arming ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      disabled={saving}
+                      onClick={() => completeTask(task)}
+                      className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
+                    >
+                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                      {t('pm.confirmDone', '確認完成')}
+                    </Button>
+                    <button
+                      type="button"
+                      aria-label={t('common.cancel', '取消')}
+                      onClick={() => setConfirmId(null)}
+                      className="p-1.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setConfirmId(task.record_id)}
+                    className="h-8 shrink-0 gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" /> {t('pm.done', '完成')}
+                  </Button>
+                )}
               </div>
             )
           })}

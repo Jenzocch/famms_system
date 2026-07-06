@@ -123,6 +123,7 @@ export async function GET(req: Request) {
 
         pushTask(date, {
           record_id: r.id,
+          schedule_id: r.pm_schedule_id,
           projected: false,
           ad_hoc: false,
           machine_id: schedule.machine_id,
@@ -155,6 +156,7 @@ export async function GET(req: Request) {
 
           pushTask(date, {
             record_id: `proj-${s.id}-${date}`,
+            schedule_id: s.id,
             projected: true,
             ad_hoc: false,
             machine_id: s.machine_id,
