@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/auth'
 import { notifyFactory, formatDailySummary, isTelegramConfigured } from '@/lib/telegram'
 
 // POST /api/notifications/daily-summary — compute and send a daily summary to
-// each factory's subscribed Telegram groups/users. Intended to be triggered by
-// a scheduled job (cron) or manually by an admin.
+// each factory's subscribed Telegram groups/users. Admin-only: it broadcasts to
+// every factory, so a regular user shouldn't be able to trigger the blast.
 export async function POST() {
+  const guard = await requireAdmin()
+  if (!guard.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: guard.status })
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   if (!isTelegramConfigured()) {
     return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN belum dikonfigurasi' }, { status: 400 })

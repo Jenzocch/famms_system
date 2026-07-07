@@ -43,6 +43,9 @@ export async function requireAdmin(): Promise<
 > {
   const user = await getCurrentUser()
   if (!user) return { ok: false, status: 401 }
+  // Deactivated accounts must not pass admin checks even with a valid session —
+  // the layout blocks them in the browser, but API routes don't go through it.
+  if (!user.is_active) return { ok: false, status: 403 }
   if (user.role !== 'admin') return { ok: false, status: 403 }
   return { ok: true, user }
 }

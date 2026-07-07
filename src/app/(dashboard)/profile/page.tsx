@@ -36,12 +36,18 @@ export default function ProfilePage() {
     load()
   }, [])
 
+  // Only admins may (re)assign a factory. For everyone else the factory is the
+  // tenant boundary, so they can edit their name but not switch factories.
+  const isAdmin = profile?.role === 'admin'
+
   async function save() {
     if (!profile) return
     setSaving(true)
+    const update: { full_name: string; factory_id?: string | null } = { full_name: fullName.trim() }
+    if (isAdmin) update.factory_id = factoryId || null
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName.trim(), factory_id: factoryId || null })
+      .update(update)
       .eq('id', profile.id)
     setSaving(false)
     if (error) toast.error(error.message)
@@ -49,6 +55,8 @@ export default function ProfilePage() {
   }
 
   if (!profile) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+
+  const factoryName = factories.find(f => f.id === profile.factory_id)?.name
 
   return (
     <div className="max-w-md mx-auto">
@@ -71,12 +79,18 @@ export default function ProfilePage() {
 
         <div>
           <Label>{t('profile.factory', '工廠')}</Label>
-          <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')} items={Object.fromEntries(factories.map(f => [f.id, f.name]))}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder={t('profile.selectFactory', '選擇工廠')} /></SelectTrigger>
-            <SelectContent>
-              {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {isAdmin ? (
+            <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')} items={Object.fromEntries(factories.map(f => [f.id, f.name]))}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder={t('profile.selectFactory', '選擇工廠')} /></SelectTrigger>
+              <SelectContent>
+                {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+              {factoryName || t('profile.noFactory', '未指派')} — {t('profile.contactAdminFactory', '請聯繫管理員修改工廠')}
+            </p>
+          )}
         </div>
 
         <div>

@@ -33,7 +33,7 @@ CREATE TABLE areas (
   UNIQUE(factory_id, code)
 );
 
--- Departments (for purchase request system)
+-- Departments (org units within a factory; used for incident assignment)
 CREATE TABLE departments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   factory_id UUID NOT NULL REFERENCES factories(id) ON DELETE CASCADE,

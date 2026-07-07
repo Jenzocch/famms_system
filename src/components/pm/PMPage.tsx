@@ -42,9 +42,15 @@ interface RecentItem {
   cost?: number | null
 }
 
+// zh fallbacks; rendered through t(pm.cad*) so labels follow app language.
 const PM_TYPE_LABELS: Record<string, string> = {
   daily: '每日', weekly: '每週', monthly: '每月',
   quarterly: '每季', half_yearly: '每半年', yearly: '每年', custom: '自訂天數',
+}
+const PM_TYPE_KEYS: Record<string, string> = {
+  daily: 'pm.cadDaily', weekly: 'pm.cadWeekly', monthly: 'pm.cadMonthly',
+  quarterly: 'pm.cadQuarterly', half_yearly: 'pm.cadHalfYearly',
+  yearly: 'pm.cadYearly', custom: 'pm.cadCustom',
 }
 
 export default function PMPage() {
@@ -304,7 +310,7 @@ export default function PMPage() {
                       item.kind === 'scheduled' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
                     }`}>
                       {item.kind === 'scheduled'
-                        ? `${t('pm.plannedTag')}${item.pmType ? ` · ${PM_TYPE_LABELS[item.pmType] || item.pmType}` : ''}`
+                        ? `${t('pm.plannedTag')}${item.pmType ? ` · ${t(PM_TYPE_KEYS[item.pmType] ?? '', PM_TYPE_LABELS[item.pmType] || item.pmType)}` : ''}`
                         : t('pm.adhocTag')}
                     </span>
                   </div>

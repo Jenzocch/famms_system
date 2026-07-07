@@ -236,8 +236,7 @@ export default function AssignForm({
       <Button
         onClick={save}
         disabled={submitting || !canAssign}
-        variant="outline"
-        className="w-full"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 disabled:hover:bg-gray-300"
         title={!canAssign ? t('assign.onlySupervisor', '只有主管可以派工') : ''}
       >
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

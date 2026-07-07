@@ -23,10 +23,22 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const isPublicApi = request.nextUrl.pathname.startsWith('/api')
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname.startsWith('/login')
+  const isApi = pathname.startsWith('/api')
+  // Only the Telegram webhook may be called without a session — Telegram's
+  // servers can't log in. It authenticates itself via the secret-token header
+  // checked inside the route.
+  const isPublicApi = pathname.startsWith('/api/notifications/telegram')
 
-  if (!user && !isAuthPage && !isPublicApi) {
+  if (!user && isApi && !isPublicApi) {
+    // Safety net: every API route also self-guards, but this keeps a future
+    // route that forgets its auth check from being exposed. JSON, not a
+    // redirect — API callers can't follow a login page.
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!user && !isAuthPage && !isApi) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

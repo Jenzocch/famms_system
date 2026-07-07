@@ -35,6 +35,8 @@
     "cardButton": "Nudge",
     "notePlaceholder": "Optional: a message for the assignee (e.g. the boss is asking — can it be done today?)",
     "sent": "Reminder sent via Telegram ({count} recipients)",
+    "sentPersonal": "DM'd {count} assignee(s) directly & notified the group",
+    "unregistered": "{count} assignee(s) have no personal Telegram set up — only got the group notice",
     "noRecipients": "Sent, but no subscribed Telegram recipients yet",
     "failed": "Failed to send reminder"
   },
@@ -97,7 +99,9 @@
     "submit": "Submit",
     "reset": "Reset",
     "noData": "No data available",
-    "update": "Update"
+    "update": "Update",
+    "deleted": "Deleted",
+    "deleteFailed": "Delete failed"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -185,7 +189,18 @@
     "selectMachineType": "Select a machine and PM type",
     "created": "PM schedule created",
     "createFailed": "Failed to create PM schedule",
-    "create": "Create Schedule"
+    "create": "Create Schedule",
+    "addTitle": "Add PM Plan",
+    "factory": "Factory",
+    "pmTypeLabel": "PM Type",
+    "intervalDays": "Interval (days)",
+    "intervalPlaceholder": "e.g. 30",
+    "descChecklist": "Description / Checklist",
+    "descChecklistPlaceholder": "e.g. Check bearing lubrication, clean heat sink, measure temperature…",
+    "selectFactoryPlaceholder": "Select factory",
+    "errSelectAll": "Please select factory, machine and PM type",
+    "errInterval": "Enter the number of days for a custom interval",
+    "createFailedShort": "Create failed"
   },
   "incidents": {
     "title": "Incidents",
@@ -446,7 +461,12 @@
     "costPlaceholder": "Cost (optional)",
     "confirmComplete2": "Confirm Complete",
     "skipReasonPlaceholder": "Skip reason (required)",
-    "confirmSkip2": "Confirm Skip"
+    "confirmSkip2": "Confirm Skip",
+    "badgeOverdueDays": "Overdue {count}d",
+    "badgeInDays": "in {count}d",
+    "searchMachine": "Search machine name or code...",
+    "noMatchingMachines": "No matching machines",
+    "noUpcoming": "No upcoming maintenance"
   },
   "weekdays": {
     "0": "Sun",
@@ -646,7 +666,22 @@
     "flagNewIncident": "New Incident",
     "flagSlaAlert": "SLA Alert",
     "flagBlocking": "Blocking",
-    "flagDailySummary": "Daily Summary"
+    "flagDailySummary": "Daily Summary",
+    "personalTitle": "Personal Notifications",
+    "personalDesc": "Register an employee's personal Chat ID. When a case is assigned to them and nudged, they get DM'd directly.",
+    "personalStep1": "1. The employee DMs the FAMMS bot on Telegram, sends /start",
+    "personalStep2": "2. The bot replies \"Chat ID Anda: number\"",
+    "personalStep3": "3. Pick the account below, put that number into Chat ID, then add",
+    "account": "Account",
+    "selectAccount": "— Select account —",
+    "personalChatId": "Personal Chat ID",
+    "addUserBtn": "Add Personal Notification",
+    "fillUserAndId": "Select an account and enter a Chat ID",
+    "userAdded": "Personal notification added",
+    "addUserFailed": "Failed to add personal notification",
+    "userDeleted": "Personal notification deleted",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
   },
   "spareParts": {
     "title": "Spare Parts Management",
@@ -801,10 +836,20 @@
     "observation": "Awaiting Confirmation",
     "closed": "Closed"
   },
+  "workflowStep": {
+    "reported": "New",
+    "accepted": "Accepted",
+    "analyzing": "Analyzing",
+    "repairing": "Repairing",
+    "testing": "Testing",
+    "observation": "Awaiting Confirmation",
+    "closed": "Closed",
+    "heading": "Workflow Progress"
+  },
   "appName": "Factory Maintenance",
   "caseEdit": {
     "edit": "Edit case",
-    "delete": "Delete",
+    "delete": "Delete Case",
     "onlySupervisorDelete": "Only supervisors can delete a case",
     "confirmDelete": "Delete this case? This cannot be undone and all progress records will be removed too.",
     "deleted": "Case deleted",
@@ -846,5 +891,21 @@
     "zoomOut": "Zoom out",
     "zoomIn": "Zoom in",
     "download": "Download original"
+  },
+  "audit": {
+    "heading": "Activity History",
+    "loading": "Loading history...",
+    "empty": "No activity yet",
+    "create": "Created",
+    "update": "Edited",
+    "delete": "Deleted",
+    "status_change": "Status changed",
+    "assign": "Assigned",
+    "comment": "Comment"
+  },
+  "accountDisabled": {
+    "title": "Account disabled",
+    "desc": "This account is currently unavailable. Please contact the system administrator.",
+    "logout": "Sign out"
   }
 }

@@ -9,6 +9,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true }) // silently accept; bot not configured
   }
 
+  // Verify the request really came from Telegram. When you register the webhook
+  // with setWebhook(secret_token: <TELEGRAM_WEBHOOK_SECRET>), Telegram echoes it
+  // back in this header on every call. If the secret is configured, reject any
+  // request that doesn't match — this blocks forged /chatid etc. If it isn't
+  // configured we stay backward-compatible (but you SHOULD set it).
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (secret && req.headers.get('x-telegram-bot-api-secret-token') !== secret) {
+    return NextResponse.json({ ok: false }, { status: 401 })
+  }
+
   const update = await req.json().catch(() => null)
   const message = update?.message
   const chat = message?.chat

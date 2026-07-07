@@ -157,7 +157,7 @@ export default function IncidentActions({
         <Button
           variant="outline"
           onClick={() => setEditing(true)}
-          className="flex-1 gap-2"
+          className="flex-1 gap-2 border-gray-300 font-medium"
         >
           <Pencil className="w-4 h-4" /> {tr('caseEdit.edit')}
         </Button>
@@ -165,7 +165,7 @@ export default function IncidentActions({
           variant="outline"
           onClick={() => setShowDeleteConfirm(true)}
           disabled={!canDelete}
-          className="gap-2 text-red-600"
+          className="gap-2 border-red-300 text-red-600 font-medium hover:bg-red-50 hover:text-red-700"
           title={!canDelete ? tr('caseEdit.onlySupervisorDelete') : ''}
         >
           {canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
@@ -262,7 +262,11 @@ export default function IncidentActions({
       </div>
 
       <div className="flex gap-2">
-        <Button onClick={saveEdit} disabled={submitting}>
+        <Button
+          onClick={saveEdit}
+          disabled={submitting}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
           {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {tr('caseEdit.save')}
         </Button>

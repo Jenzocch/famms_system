@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { notifyFactory } from '@/lib/telegram'
+import { notifyFactory, notifyAssignees } from '@/lib/telegram'
 import { PERMISSIONS } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 
@@ -38,7 +38,7 @@ export async function POST(
   const { data: incident, error: loadErr } = await supabase
     .from('incidents')
     .select(`
-      id, incident_no, title, status, factory_id, assigned_to, due_date,
+      id, incident_no, title, status, factory_id, assigned_to, assigned_user_ids, due_date,
       machine:machines(machine_code, machine_name),
       factory:factories(name)
     `)
@@ -55,25 +55,42 @@ export async function POST(
   const factory = incident.factory as unknown as { name: string } | null
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+  // Telegram messages are in Bahasa Indonesia — the factory floor audience.
   const html = [
-    `<b>⏰ 進度提醒</b>`,
-    `<b>編號:</b> ${incident.incident_no}`,
-    incident.title ? `<b>標題:</b> ${incident.title}` : '',
-    `<b>位置:</b> ${factory?.name || '?'}${machine ? ` · ${machine.machine_name}` : ''}`,
-    incident.assigned_to ? `<b>負責人:</b> ${incident.assigned_to}` : '<b>負責人:</b> （尚未指派）',
-    incident.due_date ? `<b>預計完成:</b> ${incident.due_date}` : '',
-    `${profile?.full_name || '主管'} 請您更新此案件的處理進度。`,
-    note ? `<b>📝 補充:</b> ${esc(note)}` : '',
-    `<a href="${appUrl}/incidents/${incident.id}">更新進度 →</a>`,
+    `<b>⏰ Pengingat Progres</b>`,
+    `<b>No:</b> ${esc(incident.incident_no)}`,
+    incident.title ? `<b>Judul:</b> ${esc(incident.title)}` : '',
+    `<b>Lokasi:</b> ${esc(factory?.name || '?')}${machine ? ` · ${esc(machine.machine_name)}` : ''}`,
+    incident.assigned_to ? `<b>PIC:</b> ${esc(incident.assigned_to)}` : '<b>PIC:</b> (belum ditugaskan)',
+    incident.due_date ? `<b>Target selesai:</b> ${esc(incident.due_date)}` : '',
+    `${esc(profile?.full_name || 'Supervisor')} meminta Anda memperbarui progres kasus ini.`,
+    note ? `<b>📝 Catatan:</b> ${esc(note)}` : '',
+    `<a href="${appUrl}/incidents/${incident.id}">Perbarui progres →</a>`,
   ].filter(Boolean).join('\n')
 
+  const assignedIds = Array.isArray(incident.assigned_user_ids) ? (incident.assigned_user_ids as string[]) : []
+
   try {
-    const result = await notifyFactory(supabase, {
-      factoryId: incident.factory_id,
-      type: 'status_update',
-      html,
+    // 1) Direct-message the assigned people (QC, technician, whoever) so the
+    //    nudge lands in their personal chat — the real "催". 2) Also broadcast
+    //    to the factory's groups so the team keeps visibility.
+    const [personal, group] = await Promise.all([
+      notifyAssignees(supabase, { profileIds: assignedIds, type: 'status_update', html }),
+      notifyFactory(supabase, { factoryId: incident.factory_id, type: 'status_update', html }),
+    ])
+
+    return NextResponse.json({
+      ok: true,
+      // Combined totals keep older callers working…
+      sent: personal.sent + group.sent,
+      failed: personal.failed + group.failed,
+      // …and the breakdown powers a clearer toast ("2 pinged, 1 not set up").
+      personalSent: personal.sent,
+      personalFailed: personal.failed,
+      unregistered: personal.unregistered,
+      groupSent: group.sent,
+      groupFailed: group.failed,
     })
-    return NextResponse.json({ ok: true, ...result })
   } catch (err) {
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : 'notify failed' }, { status: 500 })
   }

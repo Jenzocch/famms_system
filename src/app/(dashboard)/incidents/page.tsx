@@ -3,7 +3,7 @@ import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import IncidentBoard, { BoardRow } from '@/components/incidents/IncidentBoard'
 import IncidentsBoardWithSearch from '@/components/incidents/IncidentsBoardWithSearch'
 
-export const metadata = { title: '案件看板 | 維修系統' }
+export const metadata = { title: '案件看板 | FAMMS' }
 
 export default async function IncidentsPage({
   searchParams,
@@ -28,11 +28,15 @@ export default async function IncidentsPage({
   const isFullBoard = !user || PERMISSIONS.boardFull(user.role)
 
   if (isFullBoard) {
-    // Supervisors/managers see the whole board, scoped to their factory.
     // Admins see every factory's cases.
-    if (user?.factory_id && user.role !== 'admin') query = query.eq('factory_id', user.factory_id)
-    // Optional factory filter from the dashboard's per-factory rows.
-    if (factory) query = query.eq('factory_id', factory)
+    if (factory) {
+      // Explicit factory drill-down from the dashboard's per-factory rows.
+      query = query.eq('factory_id', factory)
+    } else if (user?.factory_id && user.role !== 'admin') {
+      // Supervisors/managers see their own factory PLUS any case assigned to
+      // them in another factory (cross-factory assignments must stay visible).
+      query = query.or(`factory_id.eq.${user.factory_id},assigned_user_ids.cs.{${user.id}}`)
+    }
   } else {
     // Technicians (no full-board access) see cases assigned to them OR reported
     // by them — across ALL factories, since they can be assigned cross-factory.

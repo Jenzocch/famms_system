@@ -356,7 +356,11 @@ export default function ProgressUpdate({
         </div>
       </div>
 
-      <Button onClick={submit} disabled={submitting} className="w-full h-11">
+      <Button
+        onClick={submit}
+        disabled={submitting}
+        className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white"
+      >
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         {t('progressUpdate.submit')}
       </Button>

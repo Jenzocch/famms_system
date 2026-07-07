@@ -14,7 +14,7 @@ import {
   NoFactoryMessage,
 } from '@/components/settings/SettingsSectionHeader'
 
-export const metadata = { title: '設定 | 維修系統' }
+export const metadata = { title: '設定 | FAMMS' }
 
 export default async function SettingsPage() {
   const user = await getCurrentUser()

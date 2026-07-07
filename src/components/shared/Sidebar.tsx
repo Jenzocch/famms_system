@@ -54,9 +54,12 @@ export default function Sidebar({ profile, incidentBadge = 0 }: SidebarProps) {
     <aside className="hidden lg:flex lg:flex-col w-60 shrink-0 bg-white border-r border-gray-200 h-screen sticky top-0">
       {/* Brand */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-gray-100">
-        <Link href="/dashboard" className="flex items-center gap-2 text-blue-600 font-bold min-w-0">
+        <Link href="/dashboard" className="flex items-center gap-2 text-blue-600 min-w-0">
           <Wrench className="w-5 h-5 shrink-0" />
-          <span className="text-sm truncate">{t('appName', '工廠維修系統')}</span>
+          <span className="flex flex-col leading-tight min-w-0">
+            <span className="text-base font-extrabold tracking-tight">FAMMS</span>
+            <span className="text-[10px] text-gray-400 font-medium truncate">{t('appName', '工廠維修系統')}</span>
+          </span>
         </Link>
         <LanguageSwitcher />
       </div>

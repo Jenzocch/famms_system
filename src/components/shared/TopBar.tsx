@@ -33,9 +33,9 @@ export default function TopBar({ profile }: TopBarProps) {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 h-12 max-w-lg mx-auto">
-        <div className="flex items-center gap-2 text-blue-600 font-bold min-w-0">
-          <Wrench className="w-4 h-4 shrink-0" />
-          <span className="text-sm truncate">{t('appName', '工廠維修系統')}</span>
+        <div className="flex items-center gap-2 text-blue-600 min-w-0">
+          <Wrench className="w-5 h-5 shrink-0" />
+          <span className="text-base font-extrabold tracking-tight">FAMMS</span>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">

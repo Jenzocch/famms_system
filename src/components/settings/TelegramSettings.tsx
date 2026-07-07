@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Send, MessageCircle } from 'lucide-react'
+import { Loader2, Plus, Trash2, Send, MessageCircle, UserCheck } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 interface Group {
@@ -17,6 +17,20 @@ interface Group {
   notify_sla_alert: boolean
   notify_blocking: boolean
   notify_daily_summary: boolean
+}
+
+interface Account {
+  id: string
+  full_name: string | null
+  role: string
+  factory_id: string | null
+}
+
+interface PersonalUser {
+  id: string
+  profile_id: string
+  telegram_chat_id: number
+  notification_enabled: boolean
 }
 
 export default function TelegramSettings({
@@ -34,6 +48,14 @@ export default function TelegramSettings({
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
 
+  // Personal (per-account) Telegram notifications — so a reminder to a specific
+  // assignee (QC, technician…) can DM that person directly, not just the group.
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [users, setUsers] = useState<PersonalUser[]>([])
+  const [selectedProfile, setSelectedProfile] = useState('')
+  const [chatId, setChatId] = useState('')
+  const [savingUser, setSavingUser] = useState(false)
+
   async function load() {
     const { data } = await supabase
       .from('telegram_groups')
@@ -43,8 +65,29 @@ export default function TelegramSettings({
     setGroups(data ?? [])
   }
 
+  async function loadPeople() {
+    // Assignable accounts: this factory's users + cross-factory (null factory).
+    const { data: accts } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, factory_id')
+      .eq('is_active', true)
+      .order('full_name')
+    setAccounts(
+      ((accts ?? []) as Account[]).filter(
+        a => !a.factory_id || a.factory_id === factoryId
+      )
+    )
+
+    const { data: regs } = await supabase
+      .from('telegram_users')
+      .select('id, profile_id, telegram_chat_id, notification_enabled')
+      .eq('factory_id', factoryId)
+    setUsers((regs ?? []) as PersonalUser[])
+  }
+
   useEffect(() => {
     load()
+    loadPeople()
   }, [])
 
   async function addGroup() {
@@ -106,6 +149,62 @@ export default function TelegramSettings({
       setTesting(false)
     }
   }
+
+  async function addUser() {
+    if (!selectedProfile || !chatId) {
+      toast.error(t('telegram.fillUserAndId', '請選擇帳號並填入 Chat ID'))
+      return
+    }
+    setSavingUser(true)
+    try {
+      const { error } = await supabase.from('telegram_users').insert({
+        factory_id: factoryId,
+        profile_id: selectedProfile,
+        telegram_chat_id: Number(chatId),
+      })
+      if (error) throw error
+      toast.success(t('telegram.userAdded', '個人通知已新增'))
+      setSelectedProfile(''); setChatId('')
+      loadPeople()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('telegram.addUserFailed', '新增個人通知失敗'))
+    } finally {
+      setSavingUser(false)
+    }
+  }
+
+  async function toggleUser(u: PersonalUser) {
+    const next = !u.notification_enabled
+    const { error } = await supabase
+      .from('telegram_users')
+      .update({ notification_enabled: next })
+      .eq('id', u.id)
+    if (error) {
+      toast.error(t('telegram.updateFailed'))
+      return
+    }
+    setUsers(users.map(x => (x.id === u.id ? { ...x, notification_enabled: next } : x)))
+  }
+
+  async function removeUser(id: string) {
+    const { error } = await supabase.from('telegram_users').delete().eq('id', id)
+    if (error) {
+      toast.error(t('telegram.deleteFailed'))
+      return
+    }
+    setUsers(users.filter(u => u.id !== id))
+    toast.success(t('telegram.userDeleted', '個人通知已刪除'))
+  }
+
+  const accountLabel = (id: string) => {
+    const a = accounts.find(x => x.id === id)
+    return a ? (a.full_name || `(${a.role})`) : id.slice(0, 8)
+  }
+
+  // Accounts not yet registered for personal notifications (for the dropdown).
+  const unregisteredAccounts = accounts.filter(
+    a => !users.some(u => u.profile_id === a.id)
+  )
 
   const FLAGS: { key: keyof Group; label: string }[] = [
     { key: 'notify_new_incident', label: t('telegram.flagNewIncident') },
@@ -195,6 +294,80 @@ export default function TelegramSettings({
           ))}
         </div>
       )}
+
+      {/* Personal notifications — DM a specific assignee (QC / technician) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div>
+          <h3 className="font-semibold text-gray-900 flex items-center gap-1.5">
+            <UserCheck className="w-4 h-4" /> {t('telegram.personalTitle', '個人通知帳號')}
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            {t('telegram.personalDesc', '登錄員工的個人 Chat ID。當案件指派給他並被催進度時，會直接私訊本人。')}
+          </p>
+        </div>
+
+        {/* How to get a personal Chat ID */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
+          <p>{t('telegram.personalStep1', '1. 員工在 Telegram 私訊 FAMMS bot，傳送 /start')}</p>
+          <p>{t('telegram.personalStep2', '2. bot 回覆「Chat ID Anda: 數字」')}</p>
+          <p>{t('telegram.personalStep3', '3. 選擇下方帳號，把該數字填進 Chat ID 後新增')}</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label>{t('telegram.account', '帳號')}</Label>
+            <select
+              value={selectedProfile}
+              onChange={e => setSelectedProfile(e.target.value)}
+              className="mt-1 w-full h-9 rounded-md border border-gray-300 bg-white px-3 text-sm"
+            >
+              <option value="">{t('telegram.selectAccount', '— 選擇帳號 —')}</option>
+              {unregisteredAccounts.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.full_name || `(${a.role})`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>{t('telegram.personalChatId', '個人 Chat ID')}</Label>
+            <Input value={chatId} onChange={e => setChatId(e.target.value)} placeholder="5003966994" className="mt-1" />
+          </div>
+        </div>
+        <Button onClick={addUser} disabled={savingUser}>
+          {savingUser ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+          {t('telegram.addUserBtn', '新增個人通知')}
+        </Button>
+
+        {/* Registered personal users */}
+        {users.length > 0 && (
+          <div className="rounded-lg border border-gray-100 divide-y divide-gray-100">
+            {users.map(u => (
+              <div key={u.id} className="flex items-center justify-between p-3">
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">{accountLabel(u.profile_id)}</p>
+                  <p className="text-xs text-gray-400 font-mono">{u.telegram_chat_id}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleUser(u)}
+                    className={`text-xs px-3 py-1 rounded-full border transition ${
+                      u.notification_enabled
+                        ? 'bg-green-50 border-green-300 text-green-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-400'
+                    }`}
+                  >
+                    {u.notification_enabled ? t('telegram.enabled', '已啟用') : t('telegram.disabled', '已停用')}
+                  </button>
+                  <button onClick={() => removeUser(u.id)} className="text-gray-400 hover:text-red-500">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Test */}
       <Button variant="outline" onClick={testSend} disabled={testing || !configured}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/lib/i18n'
 import { Clock, User, Edit3, CheckCircle, AlertCircle, Trash2 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
@@ -28,6 +29,8 @@ const ACTION_ICONS = {
   comment: <Edit3 className="w-4 h-4 text-blue-500" />,
 }
 
+// Fallback zh labels; display goes through t(`audit.*`) so en/id users
+// see their language. change_summary stays as stored (zh audit log).
 const ACTION_LABELS = {
   create: '建立',
   update: '編輯',
@@ -39,6 +42,7 @@ const ACTION_LABELS = {
 
 export default function AuditTrail({ resourceId, resourceType }: AuditTrailProps) {
   const supabase = createClient()
+  const { t } = useI18n()
   const [logs, setLogs] = useState<AuditEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -65,14 +69,14 @@ export default function AuditTrail({ resourceId, resourceType }: AuditTrailProps
   }
 
   if (loading) {
-    return <div className="text-sm text-gray-500 py-4">載入歷史記錄中...</div>
+    return <div className="text-sm text-gray-500 py-4">{t('audit.loading', '載入歷史記錄中...')}</div>
   }
 
   if (logs.length === 0) {
     return (
       <div className="text-center py-6 text-gray-400 text-sm">
         <Clock className="w-6 h-6 mx-auto mb-2 opacity-30" />
-        沒有操作記錄
+        {t('audit.empty', '沒有操作記錄')}
       </div>
     )
   }
@@ -81,13 +85,13 @@ export default function AuditTrail({ resourceId, resourceType }: AuditTrailProps
     <div className="space-y-3">
       <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
         <Clock className="w-4 h-4" />
-        操作歷史
+        {t('audit.heading', '操作歷史')}
       </h3>
 
       <div className="space-y-2">
         {logs.map((log, idx) => {
           const icon = ACTION_ICONS[log.action_type as keyof typeof ACTION_ICONS]
-          const label = ACTION_LABELS[log.action_type as keyof typeof ACTION_LABELS]
+          const label = t(`audit.${log.action_type}`, ACTION_LABELS[log.action_type as keyof typeof ACTION_LABELS] ?? log.action_type)
 
           return (
             <div

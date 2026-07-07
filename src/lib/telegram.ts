@@ -166,3 +166,49 @@ export async function notifyFactory(
 
   return { sent, failed }
 }
+
+// Direct-message specific accounts (by profile id) via their registered
+// personal chat_id. Used to nudge the exact assignees of an incident — a QC,
+// technician, or anyone — instead of broadcasting to the whole factory.
+// `unregistered` = assigned accounts with NO personal chat_id on file yet, so
+// the caller can tell the supervisor "3 pinged, 1 not set up".
+export async function notifyAssignees(
+  supabase: SupabaseClient,
+  args: { profileIds: string[]; type: NotificationType; html: string }
+): Promise<{ sent: number; failed: number; unregistered: number }> {
+  if (!TOKEN || args.profileIds.length === 0) return { sent: 0, failed: 0, unregistered: 0 }
+
+  const { data: users } = await supabase
+    .from('telegram_users')
+    .select('id, profile_id, telegram_chat_id')
+    .in('profile_id', args.profileIds)
+    .eq('notification_enabled', true)
+
+  // A person may be registered in more than one factory (chat_id is globally
+  // unique) — dedupe so they don't get the same nudge twice.
+  const seen = new Set<number>()
+  const targets = (users ?? []).filter(u => {
+    if (seen.has(u.telegram_chat_id)) return false
+    seen.add(u.telegram_chat_id)
+    return true
+  })
+
+  let sent = 0
+  let failed = 0
+  for (const u of targets) {
+    const r = await sendTelegramMessage(u.telegram_chat_id, args.html)
+    await supabase.from('notification_logs').insert({
+      notification_type: args.type,
+      recipient_type: 'user',
+      recipient_id: u.id,
+      telegram_message_id: r.messageId ?? null,
+      status: r.ok ? 'sent' : 'failed',
+    })
+    r.ok ? sent++ : failed++
+  }
+
+  const registered = new Set((users ?? []).map(u => u.profile_id))
+  const unregistered = args.profileIds.filter(id => !registered.has(id)).length
+
+  return { sent, failed, unregistered }
+}

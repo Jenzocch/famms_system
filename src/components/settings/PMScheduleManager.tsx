@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { useI18n } from '@/lib/i18n'
 import { Loader2, Trash2, Edit2, Calendar, Clock } from 'lucide-react'
 import PMScheduleForm from './PMScheduleForm'
 
@@ -20,18 +21,20 @@ interface Schedule {
   factory?: { name: string }
 }
 
+// zh fallbacks; rendered through t(pm.cad*) so labels follow app language.
 const PM_TYPE_LABELS: Record<string, string> = {
-  daily: '每日',
-  weekly: '每週',
-  monthly: '每月',
-  quarterly: '每季',
-  half_yearly: '每半年',
-  yearly: '每年',
-  custom: '自訂',
+  daily: '每日', weekly: '每週', monthly: '每月', quarterly: '每季',
+  half_yearly: '每半年', yearly: '每年', custom: '自訂',
+}
+const PM_TYPE_KEYS: Record<string, string> = {
+  daily: 'pm.cadDaily', weekly: 'pm.cadWeekly', monthly: 'pm.cadMonthly',
+  quarterly: 'pm.cadQuarterly', half_yearly: 'pm.cadHalfYearly',
+  yearly: 'pm.cadYearly', custom: 'pm.cadCustom',
 }
 
 export default function PMScheduleManager() {
   const supabase = createClient()
+  const { t } = useI18n()
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -64,10 +67,10 @@ export default function PMScheduleManager() {
         .update({ is_active: false })
         .eq('id', id)
       if (error) throw error
-      toast.success('已刪除')
+      toast.success(t('common.deleted', '已刪除'))
       await load()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '刪除失敗')
+      toast.error(err instanceof Error ? err.message : t('common.deleteFailed', '刪除失敗'))
     } finally {
       setDeleting(null)
     }
@@ -78,9 +81,9 @@ export default function PMScheduleManager() {
       <PMScheduleForm onSaved={load} />
 
       {loading ? (
-        <p className="text-sm text-gray-400">載入中…</p>
+        <p className="text-sm text-gray-400">{t('common.loading', '載入中…')}</p>
       ) : schedules.length === 0 ? (
-        <p className="text-sm text-gray-400">尚無保養計畫</p>
+        <p className="text-sm text-gray-400">{t('pm.noSchedules', '尚無保養計畫')}</p>
       ) : (
         <div className="space-y-2">
           {schedules.map(s => (
@@ -108,11 +111,11 @@ export default function PMScheduleManager() {
 
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                <span className="font-medium text-gray-700">{PM_TYPE_LABELS[s.pm_type] || s.pm_type}</span>
+                <span className="font-medium text-gray-700">{t(PM_TYPE_KEYS[s.pm_type] ?? '', PM_TYPE_LABELS[s.pm_type] || s.pm_type)}</span>
                 {s.interval_days && (
                   <>
                     <span className="text-gray-400">·</span>
-                    <span className="text-gray-600">每 {s.interval_days} 天</span>
+                    <span className="text-gray-600">{t('pm.cadEveryNDays', '每 {days} 天').replace('{days}', String(s.interval_days))}</span>
                   </>
                 )}
               </div>

@@ -5,7 +5,7 @@ import { addDays, addWeeks, addMonths } from 'date-fns'
 import { IncidentStatus } from '@/types'
 import DashboardView, { DashboardRow } from '@/components/dashboard/DashboardView'
 
-export const metadata = { title: '主管追蹤 | 維修系統' }
+export const metadata = { title: 'FAMMS · 主管追蹤' }
 
 const UNSPECIFIED = '__unspecified__'
 

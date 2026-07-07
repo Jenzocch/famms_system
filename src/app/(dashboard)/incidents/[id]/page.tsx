@@ -5,6 +5,7 @@ import ProgressUpdate from '@/components/incidents/ProgressUpdate'
 import ProgressTimeline from '@/components/incidents/ProgressTimeline'
 import WorkflowProgress from '@/components/incidents/WorkflowProgress'
 import RemindButton from '@/components/incidents/RemindButton'
+import GudangRequest from '@/components/incidents/GudangRequest'
 import StatusChip from '@/components/incidents/StatusChip'
 import { BackLink, UrgencyChip, DueDateChip, ClosedBanner } from '@/components/incidents/IncidentDetailChrome'
 import AssignForm from '@/components/incidents/AssignForm'
@@ -155,6 +156,9 @@ export default async function IncidentDetailPage({
       {!isClosed && user && PERMISSIONS.remindProgress(user.role) && (
         <RemindButton incidentId={id} />
       )}
+
+      {/* Request spare parts / materials from Gudang One (open cases only) */}
+      {!isClosed && user && <GudangRequest incidentId={id} />}
 
       {/* Assignment (派工) — available even after close so a case can be
           re-routed to whoever follow-up work belongs to. */}

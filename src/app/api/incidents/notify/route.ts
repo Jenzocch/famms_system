@@ -2,23 +2,38 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { notifyFactory } from '@/lib/telegram'
 
+// Telegram messages are in Bahasa Indonesia — the factory floor audience.
 const ISSUE_TYPE_LABELS: Record<string, string> = {
-  machine: '🔧 機器故障',
-  pipe: '🚿 水管/管線',
-  electrical: '💡 電力/照明',
-  facility: '🏭 設施/基礎建設',
-  safety: '⚠️ 安全問題',
-  cleanliness: '🧹 衛生/清潔',
-  other: '📋 其他',
+  machine: '🔧 Kerusakan Mesin',
+  pipe: '🚿 Pipa/Saluran',
+  electrical: '💡 Listrik/Penerangan',
+  facility: '🏭 Fasilitas/Infrastruktur',
+  safety: '⚠️ Masalah Keselamatan',
+  cleanliness: '🧹 Kebersihan/Sanitasi',
+  other: '📋 Lainnya',
 }
 
 const URGENCY_LABELS: Record<string, string> = {
-  A: '🔴 緊急', B: '🟠 高', C: '🟡 中', D: '🟢 低',
+  A: '🔴 Kritis', B: '🟠 Tinggi', C: '🟡 Sedang', D: '🟢 Rendah',
+}
+
+// Escape user-supplied text before it goes into Telegram HTML parse mode.
+// Without this, a title/name containing <, >, or & makes Telegram reject the
+// whole message (400), silently dropping the factory-wide alert.
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 // POST /api/incidents/notify — send Telegram alert for a new report
 export async function POST(req: Request) {
   const supabase = await createClient()
+
+  // Require a logged-in user — otherwise anyone could POST an incidentId and
+  // spam the factory's Telegram groups. Any authenticated user may trigger it
+  // (the reporter, right after creating the incident).
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { incidentId } = await req.json()
   if (!incidentId) {
     return NextResponse.json({ error: 'incidentId required' }, { status: 400 })
@@ -42,8 +57,8 @@ export async function POST(req: Request) {
   const factory = incident.factory as unknown as { name: string } | null
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-  // Resolve the type label (covers admin-added types). The message is in zh,
-  // so prefer the Chinese label; fall back to the built-in map, then the code.
+  // Resolve the type label (covers admin-added types). Telegram audience is
+  // the Indonesian factory floor, so prefer the Bahasa label.
   // select('*') keeps this working before the i18n columns migration is run.
   let typeLabel = ISSUE_TYPE_LABELS[incident.incident_type] || incident.incident_type
   const { data: typeRow } = await supabase
@@ -51,17 +66,17 @@ export async function POST(req: Request) {
     .select('*')
     .eq('code', incident.incident_type)
     .maybeSingle()
-  if (typeRow) typeLabel = (typeRow as any).label_zh || (typeRow as any).label || typeLabel
+  if (typeRow) typeLabel = (typeRow as any).label_id || (typeRow as any).label || typeLabel
 
   const html = [
-    `<b>🆕 新報修案件</b>`,
-    `<b>編號:</b> ${incident.incident_no}`,
-    `<b>類型:</b> ${typeLabel}`,
-    `<b>緊急度:</b> ${URGENCY_LABELS[incident.downtime_impact] || incident.downtime_impact}`,
-    incident.title ? `<b>標題:</b> ${incident.title}` : '',
-    `<b>位置:</b> ${factory?.name || '?'}${machine ? ` · ${machine.machine_name}` : ''}`,
-    incident.reporter_name ? `<b>回報人:</b> ${incident.reporter_name}` : '',
-    `<a href="${appUrl}/incidents/${incident.id}">查看詳情 →</a>`,
+    `<b>🆕 Laporan Baru</b>`,
+    `<b>No:</b> ${esc(incident.incident_no)}`,
+    `<b>Jenis:</b> ${esc(typeLabel)}`,
+    `<b>Urgensi:</b> ${URGENCY_LABELS[incident.downtime_impact] || esc(incident.downtime_impact)}`,
+    incident.title ? `<b>Judul:</b> ${esc(incident.title)}` : '',
+    `<b>Lokasi:</b> ${esc(factory?.name || '?')}${machine ? ` · ${esc(machine.machine_name)}` : ''}`,
+    incident.reporter_name ? `<b>Pelapor:</b> ${esc(incident.reporter_name)}` : '',
+    `<a href="${appUrl}/incidents/${incident.id}">Lihat detail →</a>`,
   ].filter(Boolean).join('\n')
 
   try {

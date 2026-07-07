@@ -27,17 +27,6 @@ export const REPEAT_FAILURE_WINDOW_DAYS = 30
 export const RCA_TRIGGER_COUNT = 3
 export const RCA_TRIGGER_WINDOW_DAYS = 90
 
-// Currency
-export const CURRENCY = 'IDR'
-
 export const MAX_PHOTOS_PER_STAGE = 6
 export const MAX_FILE_SIZE_MB = 10
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-
-export function formatRupiah(amount: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(amount)
-}

@@ -35,6 +35,8 @@
     "cardButton": "Ingatkan",
     "notePlaceholder": "Opsional: pesan untuk penanggung jawab (mis. bos menanyakan, bisa selesai hari ini?)",
     "sent": "Pengingat dikirim via Telegram ({count} penerima)",
+    "sentPersonal": "Sudah DM {count} penanggung jawab & notifikasi group",
+    "unregistered": "{count} penanggung jawab belum set Telegram pribadi, hanya dapat notifikasi group",
     "noRecipients": "Terkirim, tetapi belum ada penerima Telegram yang berlangganan",
     "failed": "Gagal mengirim pengingat"
   },
@@ -97,7 +99,9 @@
     "submit": "Kirim",
     "reset": "Atur Ulang",
     "noData": "Tidak ada data",
-    "update": "Perbarui"
+    "update": "Perbarui",
+    "deleted": "Dihapus",
+    "deleteFailed": "Gagal menghapus"
   },
   "navigation": {
     "dashboard": "Dasbor",
@@ -185,7 +189,18 @@
     "selectMachineType": "Pilih mesin dan tipe PM",
     "created": "Jadwal PM dibuat",
     "createFailed": "Gagal membuat jadwal PM",
-    "create": "Buat Jadwal PM"
+    "create": "Buat Jadwal PM",
+    "addTitle": "Tambah Jadwal PM",
+    "factory": "Pabrik",
+    "pmTypeLabel": "Jenis PM",
+    "intervalDays": "Interval (hari)",
+    "intervalPlaceholder": "mis. 30",
+    "descChecklist": "Deskripsi / Checklist",
+    "descChecklistPlaceholder": "mis. Cek pelumasan bearing, bersihkan heat sink, ukur suhu…",
+    "selectFactoryPlaceholder": "Pilih pabrik",
+    "errSelectAll": "Pilih pabrik, mesin dan jenis PM",
+    "errInterval": "Masukkan jumlah hari untuk interval khusus",
+    "createFailedShort": "Gagal membuat"
   },
   "incidents": {
     "title": "Laporan",
@@ -446,7 +461,12 @@
     "costPlaceholder": "Biaya (opsional)",
     "confirmComplete2": "Konfirmasi Selesai",
     "skipReasonPlaceholder": "Alasan melewati (wajib)",
-    "confirmSkip2": "Konfirmasi Lewati"
+    "confirmSkip2": "Konfirmasi Lewati",
+    "badgeOverdueDays": "Terlambat {count} hr",
+    "badgeInDays": "{count} hr lagi",
+    "searchMachine": "Cari nama atau kode mesin...",
+    "noMatchingMachines": "Tidak ada mesin yang cocok",
+    "noUpcoming": "Tidak ada pemeliharaan mendatang"
   },
   "weekdays": {
     "0": "Min",
@@ -646,7 +666,22 @@
     "flagNewIncident": "Incident Baru",
     "flagSlaAlert": "SLA Alert",
     "flagBlocking": "Blocking",
-    "flagDailySummary": "Ringkasan Harian"
+    "flagDailySummary": "Ringkasan Harian",
+    "personalTitle": "Notifikasi Pribadi",
+    "personalDesc": "Daftarkan Chat ID pribadi karyawan. Saat incident ditugaskan ke dia lalu diingatkan, dia akan di-DM langsung.",
+    "personalStep1": "1. Karyawan DM bot FAMMS di Telegram, kirim /start",
+    "personalStep2": "2. Bot membalas \"Chat ID Anda: angka\"",
+    "personalStep3": "3. Pilih akun di bawah, isi angka itu ke Chat ID lalu tambah",
+    "account": "Akun",
+    "selectAccount": "— Pilih akun —",
+    "personalChatId": "Chat ID Pribadi",
+    "addUserBtn": "Tambah Notifikasi Pribadi",
+    "fillUserAndId": "Pilih akun dan isi Chat ID",
+    "userAdded": "Notifikasi pribadi ditambahkan",
+    "addUserFailed": "Gagal menambah notifikasi pribadi",
+    "userDeleted": "Notifikasi pribadi dihapus",
+    "enabled": "Aktif",
+    "disabled": "Nonaktif"
   },
   "spareParts": {
     "title": "Manajemen Suku Cadang",
@@ -801,10 +836,20 @@
     "observation": "Menunggu Konfirmasi",
     "closed": "Selesai"
   },
+  "workflowStep": {
+    "reported": "Baru",
+    "accepted": "Diterima",
+    "analyzing": "Analisis",
+    "repairing": "Perbaikan",
+    "testing": "Pengujian",
+    "observation": "Menunggu Konfirmasi",
+    "closed": "Selesai",
+    "heading": "Progres Alur"
+  },
   "appName": "Perawatan Pabrik",
   "caseEdit": {
     "edit": "Edit kasus",
-    "delete": "Hapus",
+    "delete": "Hapus Kasus",
     "onlySupervisorDelete": "Hanya supervisor yang bisa menghapus kasus",
     "confirmDelete": "Hapus kasus ini? Tindakan ini tidak bisa dibatalkan dan semua catatan penanganan ikut terhapus.",
     "deleted": "Kasus dihapus",
@@ -846,5 +891,21 @@
     "zoomOut": "Perkecil",
     "zoomIn": "Perbesar",
     "download": "Unduh asli"
+  },
+  "audit": {
+    "heading": "Riwayat Aktivitas",
+    "loading": "Memuat riwayat...",
+    "empty": "Belum ada aktivitas",
+    "create": "Dibuat",
+    "update": "Diedit",
+    "delete": "Dihapus",
+    "status_change": "Status diubah",
+    "assign": "Ditugaskan",
+    "comment": "Komentar"
+  },
+  "accountDisabled": {
+    "title": "Akun dinonaktifkan",
+    "desc": "Akun ini tidak dapat digunakan saat ini. Hubungi admin sistem.",
+    "logout": "Keluar"
   }
 }
