@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, X, CheckCircle, SkipForward, Loader2, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, CheckCircle, SkipForward, Loader2, Users, AlertTriangle, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,6 +11,10 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n'
+import { useOverdueMaintenanceData } from '@/lib/hooks/useOverdueMaintenanceData'
+import { formatDistanceToNow } from 'date-fns'
+import { zhTW, id as idLocale, enUS } from 'date-fns/locale'
+import type { Locale as DateFnsLocale } from 'date-fns'
 
 interface PMTask {
   record_id: string
@@ -54,6 +58,12 @@ const PM_TYPE_LABELS: Record<string, string> = {
 const PM_TYPE_KEYS: Record<string, string> = {
   daily: 'pm.cadDaily', weekly: 'pm.cadWeekly', monthly: 'pm.cadMonthly',
   quarterly: 'pm.cadQuarterly', half_yearly: 'pm.cadHalfYearly', yearly: 'pm.cadYearly', custom: 'pm.cadCustom',
+}
+
+const DATE_LOCALES: Record<string, DateFnsLocale> = {
+  zh: zhTW,
+  en: enUS,
+  id: idLocale,
 }
 
 const STATUS_KEYS: Record<string, string> = {
@@ -108,7 +118,10 @@ function getWeekDates(date: Date): string[] {
 }
 
 export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const dateLocale = DATE_LOCALES[locale]
+  const pmTypeLabel = (pmType: string) =>
+    t(PM_TYPE_KEYS[pmType] ?? '', PM_TYPE_LABELS[pmType] || pmType)
   // Short label for a task's kind: cadence or ad-hoc maintenance label.
   const typeLabel = (task: PMTask): string => {
     if (task.ad_hoc) return t('pm.adhocLabel')
@@ -118,6 +131,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
   const statusLabel = (status: string) =>
     t(STATUS_KEYS[status] ?? '', STATUS_LABELS[status] || status)
   const dayAbbr = (idx: number) => t(`weekdays.${idx}`, DAY_ABBRS[idx])
+  const { overdue, loading: overdueLoading } = useOverdueMaintenanceData()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month')
   const [selectedMachineId, setSelectedMachineId] = useState('all')
@@ -127,6 +141,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [myId, setMyId] = useState<string | null>(null)
   const [onlyMine, setOnlyMine] = useState(false)
+  const [showOverdueList, setShowOverdueList] = useState(false)
 
   // Current user id, so "only my maintenance" can filter to schedules this
   // person is assigned to. (getSession = local read, no network call.)
@@ -256,6 +271,54 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
 
   return (
     <div className="space-y-3">
+      {/* Overdue Alert Summary — compact banner */}
+      {!overdueLoading && overdue.length > 0 && (
+        <div className="border-l-4 border-red-500 bg-red-50 rounded-lg p-3">
+          <button
+            onClick={() => setShowOverdueList(!showOverdueList)}
+            className="w-full flex items-center gap-2 hover:opacity-75 transition-opacity"
+          >
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-sm text-red-900">
+                {t('pm.machinesOverdue', '逾期警示').replace('{count}', String(overdue.length))}
+              </p>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-red-600 shrink-0 transition-transform ${showOverdueList ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Expandable overdue list */}
+          {showOverdueList && (
+            <div className="mt-3 space-y-2 border-t border-red-200 pt-3">
+              {overdue.map(m => (
+                <div key={m.machine_id} className="bg-white rounded-lg p-2.5 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {m.machine_code ? `[${m.machine_code}] ` : ''}{m.machine_name}
+                      </p>
+                      <p className="text-gray-600 mt-0.5">
+                        {pmTypeLabel(m.pm_type)}
+                      </p>
+                      {m.last_maintained_at && (
+                        <p className="text-gray-500 mt-0.5">
+                          {formatDistanceToNow(new Date(m.last_maintained_at), { addSuffix: true, locale: dateLocale })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-red-600">
+                        {m.days_overdue}d
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Controls row */}
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={selectedMachineId} onValueChange={v => setSelectedMachineId(v ?? 'all')} items={machineItems}>

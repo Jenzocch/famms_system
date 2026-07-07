@@ -12,7 +12,6 @@ import { toast } from 'sonner'
 import { Loader2, Wrench, Clock, CheckCircle, CalendarClock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
-import OverdueMaintenanceAlert from './OverdueMaintenanceAlert'
 import PMScheduleManager from './PMScheduleManager'
 import PMFullCalendar from './PMFullCalendar'
 import PMDueList from './PMDueList'
@@ -208,18 +207,13 @@ export default function PMPage({ defaultFactoryId }: { defaultFactoryId?: string
       {/* Technician due-list: dates at a glance + search */}
       {factoryId && <PMDueList factoryId={factoryId} />}
 
-      {/* Factory PM Calendar */}
+      {/* Factory PM Calendar — includes integrated overdue alert */}
       {factoryId && (
         <div className="space-y-2">
           <h2 className="font-semibold text-gray-700 text-sm">{t('pm.calendarHeading')}</h2>
           <PMFullCalendar factoryId={factoryId} />
         </div>
       )}
-
-      {/* Overdue Alert */}
-      <div className="border-l-4 border-amber-500 bg-amber-50 rounded-lg p-4">
-        <OverdueMaintenanceAlert />
-      </div>
 
       {/* PM Schedule Manager — set up RECURRING plans */}
       {showSchedules && (
