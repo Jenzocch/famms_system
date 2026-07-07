@@ -13,10 +13,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Only the Telegram webhook may be called without a session — Telegram's
-  // servers can't log in. It authenticates itself via the secret-token header
-  // checked inside the route.
-  if (pathname.startsWith('/api/notifications/telegram')) {
+  // Sessionless callers with their own secret-based auth:
+  //  - Telegram webhook (secret-token header, checked inside the route)
+  //  - Vercel cron (Bearer CRON_SECRET, checked inside the route)
+  if (pathname.startsWith('/api/notifications/telegram') || pathname.startsWith('/api/cron/')) {
     return NextResponse.next()
   }
 

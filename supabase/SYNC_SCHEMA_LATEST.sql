@@ -30,6 +30,8 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS location_note     TEXT;
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_user_ids UUID[] DEFAULT '{}';
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS accepted_at       TIMESTAMP;
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS accepted_by_id    UUID REFERENCES profiles(id);
+-- SLA escalation de-dup: when this incident last triggered a Telegram alert.
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS last_sla_alert_at TIMESTAMP;
 
 -- The report form treats machine + failure code as optional, and some cases
 -- span all/none of the factories — relax the old NOT NULLs.
