@@ -16,12 +16,13 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { status, findings, parts_replaced, cost, delay_reason } = body as {
+  const { status, findings, parts_replaced, cost, delay_reason, checklist_results } = body as {
     status?: 'completed' | 'skipped'
     findings?: string
     parts_replaced?: { part_code: string; qty: number; cost?: number }[]
     cost?: number
     delay_reason?: PMDelayReason
+    checklist_results?: { item: string; done: boolean }[]
   }
 
   if (status !== 'completed' && status !== 'skipped') {
@@ -46,6 +47,7 @@ export async function PATCH(
     .from('pm_records')
     .update({
       status,
+      checklist_results: checklist_results && checklist_results.length ? checklist_results : null,
       completed_at: status === 'completed' ? new Date().toISOString() : null,
       completed_by_id: status === 'completed' ? user.id : null,
       findings: findings || null,

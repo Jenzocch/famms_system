@@ -31,6 +31,7 @@ interface PMSchedule {
   pm_type: string
   interval_days: number | null
   description: string | null
+  checklist: string | null
   is_active: boolean
   assigned_user_ids: string[]
   assigned_to: string | null
@@ -76,6 +77,8 @@ export default function PMScheduleManager() {
   const [pmType, setPmType] = useState('monthly')
   const [intervalDays, setIntervalDays] = useState('')
   const [description, setDescription] = useState('')
+  // One checklist item per line; stored as a JSON array string on the schedule.
+  const [checklistText, setChecklistText] = useState('')
   const [assignees, setAssignees] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -127,16 +130,26 @@ export default function PMScheduleManager() {
     setMachineId('')
   }, [areaId])
 
+  const checklistToText = (raw: string | null): string => {
+    if (!raw) return ''
+    try {
+      const v = JSON.parse(raw)
+      return Array.isArray(v) ? v.join('\n') : ''
+    } catch { return '' }
+  }
+  const textToChecklist = (text: string): string[] =>
+    text.split('\n').map(l => l.trim()).filter(Boolean)
+
   async function loadSchedules() {
     // assigned_user_ids / assigned_to only exist after migration_pm_assignee.sql.
     // Retry without them if the column is missing, so the list still loads.
     const withAssignee = `
-        id, machine_id, pm_type, interval_days, description, is_active,
+        id, machine_id, pm_type, interval_days, description, checklist, is_active,
         assigned_user_ids, assigned_to,
         machines:machines(machine_name, machine_code)
       `
     const baseCols = `
-        id, machine_id, pm_type, interval_days, description, is_active,
+        id, machine_id, pm_type, interval_days, description, checklist, is_active,
         machines:machines(machine_name, machine_code)
       `
     let res: any = await supabase
@@ -160,6 +173,7 @@ export default function PMScheduleManager() {
         pm_type: s.pm_type,
         interval_days: s.interval_days ?? null,
         description: s.description,
+        checklist: s.checklist ?? null,
         is_active: s.is_active,
         assigned_user_ids: s.assigned_user_ids ?? [],
         assigned_to: s.assigned_to ?? null,
@@ -195,7 +209,13 @@ export default function PMScheduleManager() {
       if (editingId) {
         // Assignee columns are optional (migration_pm_assignee.sql). Try with
         // them; if the column is missing, retry without so the edit still saves.
-        const base = { pm_type: pmType, interval_days: intervalValue, description: description || null }
+        const items = textToChecklist(checklistText)
+        const base = {
+          pm_type: pmType,
+          interval_days: intervalValue,
+          description: description || null,
+          checklist: items.length ? JSON.stringify(items) : null,
+        }
         let { error } = await supabase
           .from('pm_schedules')
           .update({ ...base, assigned_user_ids: assignees, assigned_to: assignedTo })
@@ -218,6 +238,7 @@ export default function PMScheduleManager() {
             pm_type: pmType,
             interval_days: intervalValue,
             description: description || undefined,
+            checklist: textToChecklist(checklistText),
             assigned_user_ids: assignees,
             assigned_to: assignedTo,
           }),
@@ -232,6 +253,7 @@ export default function PMScheduleManager() {
       setPmType('monthly')
       setIntervalDays('')
       setDescription('')
+      setChecklistText('')
       setAssignees([])
       setShowForm(false)
       setEditingId(null)
@@ -274,7 +296,7 @@ export default function PMScheduleManager() {
         <Button
           onClick={() => {
             setEditingId(null); setMachineId(''); setPmType('monthly')
-            setIntervalDays(''); setDescription(''); setAssignees([])
+            setIntervalDays(''); setDescription(''); setChecklistText(''); setAssignees([])
             setShowForm(true)
           }}
           className="gap-2 w-full"
@@ -352,6 +374,18 @@ export default function PMScheduleManager() {
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder={t('pm.notesPlaceholder')}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+
+          {/* Checklist — one item per line; ticked off when completing the task */}
+          <div>
+            <Label>{t('pm.checklistLabel', '檢查清單 Checklist（選填，一行一項）')}</Label>
+            <textarea
+              value={checklistText}
+              onChange={e => setChecklistText(e.target.value)}
+              placeholder={t('pm.checklistPlaceholder', '例如：\n檢查 bearing 潤滑\n清潔散熱片\n測量運轉溫度')}
+              rows={3}
               className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           </div>
@@ -445,6 +479,7 @@ export default function PMScheduleManager() {
                     setPmType(s.pm_type)
                     setIntervalDays(s.interval_days ? String(s.interval_days) : '')
                     setDescription(s.description || '')
+                    setChecklistText(checklistToText(s.checklist))
                     setAssignees(s.assigned_user_ids ?? [])
                     setShowForm(true)
                   }}

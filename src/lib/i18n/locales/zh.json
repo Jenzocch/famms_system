@@ -392,7 +392,10 @@
     "noMatchingMachines": "找不到符合的機器",
     "noUpcoming": "近期沒有待辦保養",
     "confirmDone": "確認完成",
-    "done": "完成"
+    "done": "完成",
+    "checklistHeading": "檢查清單 Checklist",
+    "checklistLabel": "檢查清單 Checklist（選填，一行一項）",
+    "checklistPlaceholder": "例如：\n檢查 bearing 潤滑\n清潔散熱片\n測量運轉溫度"
   },
   "weekdays": {
     "0": "日",

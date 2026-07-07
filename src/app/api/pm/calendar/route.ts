@@ -16,6 +16,15 @@ import type { PMType } from '@/types'
  *
  * Optional machine_id filters to a single machine.
  */
+// pm_schedules.checklist is a JSON string (array of item labels).
+function parseChecklist(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'string') return []
+  try {
+    const v = JSON.parse(raw)
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
+
 export async function GET(req: Request) {
   const supabase = await createClient()
   // Local JWT check — this endpoint is hit on every PM calendar month change,
@@ -52,7 +61,7 @@ export async function GET(req: Request) {
     // assigned_user_ids / assigned_to only exist once migration_pm_assignee.sql
     // has run — if it hasn't, select+retry without them so the calendar still
     // works (assignee display/filter just stays empty until the migration runs).
-    const BASE_COLS = 'id, machine_id, pm_type, interval_days, description, created_at'
+    const BASE_COLS = 'id, machine_id, pm_type, interval_days, description, checklist, created_at'
     const scheduleSelect = async (cols: string) => {
       let q = supabase.from('pm_schedules').select(cols)
         .eq('factory_id', factoryId).eq('is_active', true)
@@ -126,6 +135,7 @@ export async function GET(req: Request) {
         pushTask(date, {
           record_id: r.id,
           schedule_id: r.pm_schedule_id,
+          checklist: parseChecklist(schedule.checklist),
           projected: false,
           ad_hoc: false,
           machine_id: schedule.machine_id,
@@ -159,6 +169,7 @@ export async function GET(req: Request) {
           pushTask(date, {
             record_id: `proj-${s.id}-${date}`,
             schedule_id: s.id,
+            checklist: parseChecklist((s as any).checklist),
             projected: true,
             ad_hoc: false,
             machine_id: s.machine_id,

@@ -392,7 +392,10 @@
     "noMatchingMachines": "No matching machines",
     "noUpcoming": "No upcoming maintenance",
     "confirmDone": "Confirm done",
-    "done": "Done"
+    "done": "Done",
+    "checklistHeading": "Checklist",
+    "checklistLabel": "Checklist (optional, one item per line)",
+    "checklistPlaceholder": "e.g.\nCheck bearing lubrication\nClean heat sink\nMeasure running temperature"
   },
   "weekdays": {
     "0": "Sun",

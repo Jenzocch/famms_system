@@ -16,13 +16,14 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { pm_schedule_id, scheduled_date, status, findings, cost, delay_reason } = body as {
+  const { pm_schedule_id, scheduled_date, status, findings, cost, delay_reason, checklist_results } = body as {
     pm_schedule_id?: string
     scheduled_date?: string
     status?: 'completed' | 'skipped'
     findings?: string
     cost?: number
     delay_reason?: PMDelayReason
+    checklist_results?: { item: string; done: boolean }[]
   }
 
   if (!pm_schedule_id || !scheduled_date) {
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
 
   const values = {
     status,
+    checklist_results: checklist_results && checklist_results.length ? checklist_results : null,
     completed_at: status === 'completed' ? new Date().toISOString() : null,
     completed_by_id: status === 'completed' ? user.id : null,
     findings: findings || null,

@@ -392,7 +392,10 @@
     "noMatchingMachines": "Tidak ada mesin yang cocok",
     "noUpcoming": "Tidak ada pemeliharaan mendatang",
     "confirmDone": "Konfirmasi selesai",
-    "done": "Selesai"
+    "done": "Selesai",
+    "checklistHeading": "Checklist",
+    "checklistLabel": "Checklist (opsional, satu item per baris)",
+    "checklistPlaceholder": "mis.\nCek pelumasan bearing\nBersihkan heatsink\nUkur suhu operasi"
   },
   "weekdays": {
     "0": "Min",

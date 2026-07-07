@@ -19,6 +19,7 @@ import type { Locale as DateFnsLocale } from 'date-fns'
 interface PMTask {
   record_id: string
   schedule_id?: string
+  checklist?: string[]
   projected: boolean
   ad_hoc?: boolean
   machine_id: string
@@ -155,7 +156,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
 
   // Inline action state for completing/skipping a task from the detail panel.
   // `task` is kept so projected occurrences can be materialised on save.
-  const [action, setAction] = useState<{ taskId: string; task: PMTask; mode: 'complete' | 'skip'; findings: string; cost: string; reason: string } | null>(null)
+  const [action, setAction] = useState<{ taskId: string; task: PMTask; mode: 'complete' | 'skip'; findings: string; cost: string; reason: string; checks: boolean[] } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const year = currentDate.getFullYear()
@@ -198,11 +199,15 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
     }
     setSubmitting(true)
     try {
+      const checklist = action.task.checklist ?? []
       const payload = {
         status: action.mode === 'complete' ? 'completed' : 'skipped',
         findings: action.findings || undefined,
         cost: action.cost ? parseFloat(action.cost) : undefined,
         delay_reason: action.mode === 'skip' ? action.reason : undefined,
+        checklist_results: action.mode === 'complete' && checklist.length > 0
+          ? checklist.map((item, i) => ({ item, done: action.checks[i] ?? false }))
+          : undefined,
       }
       // Projected occurrences have no stored record yet — POST materialises
       // one for (schedule, date). Stored records PATCH in place.
@@ -573,7 +578,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
                             <Button
                               size="sm"
                               className="h-7 gap-1 bg-green-600 hover:bg-green-700 text-xs"
-                              onClick={() => setAction({ taskId: task.record_id, task, mode: 'complete', findings: '', cost: '', reason: '' })}
+                              onClick={() => setAction({ taskId: task.record_id, task, mode: 'complete', findings: '', cost: '', reason: '', checks: (task.checklist ?? []).map(() => false) })}
                             >
                               <CheckCircle className="w-3.5 h-3.5" /> {t('pm.complete')}
                             </Button>
@@ -581,7 +586,7 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
                               size="sm"
                               variant="outline"
                               className="h-7 gap-1 border-orange-300 text-orange-600 hover:bg-orange-50 text-xs"
-                              onClick={() => setAction({ taskId: task.record_id, task, mode: 'skip', findings: '', cost: '', reason: '' })}
+                              onClick={() => setAction({ taskId: task.record_id, task, mode: 'skip', findings: '', cost: '', reason: '', checks: [] })}
                             >
                               <SkipForward className="w-3.5 h-3.5" /> {t('pm.skip')}
                             </Button>
@@ -593,6 +598,26 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
                     {/* Inline complete form */}
                     {acting?.mode === 'complete' && (
                       <div className="mt-3 ml-5 space-y-2 bg-green-50 rounded-lg p-3 border border-green-200">
+                        {(acting.task.checklist ?? []).length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-green-900">{t('pm.checklistHeading', '檢查清單 Checklist')}</p>
+                            {(acting.task.checklist ?? []).map((item, i) => (
+                              <label key={i} className="flex items-start gap-2 text-sm text-gray-700 bg-white rounded-lg border border-green-100 px-2.5 py-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={acting.checks[i] ?? false}
+                                  onChange={e => {
+                                    const checks = [...acting.checks]
+                                    checks[i] = e.target.checked
+                                    setAction({ ...acting, checks })
+                                  }}
+                                  className="mt-0.5 w-4 h-4 accent-green-600 shrink-0"
+                                />
+                                <span className={acting.checks[i] ? 'line-through text-gray-400' : ''}>{item}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                         <Textarea
                           value={acting.findings}
                           onChange={e => setAction({ ...acting, findings: e.target.value })}

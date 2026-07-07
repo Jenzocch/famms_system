@@ -80,6 +80,9 @@ ALTER TABLE machines ADD COLUMN IF NOT EXISTS asset_category TEXT DEFAULT 'machi
 ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS interval_days     INTEGER;
 ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS assigned_user_ids UUID[] DEFAULT '{}';
 ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS assigned_to       TEXT;
+-- Per-item checklist tick-off stored on the completed record:
+-- [{"item": "檢查潤滑", "done": true}, ...]
+ALTER TABLE pm_records ADD COLUMN IF NOT EXISTS checklist_results JSONB;
 CREATE INDEX IF NOT EXISTS idx_pm_schedules_assigned_user_ids
   ON pm_schedules USING GIN (assigned_user_ids);
 
