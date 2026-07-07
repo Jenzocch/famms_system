@@ -47,7 +47,7 @@ const PM_TYPE_LABELS: Record<string, string> = {
   quarterly: '每季', half_yearly: '每半年', yearly: '每年', custom: '自訂天數',
 }
 
-export default function PMPage() {
+export default function PMPage({ defaultFactoryId }: { defaultFactoryId?: string | null }) {
   const supabase = createClient()
   const { t } = useI18n()
 
@@ -65,9 +65,20 @@ export default function PMPage() {
   const [showSchedules, setShowSchedules] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  // Auto-pick a factory so the calendar shows immediately (one less step):
+  // the user's own factory when known, otherwise the first factory.
   useEffect(() => {
-    supabase.from('factories').select('*').order('name').then(({ data }) => setFactories(data ?? []))
-  }, [])
+    supabase.from('factories').select('*').order('name').then(({ data }) => {
+      const list = data ?? []
+      setFactories(list)
+      if (list.length > 0) {
+        const own = defaultFactoryId && list.some(f => f.id === defaultFactoryId)
+          ? defaultFactoryId
+          : list[0].id
+        setFactoryId(prev => prev || own)
+      }
+    })
+  }, [defaultFactoryId])
 
   useEffect(() => {
     if (!factoryId) { setAreas([]); setAreaId(''); return }
@@ -235,13 +246,8 @@ export default function PMPage() {
             </div>
           </div>
 
-          <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')} items={factoryItems}>
-            <SelectTrigger><SelectValue placeholder={t('report.selectFactory')} /></SelectTrigger>
-            <SelectContent>
-              {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
+          {/* Factory is already chosen at the top of the page — the form just
+              needs area → machine, so there's no duplicate factory picker here. */}
           {areas.length > 0 && (
             <Select value={areaId} onValueChange={(v) => setAreaId(v ?? '')} items={areaItems}>
               <SelectTrigger><SelectValue placeholder={t('report.selectArea')} /></SelectTrigger>
