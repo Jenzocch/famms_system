@@ -88,11 +88,11 @@ export default function NextStepHint({
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500 w-14 shrink-0">{t('nextStep.now')}</span>
+        <span className="text-xs text-gray-500 min-w-[3.5rem] shrink-0 whitespace-nowrap">{t('nextStep.now')}</span>
         <StatusPill status={status} />
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-medium text-blue-700 w-14 shrink-0">{t('nextStep.next')}</span>
+        <span className="text-xs font-medium text-blue-700 min-w-[3.5rem] shrink-0 whitespace-nowrap">{t('nextStep.next')}</span>
         <StatusPill status={next} />
         <span className="text-xs text-gray-600">（{t(nextHintKey(status))}）</span>
       </div>
