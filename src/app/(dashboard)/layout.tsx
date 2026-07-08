@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="lg:hidden">
           <TopBar profile={profile} />
         </div>
-        <main className="flex-1 w-full mx-auto px-4 py-4 pb-24 max-w-lg lg:max-w-5xl lg:pb-8">
+        <main className="flex-1 w-full mx-auto px-4 py-4 pb-24 max-w-lg lg:max-w-5xl xl:max-w-7xl xl:px-6 lg:pb-8">
           {children}
         </main>
       </div>
