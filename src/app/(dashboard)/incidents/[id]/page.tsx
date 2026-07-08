@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import { notFound } from 'next/navigation'
+import ImageViewer from '@/components/shared/ImageViewer'
 import ProgressUpdate from '@/components/incidents/ProgressUpdate'
 import ProgressTimeline from '@/components/incidents/ProgressTimeline'
 import WorkflowProgress from '@/components/incidents/WorkflowProgress'
@@ -79,6 +81,22 @@ export default async function IncidentDetailPage({
     .eq('incident_id', id)
     .order('requested_at', { ascending: false })
 
+  // Photos attached to the ORIGINAL report live directly under
+  // incident-photos/{id}/ with no DB record (progress-update photos go to the
+  // updates/ subfolder and are tracked on their update rows), so the only way
+  // to show them is to list the storage folder. Admin client: storage.list is
+  // gated by storage RLS even on public buckets. Best-effort — a storage
+  // hiccup must not break the page.
+  let reportPhotos: string[] = []
+  try {
+    const { data: files } = await createAdminClient()
+      .storage.from('incident-photos')
+      .list(id, { limit: 20 })
+    reportPhotos = (files ?? [])
+      .filter(f => f.id && !f.name.startsWith('.'))
+      .map(f => `${id}/${f.name}`)
+  } catch { /* storage unavailable / key missing — just skip the gallery */ }
+
   const machine = incident.machine as { machine_code: string | null; machine_name: string } | null
   const factory = incident.factory as { name: string; code: string | null } | null
   const status = incident.status as IncidentStatus
@@ -121,6 +139,13 @@ export default async function IncidentDetailPage({
         {incident.description && (
           <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">
             {incident.description}
+          </div>
+        )}
+
+        {/* Photos attached to the original report */}
+        {reportPhotos.length > 0 && (
+          <div className="mt-3">
+            <ImageViewer paths={reportPhotos} supabaseUrl={supabaseUrl} />
           </div>
         )}
 
