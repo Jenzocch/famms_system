@@ -32,11 +32,6 @@ export const PERMISSIONS = {
   remindProgress: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   editIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   deleteIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
-  // Anyone working a case can request parts; only supervisors+ mark them
-  // ordered/received/rejected (that status drives warehouse-facing reporting).
-  requestParts: (_role: UserRole) => true,
-  managePartsRequests: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
-
   // --- Preventive maintenance ---
   // Technicians execute PM tasks; managers + admins also manage PM schedules.
   viewPM: (_role: UserRole) => true,

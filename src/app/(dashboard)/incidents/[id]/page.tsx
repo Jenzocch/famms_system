@@ -12,7 +12,6 @@ import AssignForm from '@/components/incidents/AssignForm'
 import NextStepHint from '@/components/incidents/NextStepHint'
 import IncidentActions from '@/components/incidents/IncidentActions'
 import AuditTrail from '@/components/incidents/AuditTrail'
-import PartsRequestPanel from '@/components/incidents/PartsRequestPanel'
 import IncidentTypeText from '@/components/incidents/IncidentTypeText'
 import { IncidentStatus } from '@/types'
 import { URGENCY_FROM_IMPACT } from '@/lib/incident-display'
@@ -179,16 +178,6 @@ export default async function IncidentDetailPage({
 
       {/* Request spare parts / materials from Gudang One (open cases only) */}
       {!isClosed && user && <GudangRequest incidentId={id} />}
-
-      {/* Parts/material request — structured request instead of a free-text
-          note, so a future warehouse-system sync has something to read. */}
-      <CollapsibleSection titleKey="parts.sectionHeading" fallback="零件 / 物料申請">
-        <PartsRequestPanel
-          incidentId={id}
-          factoryCode={factory?.code ?? null}
-          canManage={!!user && PERMISSIONS.managePartsRequests(user.role)}
-        />
-      </CollapsibleSection>
 
       {/* Low-frequency sections collapsed by default to keep the page short */}
       <CollapsibleSection titleKey="incidentDetail.manageSection" fallback="編輯 / 刪除案件">

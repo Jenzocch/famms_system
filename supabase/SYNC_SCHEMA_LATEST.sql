@@ -191,45 +191,6 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_costs_incident ON maintenance_costs(i
 CREATE INDEX IF NOT EXISTS idx_maintenance_costs_date ON maintenance_costs(cost_date DESC);
 
 -- ---------------------------------------------------------------------------
--- PARTS REQUESTS — request parts/materials against an incident or PM task
--- (P1-4: FAMMS-side half of the planned Gudang One warehouse integration).
--- Kept as free-text part_name/warehouse rather than FKs into spare_parts,
--- since the parts catalog of record may end up living in Gudang One, not here.
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS parts_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  factory_id UUID REFERENCES factories(id) ON DELETE SET NULL,
-  incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE,
-  machine_id UUID REFERENCES machines(id) ON DELETE SET NULL,
-
-  part_name TEXT NOT NULL,
-  part_code TEXT,
-  quantity INTEGER NOT NULL DEFAULT 1,
-  unit TEXT,
-  warehouse TEXT,
-  urgency TEXT NOT NULL DEFAULT 'normal' CHECK (urgency IN ('normal', 'urgent')),
-  note TEXT,
-
-  status TEXT NOT NULL DEFAULT 'requested'
-    CHECK (status IN ('requested', 'ordered', 'received', 'rejected')),
-  -- Populated once Gudang One's own request/order id is known, so a later
-  -- sync integration can reconcile records instead of guessing by content.
-  external_ref TEXT,
-
-  requested_by_id UUID REFERENCES profiles(id),
-  requested_at TIMESTAMP DEFAULT NOW(),
-  resolved_at TIMESTAMP
-);
-ALTER TABLE parts_requests DISABLE ROW LEVEL SECURITY;
--- QC verdict on the delivered part, written back by Gudang One (which gets it
--- from FQMS via its qc-status webhook). NULL = not inspected / not applicable.
-ALTER TABLE parts_requests ADD COLUMN IF NOT EXISTS qc_result TEXT
-  CHECK (qc_result IN ('passed', 'failed'));
-CREATE INDEX IF NOT EXISTS idx_parts_requests_incident ON parts_requests(incident_id);
-CREATE INDEX IF NOT EXISTS idx_parts_requests_factory  ON parts_requests(factory_id);
-CREATE INDEX IF NOT EXISTS idx_parts_requests_status    ON parts_requests(status);
-
--- ---------------------------------------------------------------------------
 -- Make PostgREST (the Supabase API) pick up all of the above immediately.
 -- ---------------------------------------------------------------------------
 GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role;
@@ -251,8 +212,4 @@ UNION ALL SELECT 'pm_schedules.assigned_to',
 UNION ALL SELECT 'vendors table', to_regclass('public.vendors') IS NOT NULL
 UNION ALL SELECT 'incidents.location_note',
        EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name='incidents' AND column_name='location_note')
-UNION ALL SELECT 'parts_requests table', to_regclass('public.parts_requests') IS NOT NULL
-UNION ALL SELECT 'parts_requests.qc_result',
-       EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name='parts_requests' AND column_name='qc_result');
+               WHERE table_name='incidents' AND column_name='location_note');
