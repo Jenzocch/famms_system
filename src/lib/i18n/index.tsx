@@ -15,6 +15,15 @@ export const LOCALES: { value: Locale; label: string }[] = [
 
 const DICTS: Record<Locale, any> = { zh, en, id }
 const STORAGE_KEY = 'famms_lang'
+// Cookie mirror of the same choice. The cookie is what lets the SERVER render
+// the first paint in the right language — localStorage alone is invisible to
+// SSR, which is why pages used to flash Bahasa before snapping to the saved
+// language on every full page load.
+export const LOCALE_COOKIE = 'famms_lang'
+
+function isLocale(v: unknown): v is Locale {
+  return v === 'zh' || v === 'en' || v === 'id'
+}
 
 // Resolve a dot-path ('navigation.pm') against a nested dictionary.
 function lookup(dict: any, key: string): string | undefined {
@@ -29,28 +38,39 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('id')
+export function I18nProvider({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode
+  initialLocale?: Locale
+}) {
+  // initialLocale comes from the cookie via the server layout, so SSR and the
+  // first client render agree — no hydration flash.
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'id')
 
-  // Hydrate the saved choice on mount (client-only to avoid SSR mismatch).
-  // First visit (nothing saved): follow the browser/phone language so
-  // Indonesian staff see Bahasa and Chinese managers see 中文 without hunting
-  // for the language switcher. A manual choice always wins afterwards.
+  // One-time migration for visitors from before the cookie existed (choice
+  // only in localStorage) and first-visit browser-language detection:
+  // Indonesian staff see Bahasa, Chinese managers see 中文, without hunting
+  // for the switcher. A manual choice always wins afterwards.
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null
-    if (saved === 'zh' || saved === 'en' || saved === 'id') {
+    if (initialLocale) return // cookie present — nothing to migrate
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    if (isLocale(saved)) {
       setLocaleState(saved)
+      writeCookie(saved)
       return
     }
     const nav = (navigator.language || '').toLowerCase()
-    if (nav.startsWith('zh')) setLocaleState('zh')
-    else if (nav.startsWith('en')) setLocaleState('en')
-    // anything else (incl. 'id') keeps the Bahasa Indonesia default
-  }, [])
+    if (nav.startsWith('zh')) { setLocaleState('zh'); writeCookie('zh') }
+    else if (nav.startsWith('en')) { setLocaleState('en'); writeCookie('en') }
+    else writeCookie('id') // remember the default too, so SSR stops guessing
+  }, [initialLocale])
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l)
-    if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, l)
+    window.localStorage.setItem(STORAGE_KEY, l)
+    writeCookie(l)
   }, [])
 
   // t() falls back to the id value, then the explicit fallback, then the key.
@@ -63,6 +83,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       {children}
     </I18nContext.Provider>
   )
+}
+
+function writeCookie(l: Locale) {
+  // 1 year; SameSite=Lax so it rides along on normal navigations.
+  document.cookie = `${LOCALE_COOKIE}=${l}; path=/; max-age=31536000; SameSite=Lax`
 }
 
 export function useI18n(): I18nContextValue {

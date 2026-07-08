@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { cookies } from 'next/headers'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
-import { I18nProvider } from '@/lib/i18n'
+import { I18nProvider, LOCALE_COOKIE, type Locale } from '@/lib/i18n'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -11,11 +12,18 @@ export const metadata: Metadata = {
   description: 'Sistem manajemen aset & maintenance equipment untuk SJA, DIN, Olentia',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read the saved language from the cookie so the server renders the first
+  // paint in the user's language — without this, every full page load flashed
+  // the Bahasa default before the client swapped in the saved choice.
+  const saved = (await cookies()).get(LOCALE_COOKIE)?.value
+  const initialLocale =
+    saved === 'zh' || saved === 'en' || saved === 'id' ? (saved as Locale) : undefined
+
   return (
-    <html lang="en" className="h-full">
+    <html lang={initialLocale ?? 'id'} className="h-full">
       <body className={`${inter.className} h-full bg-gray-50`}>
-        <I18nProvider>
+        <I18nProvider initialLocale={initialLocale}>
           {children}
           <Toaster richColors position="top-right" />
         </I18nProvider>
