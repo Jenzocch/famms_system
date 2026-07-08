@@ -91,12 +91,20 @@ export async function GET(req: Request) {
     .eq('machine_id', machine.id)
     .neq('status', 'closed')
 
+  // Single verdict for QC: machine is running, PM is up to date, and no open
+  // repair case. Informational context for IPQC pre-checks, not a hard gate.
+  const okToRun =
+    machine.status === 'running' &&
+    pmOverdueCount === 0 &&
+    (openIncidentCount ?? 0) === 0
+
   return NextResponse.json({
     machine_id: machine.id,
     machine_code: machine.machine_code,
     machine_name: machine.machine_name,
     factory_code: factory.code,
     status: machine.status,
+    ok_to_run: okToRun,
     maintenance_ok: pmOverdueCount === 0,
     pm_overdue_count: pmOverdueCount,
     last_pm_completed_at: lastPmCompletedAt,

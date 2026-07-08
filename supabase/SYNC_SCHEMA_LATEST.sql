@@ -191,6 +191,35 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_costs_incident ON maintenance_costs(i
 CREATE INDEX IF NOT EXISTS idx_maintenance_costs_date ON maintenance_costs(cost_date DESC);
 
 -- ---------------------------------------------------------------------------
+-- PARTS REQUESTS — local read-only tracking of parts asked for via
+-- "向倉庫叫料" (POST /api/gudang/request forwards to Gudang One and, on
+-- success, inserts one row here so the incident page can show status without
+-- FAMMS ever polling the warehouse). Gudang One writes status forward
+-- (requested -> ordered -> received/rejected) via /api/external/parts-requests.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS parts_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  factory_id UUID REFERENCES factories(id) ON DELETE SET NULL,
+  incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE,
+  machine_id UUID REFERENCES machines(id) ON DELETE SET NULL,
+
+  items JSONB NOT NULL, -- [{name, part_no, qty, unit}, ...] as sent to Gudang
+  urgency TEXT NOT NULL DEFAULT 'normal' CHECK (urgency IN ('low', 'normal', 'urgent')),
+  note TEXT,
+
+  status TEXT NOT NULL DEFAULT 'requested'
+    CHECK (status IN ('requested', 'ordered', 'received', 'rejected')),
+  external_ref TEXT, -- Gudang One's own request id
+
+  requested_by_id UUID REFERENCES profiles(id),
+  requested_at TIMESTAMP DEFAULT NOW(),
+  resolved_at TIMESTAMP
+);
+ALTER TABLE parts_requests DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_parts_requests_incident ON parts_requests(incident_id);
+CREATE INDEX IF NOT EXISTS idx_parts_requests_status   ON parts_requests(status);
+
+-- ---------------------------------------------------------------------------
 -- Make PostgREST (the Supabase API) pick up all of the above immediately.
 -- ---------------------------------------------------------------------------
 GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role;
@@ -212,4 +241,5 @@ UNION ALL SELECT 'pm_schedules.assigned_to',
 UNION ALL SELECT 'vendors table', to_regclass('public.vendors') IS NOT NULL
 UNION ALL SELECT 'incidents.location_note',
        EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name='incidents' AND column_name='location_note');
+               WHERE table_name='incidents' AND column_name='location_note')
+UNION ALL SELECT 'parts_requests table', to_regclass('public.parts_requests') IS NOT NULL;

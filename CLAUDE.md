@@ -372,7 +372,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000 (or production URL)
 
 # External integrations (server-to-server)
 QC_API_SECRET=your_random_secret      # Bearer token for GET /api/external/machine-status (QC/FQMS pulls PM/health status)
-GUDANG_SYNC_SECRET=your_random_secret # Bearer token for POST /api/external/parts-requests (Gudang One writes back status/qc_result)
+GUDANG_SYNC_SECRET=your_random_secret # Bearer token for POST /api/external/parts-requests (Gudang One writes back status)
+GUDANG_WEBHOOK_URL=https://<gudang-project>.supabase.co/functions/v1/famms-request # line ①: push new parts requests to Gudang
+GUDANG_WEBHOOK_SECRET=same_secret_as_gudang_famms_request # sent as x-famms-secret header
 ```
 
 ---

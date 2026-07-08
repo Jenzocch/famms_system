@@ -1000,6 +1000,13 @@
     "submit": "Kirim permintaan",
     "noItems": "Isi minimal satu part (nama + qty)",
     "failed": "Permintaan gagal, coba lagi nanti",
-    "sent": "Sudah dikirim ke gudang (Gudang One) — mereka akan dapat notifikasi Telegram"
+    "sent": "Sudah dikirim ke gudang (Gudang One) — mereka akan dapat notifikasi Telegram",
+    "trackingHeading": "Status Permintaan Part",
+    "status": {
+      "requested": "Diminta",
+      "ordered": "Dipesan",
+      "received": "Diterima",
+      "rejected": "Dibatalkan"
+    }
   }
 }

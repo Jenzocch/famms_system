@@ -1000,6 +1000,13 @@
     "submit": "送出叫料",
     "noItems": "至少填一項零件（名稱＋數量）",
     "failed": "叫料失敗，稍後再試",
-    "sent": "已送到倉庫（Gudang One），倉管會收到 Telegram 通知"
+    "sent": "已送到倉庫（Gudang One），倉管會收到 Telegram 通知",
+    "trackingHeading": "叫料狀態",
+    "status": {
+      "requested": "待處理",
+      "ordered": "已下單",
+      "received": "已到貨",
+      "rejected": "已取消"
+    }
   }
 }

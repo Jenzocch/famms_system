@@ -1000,6 +1000,13 @@
     "submit": "Send request",
     "noItems": "Fill in at least one part (name + qty)",
     "failed": "Request failed, please try again later",
-    "sent": "Sent to warehouse (Gudang One) — they'll get a Telegram notification"
+    "sent": "Sent to warehouse (Gudang One) — they'll get a Telegram notification",
+    "trackingHeading": "Parts Request Status",
+    "status": {
+      "requested": "Requested",
+      "ordered": "Ordered",
+      "received": "Received",
+      "rejected": "Cancelled"
+    }
   }
 }

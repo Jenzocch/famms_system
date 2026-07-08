@@ -6,6 +6,7 @@ import ProgressTimeline from '@/components/incidents/ProgressTimeline'
 import WorkflowProgress from '@/components/incidents/WorkflowProgress'
 import RemindButton from '@/components/incidents/RemindButton'
 import GudangRequest from '@/components/incidents/GudangRequest'
+import PartsRequestTracker from '@/components/incidents/PartsRequestTracker'
 import StatusChip from '@/components/incidents/StatusChip'
 import { BackLink, UrgencyChip, DueDateChip, ClosedBanner, CollapsibleSection } from '@/components/incidents/IncidentDetailChrome'
 import AssignForm from '@/components/incidents/AssignForm'
@@ -71,6 +72,12 @@ export default async function IncidentDetailPage({
     .select('*')
     .eq('incident_id', id)
     .order('created_at', { ascending: false })
+
+  const { data: partsRequests } = await supabase
+    .from('parts_requests')
+    .select('id, items, urgency, status, requested_at')
+    .eq('incident_id', id)
+    .order('requested_at', { ascending: false })
 
   const machine = incident.machine as { machine_code: string | null; machine_name: string } | null
   const factory = incident.factory as { name: string; code: string | null } | null
@@ -178,6 +185,9 @@ export default async function IncidentDetailPage({
 
       {/* Request spare parts / materials from Gudang One (open cases only) */}
       {!isClosed && user && <GudangRequest incidentId={id} />}
+
+      {/* Read-only status of parts already sent to Gudang One (any status) */}
+      <PartsRequestTracker requests={partsRequests ?? []} />
 
       {/* Low-frequency sections collapsed by default to keep the page short */}
       <CollapsibleSection titleKey="incidentDetail.manageSection" fallback="編輯 / 刪除案件">

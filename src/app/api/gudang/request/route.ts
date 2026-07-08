@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: incident, error } = await supabase
     .from('incidents')
-    .select('incident_no, factory:factories(code, name), machine:machines(machine_code, machine_name)')
+    .select('incident_no, factory_id, machine_id, factory:factories(code, name), machine:machines(machine_code, machine_name)')
     .eq('id', incidentId)
     .single()
   if (error || !incident) {
@@ -77,7 +77,29 @@ export async function POST(req: Request) {
     )
   }
 
+  // Insert the local tracking row first so its id can be handed to Gudang as
+  // famms_request_id — Gudang stores it and echoes it back on later status
+  // write-backs (POST /api/external/parts-requests), since it has no other
+  // way to reach us again after this request/response cycle ends.
+  const { data: tracked, error: trackErr } = await supabase
+    .from('parts_requests')
+    .insert({
+      factory_id: incident.factory_id,
+      incident_id: incidentId,
+      machine_id: incident.machine_id,
+      items,
+      urgency,
+      note: note || null,
+      requested_by_id: user.id,
+    })
+    .select('id')
+    .single()
+  if (trackErr || !tracked) {
+    return NextResponse.json({ error: 'Gagal mencatat permintaan' }, { status: 500 })
+  }
+
   const payload = {
+    famms_request_id: tracked.id,
     machine_id: machine?.machine_code || machine?.machine_name || '-',
     machine_name: machine?.machine_name || '',
     work_order: incident.incident_no,
@@ -96,15 +118,23 @@ export async function POST(req: Request) {
       body: JSON.stringify(payload),
     })
   } catch {
+    await supabase.from('parts_requests').delete().eq('id', tracked.id)
     return NextResponse.json({ error: 'Gudang One tidak bisa dihubungi' }, { status: 502 })
   }
 
   const out = await resp.json().catch(() => ({}))
   if (!resp.ok || !out.ok) {
+    // Never left FAMMS successfully — don't leave a phantom "requested" row.
+    await supabase.from('parts_requests').delete().eq('id', tracked.id)
     return NextResponse.json(
       { error: out.error || `Gudang menolak permintaan (${resp.status})` },
       { status: 502 }
     )
   }
+
+  if (out.request_id) {
+    await supabase.from('parts_requests').update({ external_ref: String(out.request_id) }).eq('id', tracked.id)
+  }
+
   return NextResponse.json({ ok: true, request_id: out.request_id })
 }
