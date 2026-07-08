@@ -14,6 +14,8 @@ import {
 import { toast } from 'sonner'
 import { Loader2, Plus, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { loadFactories, type Factory } from '@/lib/useFactories'
+import { loadMyFactoryId } from '@/lib/useMyFactory'
 
 interface MachineOption {
   id: string
@@ -28,6 +30,8 @@ export default function PMScheduleForm() {
   const supabase = createClient()
   const { t } = useI18n()
 
+  const [factories, setFactories] = useState<Factory[]>([])
+  const [factoryId, setFactoryId] = useState('')
   const [machines, setMachines] = useState<MachineOption[]>([])
   const [machineId, setMachineId] = useState('')
   const [pmType, setPmType] = useState<PMType | ''>('')
@@ -37,17 +41,31 @@ export default function PMScheduleForm() {
   const [checklistInput, setChecklistInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Preselect the user's own factory (fall back to the first one) — same
+  // behavior as the PM page, so the machine list below is factory-scoped.
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from('machines')
-        .select('id, machine_code, machine_name')
-        .neq('status', 'scrapped')
-        .order('machine_code')
-      setMachines(data ?? [])
-    }
-    load()
+    Promise.all([loadFactories(), loadMyFactoryId()]).then(([facs, myFactoryId]) => {
+      setFactories(facs ?? [])
+      if (!facs || facs.length === 0) return
+      const preferred = myFactoryId && facs.some(f => f.id === myFactoryId)
+        ? myFactoryId : facs[0].id
+      setFactoryId(prev => prev || preferred)
+    })
   }, [])
+
+  // Machines scoped to the chosen factory — a schedule must never be created
+  // against another factory's machine by accident.
+  useEffect(() => {
+    if (!factoryId) { setMachines([]); setMachineId(''); return }
+    supabase
+      .from('machines')
+      .select('id, machine_code, machine_name')
+      .eq('factory_id', factoryId)
+      .neq('status', 'scrapped')
+      .order('machine_code')
+      .then(({ data }) => setMachines(data ?? []))
+    setMachineId('')
+  }, [factoryId])
 
   function addChecklistItem() {
     const item = checklistInput.trim()
@@ -94,6 +112,18 @@ export default function PMScheduleForm() {
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
       <h2 className="text-lg font-semibold text-gray-900">{t('pmForm.title', '建立保養計畫')}</h2>
 
+      <div>
+        <Label>{t('settings.factory', '工廠')} <span className="text-red-500">*</span></Label>
+        <Select value={factoryId} onValueChange={(v) => setFactoryId(v ?? '')} items={Object.fromEntries(factories.map(f => [f.id, f.name]))}>
+          <SelectTrigger className="mt-1"><SelectValue placeholder={t('report.selectFactory', '選擇工廠')} /></SelectTrigger>
+          <SelectContent>
+            {factories.map(f => (
+              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>{t('pmForm.machine', '機器')} <span className="text-red-500">*</span></Label>
@@ -107,7 +137,7 @@ export default function PMScheduleForm() {
               ))}
             </SelectContent>
           </Select>
-          {machines.length === 0 && (
+          {factoryId && machines.length === 0 && (
             <p className="text-xs text-amber-600 mt-1">{t('pmForm.noMachines', '尚無機器，請先新增機器')}</p>
           )}
         </div>
