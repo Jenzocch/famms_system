@@ -370,8 +370,9 @@ TELEGRAM_BOT_TOKEN=123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000 (or production URL)
 
-# External integrations (read-only, server-to-server)
-QC_API_SECRET=your_random_secret   # Bearer token for GET /api/external/machine-status (QC/FQMS pulls PM/health status)
+# External integrations (server-to-server)
+QC_API_SECRET=your_random_secret      # Bearer token for GET /api/external/machine-status (QC/FQMS pulls PM/health status)
+GUDANG_SYNC_SECRET=your_random_secret # Bearer token for POST /api/external/parts-requests (Gudang One writes back status/qc_result)
 ```
 
 ---

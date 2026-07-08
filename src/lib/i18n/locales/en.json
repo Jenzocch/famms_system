@@ -420,6 +420,8 @@
     "markOrdered": "Mark Ordered",
     "markReceived": "Mark Received",
     "reject": "Cancel",
+    "qcPassed": "QC Passed",
+    "qcFailed": "QC Failed",
     "status": {
       "requested": "Requested",
       "ordered": "Ordered",

@@ -17,10 +17,17 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json().catch(() => ({}))
-  const { status, external_ref } = body as { status?: string; external_ref?: string }
+  const { status, external_ref, qc_result } = body as {
+    status?: string
+    external_ref?: string
+    qc_result?: string | null
+  }
 
   if (!status || !['requested', 'ordered', 'received', 'rejected'].includes(status)) {
     return NextResponse.json({ error: 'status tidak valid' }, { status: 400 })
+  }
+  if (qc_result !== undefined && qc_result !== null && !['passed', 'failed'].includes(qc_result)) {
+    return NextResponse.json({ error: 'qc_result tidak valid' }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -30,6 +37,8 @@ export async function PATCH(
     .update({
       status,
       external_ref: external_ref?.trim() || undefined,
+      // undefined = leave as-is; null = clear; 'passed'/'failed' = set
+      qc_result,
       resolved_at: resolved ? new Date().toISOString() : null,
     })
     .eq('id', id)

@@ -420,6 +420,8 @@
     "markOrdered": "Tandai Dipesan",
     "markReceived": "Tandai Diterima",
     "reject": "Batalkan",
+    "qcPassed": "Lolos QC",
+    "qcFailed": "Gagal QC",
     "status": {
       "requested": "Diminta",
       "ordered": "Dipesan",

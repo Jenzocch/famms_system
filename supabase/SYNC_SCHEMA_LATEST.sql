@@ -221,6 +221,10 @@ CREATE TABLE IF NOT EXISTS parts_requests (
   resolved_at TIMESTAMP
 );
 ALTER TABLE parts_requests DISABLE ROW LEVEL SECURITY;
+-- QC verdict on the delivered part, written back by Gudang One (which gets it
+-- from FQMS via its qc-status webhook). NULL = not inspected / not applicable.
+ALTER TABLE parts_requests ADD COLUMN IF NOT EXISTS qc_result TEXT
+  CHECK (qc_result IN ('passed', 'failed'));
 CREATE INDEX IF NOT EXISTS idx_parts_requests_incident ON parts_requests(incident_id);
 CREATE INDEX IF NOT EXISTS idx_parts_requests_factory  ON parts_requests(factory_id);
 CREATE INDEX IF NOT EXISTS idx_parts_requests_status    ON parts_requests(status);
@@ -248,4 +252,7 @@ UNION ALL SELECT 'vendors table', to_regclass('public.vendors') IS NOT NULL
 UNION ALL SELECT 'incidents.location_note',
        EXISTS (SELECT 1 FROM information_schema.columns
                WHERE table_name='incidents' AND column_name='location_note')
-UNION ALL SELECT 'parts_requests table', to_regclass('public.parts_requests') IS NOT NULL;
+UNION ALL SELECT 'parts_requests table', to_regclass('public.parts_requests') IS NOT NULL
+UNION ALL SELECT 'parts_requests.qc_result',
+       EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name='parts_requests' AND column_name='qc_result');

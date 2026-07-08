@@ -420,6 +420,8 @@
     "markOrdered": "已下單",
     "markReceived": "已到貨",
     "reject": "取消",
+    "qcPassed": "QC 合格",
+    "qcFailed": "QC 不合格",
     "status": {
       "requested": "待處理",
       "ordered": "已下單",

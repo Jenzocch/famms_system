@@ -18,6 +18,7 @@ interface PartsRequest {
   urgency: 'normal' | 'urgent'
   note: string | null
   status: 'requested' | 'ordered' | 'received' | 'rejected'
+  qc_result: 'passed' | 'failed' | null
   requested_at: string
   requested_by: { full_name: string | null } | null
 }
@@ -149,9 +150,18 @@ export default function PartsRequestPanel({
                   </p>
                   {r.note && <p className="text-xs text-gray-600 mt-1">{r.note}</p>}
                 </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLE[r.status]}`}>
-                  {t(`parts.status.${r.status}`, r.status)}
-                </span>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[r.status]}`}>
+                    {t(`parts.status.${r.status}`, r.status)}
+                  </span>
+                  {r.qc_result && (
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      r.qc_result === 'passed' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {r.qc_result === 'passed' ? t('parts.qcPassed', 'QC 合格') : t('parts.qcFailed', 'QC 不合格')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {canManage && r.status !== 'received' && r.status !== 'rejected' && (
