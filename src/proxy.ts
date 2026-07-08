@@ -13,10 +13,19 @@ import { NextResponse, type NextRequest } from 'next/server'
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Sessionless callers with their own secret-based auth:
+  // Sessionless callers with their own secret-based auth (the route itself
+  // verifies the shared secret; the session guard below would 401 them before
+  // that check ever runs):
   //  - Telegram webhook (secret-token header, checked inside the route)
   //  - Vercel cron (Bearer CRON_SECRET, checked inside the route)
-  if (pathname.startsWith('/api/notifications/telegram') || pathname.startsWith('/api/cron/')) {
+  //  - External integrations (Gudang One → parts-requests write-back with
+  //    Bearer GUDANG_SYNC_SECRET; QC/FQMS → machine-status with Bearer
+  //    QC_API_SECRET) — server-to-server, no Supabase session cookie
+  if (
+    pathname.startsWith('/api/notifications/telegram') ||
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/external/')
+  ) {
     return NextResponse.next()
   }
 
