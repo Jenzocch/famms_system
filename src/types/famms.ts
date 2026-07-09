@@ -597,7 +597,7 @@ export const MACHINE_STATUS_LABELS: Record<Machine['status'], string> = {
   running: 'Beroperasi',
   repairing: 'Perbaikan',
   standby: 'Standby',
-  scrapped: 'Dihapus',
+  scrapped: 'Afkir',
 };
 
 export const MACHINE_STATUS_COLORS: Record<Machine['status'], string> = {

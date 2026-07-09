@@ -1,8 +1,9 @@
 'use client'
 
-import type { IncidentStatus } from '@/types'
+import type { IncidentStatus, UserRole } from '@/types'
 import { useI18n } from '@/lib/i18n'
 import { STATUS_ZH } from '@/lib/incident-display'
+import { PERMISSIONS } from '@/lib/permissions'
 
 // Linear main-flow steps (waiting states branch off, not shown inline)
 const MAIN_STEPS: IncidentStatus[] = [
@@ -13,17 +14,52 @@ const WAITING_STATES: IncidentStatus[] = [
   'waiting_parts', 'waiting_approval', 'waiting_vendor', 'waiting_shutdown',
 ]
 
-export default function WorkflowProgress({ status }: { status: IncidentStatus }) {
+// Combined "where is this case / what happens next" card: the 7-step bar plus
+// ONE actionable hint line directly under it (previously a separate
+// NextStepHint card duplicated this as a second "now → next" block — merged
+// here so there's a single source of "what do I do next" on the page).
+export default function WorkflowProgress({ status, userRole }: { status: IncidentStatus; userRole?: UserRole }) {
   const { t } = useI18n()
 
   const isWaiting = WAITING_STATES.includes(status)
   const activeIndex = isWaiting ? -1 : MAIN_STEPS.indexOf(status)
   const isClosed = status === 'closed'
 
+  // An observation-period case is the supervisor's cue to review and close —
+  // role-aware hint, same logic the old NextStepHint banner used.
+  const canClose = userRole ? PERMISSIONS.closeIncident(userRole) : false
+  const awaitingClose = status === 'observation' && canClose
+
   // Use workflowStep labels so the 7 linear steps stay distinct — the board
   // deliberately collapses analyzing/repairing to one "In Progress" label, but
   // in a step-by-step progress bar two identical steps look like a bug.
   const stepLabel = (s: IncidentStatus) => t(`workflowStep.${s}`, STATUS_ZH[s])
+
+  const hintIcon = isClosed ? '✅' : awaitingClose ? '⏰' : isWaiting ? '⏸' : '👉'
+  const hintBoxClass = isClosed
+    ? 'bg-green-50 border-green-200 text-green-800'
+    : awaitingClose || isWaiting
+    ? 'bg-amber-50 border-amber-200 text-amber-800'
+    : 'bg-blue-50 border-blue-200 text-blue-800'
+  const hintLabel = awaitingClose ? t('nextStep.awaitClose') : t('nextStepLabel', '下一步')
+  const hintText = awaitingClose ? t('nextStep.awaitCloseNote') : t(`nextStep.${status}`)
+
+  // Clickable hint → scroll to + briefly highlight the section this hint is
+  // actually about. 'reported' needs an owner assigned first (section-assign);
+  // every other open status (including awaitingClose — observation+supervisor
+  // — since closing happens via ProgressUpdate's own close flow, there's no
+  // separate close section on this page) is about logging progress
+  // (section-update). Closed has nothing left to jump to.
+  const targetId = isClosed ? null : status === 'reported' ? 'section-assign' : 'section-update'
+
+  function handleHintClick() {
+    if (!targetId) return
+    const el = document.getElementById(targetId)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    el.classList.add('ring-2', 'ring-blue-400')
+    setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 1500)
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -71,20 +107,22 @@ export default function WorkflowProgress({ status }: { status: IncidentStatus })
         })}
       </div>
 
-      {/* Waiting state notice */}
-      {/* Next-step guidance — plain words telling whoever opens the case what to
-          do now. Green when closed, amber while waiting, blue otherwise. */}
-      <div className={`mt-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
-        isClosed
-          ? 'bg-green-50 border-green-200 text-green-800'
-          : isWaiting
-          ? 'bg-amber-50 border-amber-200 text-amber-800'
-          : 'bg-blue-50 border-blue-200 text-blue-800'
-      }`}>
-        <span className="shrink-0">{isClosed ? '✅' : isWaiting ? '⏸' : '👉'}</span>
+      {/* Single "what to do next" hint line — role-aware (supervisor sees the
+          awaiting-close cue on an observation case), suppressed to nothing
+          extra beyond this line since the bar above already shows position.
+          Clickable (scrolls to + briefly highlights the relevant section)
+          whenever there's an actual target; plain/non-interactive otherwise. */}
+      <div
+        onClick={targetId ? handleHintClick : undefined}
+        role={targetId ? 'button' : undefined}
+        tabIndex={targetId ? 0 : undefined}
+        onKeyDown={targetId ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleHintClick() } : undefined}
+        className={`mt-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${hintBoxClass} ${targetId ? 'cursor-pointer hover:brightness-95' : ''}`}
+      >
+        <span className="shrink-0">{hintIcon}</span>
         <span>
-          <span className="font-semibold">{t('nextStepLabel', '下一步')}：</span>
-          {t(`nextStep.${status}`)}
+          <span className="font-semibold">{hintLabel}：</span>
+          {hintText}
         </span>
       </div>
     </div>

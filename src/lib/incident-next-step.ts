@@ -34,8 +34,3 @@ const NEXT_STATUS: Partial<Record<IncidentStatus, IncidentStatus>> = {
 export function nextStatusOf(status: IncidentStatus): IncidentStatus | null {
   return NEXT_STATUS[status] ?? null
 }
-
-// i18n key for the short action hint shown next to the target status.
-export function nextHintKey(status: IncidentStatus): string {
-  return `nextStep.hint.${status}`
-}

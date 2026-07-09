@@ -59,6 +59,18 @@ export function DueDateChip({ dueDate, isClosed }: { dueDate: string; isClosed: 
   )
 }
 
+// Small corner badge marking whichever section is THIS user's actual next
+// action right now (Part 6 "your turn" emphasis). Parent wrapper must have
+// `relative` for the absolute positioning to anchor correctly.
+export function YourTurnBadge() {
+  const { t } = useI18n()
+  return (
+    <span className="absolute -top-2 -right-2 z-10 inline-flex items-center gap-1 rounded-full bg-blue-600 text-white text-[10px] font-semibold px-2 py-0.5 shadow">
+      {t('common.yourTurn', '👉 該你了')}
+    </span>
+  )
+}
+
 export function ClosedBanner({ closedAt }: { closedAt: string | null }) {
   const { t } = useI18n()
   return (
@@ -74,16 +86,26 @@ export function ClosedBanner({ closedAt }: { closedAt: string | null }) {
 
 // Collapsible wrapper for low-frequency sections (edit/delete, audit trail) so
 // the detail page stays short on mobile. Native <details> keeps it zero-JS.
-export function CollapsibleSection({ titleKey, fallback, children }: {
+// `hintKey`/`hintFallback` render a small muted one-liner under the title,
+// visible even while collapsed (it lives inside <summary>, not the hidden body)
+// — explains what the section is for at a glance.
+export function CollapsibleSection({ titleKey, fallback, hintKey, hintFallback, children }: {
   titleKey: string
   fallback: string
+  hintKey?: string
+  hintFallback?: string
   children: React.ReactNode
 }) {
   const { t } = useI18n()
   return (
     <details className="bg-white rounded-xl border border-gray-200 group">
-      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-gray-700 flex items-center justify-between">
-        {t(titleKey, fallback)}
+      <summary className="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
+        <div>
+          <span className="text-sm font-semibold text-gray-700">{t(titleKey, fallback)}</span>
+          {hintKey && (
+            <p className="text-xs font-normal text-gray-500 mt-0.5">{t(hintKey, hintFallback ?? '')}</p>
+          )}
+        </div>
         <span className="text-gray-400 transition-transform group-open:rotate-90">›</span>
       </summary>
       <div className="px-4 pb-4">{children}</div>

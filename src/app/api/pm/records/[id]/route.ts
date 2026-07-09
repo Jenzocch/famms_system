@@ -30,7 +30,7 @@ export async function PATCH(
   }
 
   if (status === 'skipped' && !delay_reason) {
-    return NextResponse.json({ error: 'delay_reason wajib diisi saat skip' }, { status: 400 })
+    return NextResponse.json({ error: 'Alasan keterlambatan wajib diisi saat dilewati' }, { status: 400 })
   }
 
   // Load the record + its schedule (for recurrence + active check)

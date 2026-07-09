@@ -18,7 +18,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!PERMISSIONS.closeIncident(user.role)) {
     return NextResponse.json(
-      { error: 'Hanya supervisor ke atas yang dapat menutup incident' },
+      { error: 'Hanya supervisor ke atas yang dapat menutup kasus' },
       { status: 403 }
     )
   }
@@ -40,11 +40,11 @@ export async function POST(
     .eq('id', id)
     .single()
   if (loadErr || !incident) {
-    return NextResponse.json({ error: 'Incident tidak ditemukan' }, { status: 404 })
+    return NextResponse.json({ error: 'Kasus tidak ditemukan' }, { status: 404 })
   }
 
   if (incident.status === 'closed') {
-    return NextResponse.json({ error: 'Incident sudah ditutup' }, { status: 400 })
+    return NextResponse.json({ error: 'Kasus ini sudah ditutup' }, { status: 400 })
   }
 
   // RCA gate — only applies to machine incidents that carry a failure_code.
@@ -54,7 +54,7 @@ export async function POST(
     if (rca.required && !rca.satisfied) {
       return NextResponse.json(
         {
-          error: 'RCA wajib diisi sebelum menutup incident',
+          error: 'RCA wajib diisi sebelum menutup kasus',
           rca_required: true,
           occurrence_count: rca.occurrenceCount,
         },

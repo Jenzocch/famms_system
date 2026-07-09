@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   if (!problem || !root_cause || !repair_method) {
     return NextResponse.json(
-      { error: 'problem, root_cause, repair_method wajib diisi' },
+      { error: 'Deskripsi masalah, penyebab, dan metode perbaikan wajib diisi' },
       { status: 400 }
     )
   }

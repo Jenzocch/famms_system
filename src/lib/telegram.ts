@@ -62,9 +62,9 @@ export function formatNewIncident(args: {
   incidentId?: string
 }): string {
   const lines = [
-    `🚨 <b>Incident Baru</b> — ${esc(args.incidentNo)}`,
+    `🚨 <b>Insiden Baru</b> — ${esc(args.incidentNo)}`,
     `🏭 Mesin: ${esc(args.machineLabel)}`,
-    `🔧 Failure: ${esc(args.failureName)}`,
+    `🔧 Kode Kerusakan: ${esc(args.failureName)}`,
     `📉 Dampak: ${esc(DOWNTIME_IMPACT_LABELS[args.impact])} (SLA ${esc(SLA_LABELS[args.impact])})`,
   ]
   if (args.appUrl && args.incidentId) {
@@ -107,7 +107,7 @@ export function formatSLAAlert(args: { incidentNo: string; machineLabel: string;
 
 export function formatBlocking(args: { incidentNo: string; reason: string }): string {
   return [
-    `🛑 <b>Work Order Terblokir</b> — ${esc(args.incidentNo)}`,
+    `🛑 <b>Kasus Terblokir</b> — ${esc(args.incidentNo)}`,
     `Alasan: ${esc(args.reason)}`,
   ].join('\n')
 }
@@ -121,7 +121,7 @@ export function formatDailySummary(args: {
 }): string {
   return [
     `📊 <b>Ringkasan Harian</b> — ${esc(args.factoryName)}`,
-    `• Incident aktif: ${args.open}`,
+    `• Kasus aktif: ${args.open}`,
     `• Baru hari ini: ${args.newToday}`,
     `• Selesai hari ini: ${args.closedToday}`,
     `• PM terlambat: ${args.overduePM}`,

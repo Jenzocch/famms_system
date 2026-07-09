@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   if (!machine_id || !pm_type) {
-    return NextResponse.json({ error: 'machine_id dan pm_type wajib diisi' }, { status: 400 })
+    return NextResponse.json({ error: 'Mesin dan jenis perawatan wajib diisi' }, { status: 400 })
   }
 
   // Resolve factory from the machine

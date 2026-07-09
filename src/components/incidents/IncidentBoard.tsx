@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, ChevronRight, UserCheck, Lock, CalendarClock } from 'lucide-react'
+import { AlertCircle, ChevronRight, UserCheck, CalendarClock } from 'lucide-react'
 import NudgeCardButton from '@/components/incidents/NudgeCardButton'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhTW, enUS, id as idLocale } from 'date-fns/locale'
@@ -45,7 +45,6 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
   const [filter, setFilter] = useState(
     initialFilter && BOARD_FILTERS.some(f => f.key === initialFilter) ? initialFilter : 'all'
   )
-  const canAssign = PERMISSIONS.assignIncident(userRole)
   const canRemind = PERMISSIONS.remindProgress(userRole)
   const { remindingId, nudge } = useProgressNudge()
 
@@ -187,7 +186,7 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
                 {/* Next-step nudge: what this case needs next, at a glance */}
                 {inc.status !== 'closed' && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
-                    <NextStepHint status={inc.status} variant="inline" userRole={userRole} />
+                    <NextStepHint status={inc.status} userRole={userRole} />
                   </div>
                 )}
 
@@ -203,12 +202,8 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
                       <span className="inline-flex items-center gap-0.5 text-blue-600 shrink-0">
                         <UserCheck className="w-3.5 h-3.5" /> {inc.assigned_to}
                       </span>
-                    ) : canAssign ? (
-                      <span className="text-amber-600 shrink-0">{t('board.unassigned')}</span>
                     ) : (
-                      <span className="inline-flex items-center gap-0.5 text-gray-400 shrink-0" title={t('board.onlySupervisorAssign')}>
-                        <Lock className="w-3.5 h-3.5" /> {t('board.unassigned')}
-                      </span>
+                      <span className="text-amber-600 shrink-0">{t('board.unassigned')}</span>
                     )
                   )}
                 </div>

@@ -122,36 +122,51 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
   async function search() {
     setLoading(true)
     try {
-      let query = supabase
-        .from('incidents')
-        .select(`
-          id, incident_no, status, downtime_impact, incident_type,
-          title, reporter_name, reported_at, assigned_to, machine_id,
-          machine:machines(machine_code, machine_name),
-          factory:factories(name)
-        `)
-
-      // Same visibility rule as the board: technicians (no full-board access)
-      // only search cases assigned to them or reported by them.
-      if (!PERMISSIONS.boardFull(userRole)) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          query = query.or(`assigned_user_ids.cs.{${user.id}},reported_by_id.eq.${user.id}`)
-        }
+      // Build a query with all shared filters applied. Called once for full
+      // access, or twice for technicians (assigned-to-me + reported-by-me).
+      // NOT a single .or('assigned_user_ids.cs.{me},...'): the array-contains
+      // operator inside .or() is unreliable in supabase-js and silently drops
+      // multi-assignee cases — the exact bug the board's own query was fixed
+      // for (see src/app/(dashboard)/incidents/page.tsx). Search must match.
+      const buildQuery = () => {
+        let q = supabase
+          .from('incidents')
+          .select(`
+            id, incident_no, status, downtime_impact, incident_type,
+            title, reporter_name, reported_at, assigned_to, machine_id,
+            machine:machines(machine_code, machine_name),
+            factory:factories(name)
+          `)
+        if (factoryId) q = q.eq('factory_id', factoryId)
+        if (machineId) q = q.eq('machine_id', machineId)
+        if (incidentType) q = q.eq('incident_type', incidentType)
+        if (status) q = q.eq('status', status)
+        if (startDate) q = q.gte('reported_at', `${startDate}T00:00:00Z`)
+        if (endDate) q = q.lte('reported_at', `${endDate}T23:59:59Z`)
+        return q.order('reported_at', { ascending: false }).limit(500)
       }
 
-      if (factoryId) query = query.eq('factory_id', factoryId)
-      if (machineId) query = query.eq('machine_id', machineId)
-      if (incidentType) query = query.eq('incident_type', incidentType)
-      if (status) query = query.eq('status', status)
-      if (startDate) query = query.gte('reported_at', `${startDate}T00:00:00Z`)
-      if (endDate) query = query.lte('reported_at', `${endDate}T23:59:59Z`)
+      let data: any[]
+      if (!PERMISSIONS.boardFull(userRole)) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setResults([]); setHasSearched(true); if (onResults) onResults([]); return }
+        const [assignedRes, reportedRes] = await Promise.all([
+          buildQuery().contains('assigned_user_ids', [user.id]),
+          buildQuery().eq('reported_by_id', user.id),
+        ])
+        if (assignedRes.error) throw assignedRes.error
+        if (reportedRes.error) throw reportedRes.error
+        const byId = new Map<string, any>()
+        for (const r of [...(assignedRes.data ?? []), ...(reportedRes.data ?? [])]) byId.set(r.id, r)
+        data = [...byId.values()].sort(
+          (a, b) => new Date(b.reported_at).getTime() - new Date(a.reported_at).getTime()
+        )
+      } else {
+        const { data: full, error } = await buildQuery()
+        if (error) throw error
+        data = full ?? []
+      }
 
-      const { data, error } = await query
-        .order('reported_at', { ascending: false })
-        .limit(500)
-
-      if (error) throw error
       const mapped = (data ?? []).map((d: any) => ({
         id: d.id,
         incident_no: d.incident_no,

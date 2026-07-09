@@ -15,6 +15,10 @@ export interface SubmitIncidentReportInput {
   locationNote: string
   photos: File[]
   userId: string | null
+  // Generated ONCE by the caller when the form mounts (not regenerated on
+  // retry) — lets a resubmit after a network drop be recognized as "the same
+  // report" instead of creating a duplicate. See the idempotency check below.
+  clientRequestId?: string
 }
 
 // Creates an incident end-to-end: unique incident_no (retry on collision),
@@ -26,6 +30,22 @@ export async function submitIncidentReport(
   input: SubmitIncidentReportInput
 ): Promise<{ id: string; incident_no: string; photoUploadFailed: boolean }> {
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Idempotency short-circuit: on a flaky-signal retry (same clientRequestId,
+  // e.g. the user hit submit again after an ambiguous timeout), a matching
+  // row means the FIRST attempt actually went through — return it as-is
+  // rather than creating a second incident. Photos/audit/notify from that
+  // first attempt already happened; do not repeat them.
+  if (input.clientRequestId) {
+    const { data: existing } = await supabase
+      .from('incidents')
+      .select('id, incident_no')
+      .eq('client_request_id', input.clientRequestId)
+      .maybeSingle()
+    if (existing) {
+      return { id: existing.id, incident_no: existing.incident_no, photoUploadFailed: false }
+    }
+  }
 
   const now = new Date()
   const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
@@ -52,6 +72,13 @@ export async function submitIncidentReport(
   const trimmedLocation = input.locationNote.trim()
   if (trimmedLocation) insertPayload.location_note = trimmedLocation
 
+  // Same backward-compatibility need as location_note: only send this on
+  // databases where the client_request_id column exists yet (added via
+  // SYNC_SCHEMA_LATEST.sql). Tracked separately so a 42703 "column does not
+  // exist" can drop just this field and retry, without losing the incident_no
+  // collision-retry logic below.
+  let sendClientRequestId = !!input.clientRequestId
+
   // The number is "today's count + 1". Two people reporting at once would
   // compute the same value, so on a unique-violation (23505 — once the
   // incidents_incident_no_key constraint is in place) bump the sequence and
@@ -62,12 +89,20 @@ export async function submitIncidentReport(
   let seq = (count ?? 0) + 1
   for (let attempt = 0; attempt < 6; attempt++) {
     const incident_no = `FIT-${ym}-${String(seq).padStart(3, '0')}`
+    const payload: Record<string, unknown> = { ...insertPayload, incident_no }
+    if (sendClientRequestId) payload.client_request_id = input.clientRequestId
     const { data, error } = await supabase
       .from('incidents')
-      .insert({ ...insertPayload, incident_no })
+      .insert(payload)
       .select('*')
       .single()
     if (!error) { incident = data; break }
+    if (error.code === '42703' && sendClientRequestId) {
+      // Column doesn't exist on this database yet — drop it and retry the
+      // SAME sequence number (this isn't an incident_no collision).
+      sendClientRequestId = false
+      continue
+    }
     if (error.code === '23505') { seq++; lastErr = error; continue }
     throw error
   }

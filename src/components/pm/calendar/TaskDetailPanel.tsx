@@ -105,23 +105,26 @@ export default function TaskDetailPanel({
                       <p className="text-xs text-orange-600 mt-0.5">{task.delay_reason}</p>
                     )}
 
-                    {/* Action buttons for real, not-yet-done tasks */}
+                    {/* Action buttons for real, not-yet-done tasks — this is the
+                        primary thing a technician taps here, so it gets a large,
+                        near-full-width target on mobile and reverts to compact
+                        inline buttons from `sm:` up. */}
                     {isActionable(task) && !acting && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-2">
                         <Button
-                          size="sm"
-                          className="h-7 gap-1 bg-green-600 hover:bg-green-700 text-xs"
+                          size="lg"
+                          className="h-11 sm:h-7 w-full sm:w-auto gap-1.5 bg-green-600 hover:bg-green-700 text-sm sm:text-xs"
                           onClick={() => setAction({ taskId: task.record_id, task, mode: 'complete', findings: '', cost: '', reason: '', checks: (task.checklist ?? []).map(() => false) })}
                         >
-                          <CheckCircle className="w-3.5 h-3.5" /> {t('pm.complete')}
+                          <CheckCircle className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> {t('pm.complete')}
                         </Button>
                         <Button
-                          size="sm"
+                          size="lg"
                           variant="outline"
-                          className="h-7 gap-1 border-orange-300 text-orange-600 hover:bg-orange-50 text-xs"
+                          className="h-11 sm:h-7 w-full sm:w-auto gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50 text-sm sm:text-xs"
                           onClick={() => setAction({ taskId: task.record_id, task, mode: 'skip', findings: '', cost: '', reason: '', checks: [] })}
                         >
-                          <SkipForward className="w-3.5 h-3.5" /> {t('pm.skip')}
+                          <SkipForward className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> {t('pm.skip')}
                         </Button>
                       </div>
                     )}
@@ -132,10 +135,10 @@ export default function TaskDetailPanel({
                 {acting?.mode === 'complete' && (
                   <div className="mt-3 ml-5 space-y-2 bg-green-50 rounded-lg p-3 border border-green-200">
                     {(acting.task.checklist ?? []).length > 0 && (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <p className="text-xs font-medium text-green-900">{t('pm.checklistHeading', '檢查清單 Checklist')}</p>
                         {(acting.task.checklist ?? []).map((item, i) => (
-                          <label key={i} className="flex items-start gap-2 text-sm text-gray-700 bg-white rounded-lg border border-green-100 px-2.5 py-1.5 cursor-pointer">
+                          <label key={i} className="flex items-start gap-2.5 text-sm text-gray-700 bg-white active:bg-gray-50 rounded-lg border border-green-100 px-3 py-2.5 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={acting.checks[i] ?? false}
@@ -144,7 +147,7 @@ export default function TaskDetailPanel({
                                 checks[i] = e.target.checked
                                 setAction({ ...acting, checks })
                               }}
-                              className="mt-0.5 w-4 h-4 accent-green-600 shrink-0"
+                              className="mt-0.5 w-5 h-5 accent-green-600 shrink-0"
                             />
                             <span className={acting.checks[i] ? 'line-through text-gray-400' : ''}>{item}</span>
                           </label>
@@ -165,12 +168,12 @@ export default function TaskDetailPanel({
                       placeholder={t('pm.costPlaceholder')}
                       className="text-sm"
                     />
-                    <div className="flex gap-2">
-                      <Button size="sm" className="h-7 bg-green-600 hover:bg-green-700 text-xs" onClick={submit} disabled={submitting}>
-                        {submitting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button size="lg" className="h-11 sm:h-7 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-sm sm:text-xs" onClick={submit} disabled={submitting}>
+                        {submitting && <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 mr-1 animate-spin" />}
                         {t('pm.confirmComplete2')}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAction(null)}>{t('pm.cancelBtn')}</Button>
+                      <Button size="lg" variant="outline" className="h-11 sm:h-7 w-full sm:w-auto text-sm sm:text-xs" onClick={() => setAction(null)}>{t('pm.cancelBtn')}</Button>
                     </div>
                   </div>
                 )}
@@ -185,12 +188,12 @@ export default function TaskDetailPanel({
                       rows={2}
                       className="text-sm"
                     />
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="h-7 border-orange-400 text-orange-700 hover:bg-orange-100 text-xs" onClick={submit} disabled={submitting || !acting.reason.trim()}>
-                        {submitting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button size="lg" variant="outline" className="h-11 sm:h-7 w-full sm:w-auto border-orange-400 text-orange-700 hover:bg-orange-100 text-sm sm:text-xs" onClick={submit} disabled={submitting || !acting.reason.trim()}>
+                        {submitting && <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 mr-1 animate-spin" />}
                         {t('pm.confirmSkip2')}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAction(null)}>{t('pm.cancelBtn')}</Button>
+                      <Button size="lg" variant="outline" className="h-11 sm:h-7 w-full sm:w-auto text-sm sm:text-xs" onClick={() => setAction(null)}>{t('pm.cancelBtn')}</Button>
                     </div>
                   </div>
                 )}

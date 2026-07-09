@@ -32,6 +32,12 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS accepted_at       TIMESTAMP;
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS accepted_by_id    UUID REFERENCES profiles(id);
 -- SLA escalation de-dup: when this incident last triggered a Telegram alert.
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS last_sla_alert_at TIMESTAMP;
+-- Idempotency key for offline/flaky-signal retries: the report form generates
+-- this once per form instance, so resubmitting after an ambiguous timeout
+-- (network drop right at submit) is recognized as the same report instead of
+-- creating a duplicate incident. NULL for rows created before this existed —
+-- UNIQUE allows any number of NULLs, so that's not a conflict.
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS client_request_id UUID UNIQUE;
 
 -- The report form treats machine + failure code as optional, and some cases
 -- span all/none of the factories — relax the old NOT NULLs.

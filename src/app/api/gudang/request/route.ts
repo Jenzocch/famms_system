@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Minimal satu item (nama + qty)' }, { status: 400 })
   }
   if (!incidentId) {
-    return NextResponse.json({ error: 'incident_id wajib' }, { status: 400 })
+    return NextResponse.json({ error: 'Laporan terkait wajib diisi' }, { status: 400 })
   }
 
   // Incident context: work-order number, machine, factory → target warehouse.
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     .eq('id', incidentId)
     .single()
   if (error || !incident) {
-    return NextResponse.json({ error: 'Incident tidak ditemukan' }, { status: 404 })
+    return NextResponse.json({ error: 'Laporan tidak ditemukan' }, { status: 404 })
   }
 
   // Supabase types to-one joins as arrays; at runtime .single() returns objects
@@ -75,6 +75,26 @@ export async function POST(req: Request) {
       { error: `Pabrik ${factory?.code ?? '?'} belum dipetakan ke gudang` },
       { status: 400 }
     )
+  }
+
+  // Idempotency guard: a double-tap, or a retry after the network dropped
+  // mid-response, must not create a second request (and a second Gudang push).
+  // No schema change needed — check for an identical request (same incident,
+  // same user, same items) in the last 30s and treat a match as the same
+  // submission, returning success without re-sending.
+  const itemsKey = JSON.stringify(items)
+  const since = new Date(Date.now() - 30_000).toISOString()
+  const { data: recent } = await supabase
+    .from('parts_requests')
+    .select('id, items, external_ref')
+    .eq('incident_id', incidentId)
+    .eq('requested_by_id', user.id)
+    .gte('requested_at', since)
+    .order('requested_at', { ascending: false })
+    .limit(5)
+  const dup = (recent ?? []).find(r => JSON.stringify(r.items) === itemsKey)
+  if (dup) {
+    return NextResponse.json({ ok: true, request_id: dup.external_ref ?? null, deduped: true })
   }
 
   // Insert the local tracking row first so its id can be handed to Gudang as

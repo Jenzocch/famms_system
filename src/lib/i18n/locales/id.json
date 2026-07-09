@@ -1,7 +1,7 @@
 {
   "dash": {
     "title": "Pelacakan Supervisor",
-    "overview": "Ikhtisar insiden & pemeliharaan",
+    "overview": "Ikhtisar insiden & perawatan",
     "open": "Kasus aktif",
     "urgent": "Kasus mendesak",
     "cases": "{count} kasus",
@@ -11,13 +11,13 @@
     "noUrgent": "Tidak ada kasus mendesak",
     "staleCases": "Kasus tertunda (tidak diperbarui 3+ hari)",
     "noStale": "Tidak ada kasus tertunda",
-    "overdueMachines": "Mesin terlambat pemeliharaan",
-    "noOverdue": "Tidak ada pemeliharaan terlambat",
+    "overdueMachines": "Mesin terlambat perawatan",
+    "noOverdue": "Tidak ada perawatan terlambat",
     "inbox": "Perlu tindakan Anda",
     "inboxAccept": "Belum diterima",
     "inboxWaiting": "Menunggu",
     "inboxConfirm": "Konfirmasi & tutup",
-    "monthlyReport": "Laporan"
+    "monthlyReport": "Laporan Bulanan"
   },
   "assign": {
     "title": "Penugasan",
@@ -29,7 +29,7 @@
     "extraPlaceholder": "mis. Vendor ABC, Pak Wang",
     "dept": "Departemen",
     "deptPlaceholder": "mis. E&M",
-    "dueDate": "Tanggal target",
+    "dueDate": "Tenggat",
     "save": "Simpan penugasan",
     "saved": "Penugasan diperbarui",
     "onlySupervisor": "Hanya supervisor yang bisa menugaskan",
@@ -39,7 +39,10 @@
     "showAllAccounts": "Tampilkan akun pabrik lain ({count})",
     "showFactoryOnly": "Hanya pabrik ini",
     "vendors": "Vendor",
-    "dueDateSupervisorOnly": "Tanggal target ditetapkan oleh supervisor"
+    "dueDateSupervisorOnly": "Tenggat ditetapkan oleh supervisor",
+    "confirmClearAll": "Hapus semua petugas? Orang yang saat ini ditugaskan tidak akan bisa melihat laporan ini lagi.",
+    "savedNoInternal": "Tersimpan, tetapi tidak ada akun internal yang ditugaskan — teknisi tidak akan melihat laporan ini, hanya supervisor",
+    "sectionHint": "Pilih siapa yang menangani laporan ini, bisa pilih beberapa orang"
   },
   "report": {
     "title": "Lapor Masalah",
@@ -80,7 +83,10 @@
     "compressedToast": "{count} foto dikompres",
     "compressSkipped": "berkas tidak dapat dikompres (kapasitas perangkat terbatas)",
     "locationOther": "Lokasi lain (isi sendiri, opsional)",
-    "advancedOptions": "Opsi lanjutan (tenggat, opsional)"
+    "advancedOptions": "Opsi lanjutan (tenggat, opsional)",
+    "sectionLocation": "Di Mana",
+    "sectionIssue": "Apa Masalahnya",
+    "sectionUrgency": "Seberapa Mendesak"
   },
   "common": {
     "save": "Simpan",
@@ -100,7 +106,8 @@
     "submit": "Kirim",
     "reset": "Atur Ulang",
     "noData": "Tidak ada data",
-    "update": "Perbarui"
+    "update": "Perbarui",
+    "yourTurn": "👉 Giliran Anda"
   },
   "navigation": {
     "dashboard": "Dasbor",
@@ -159,7 +166,7 @@
     "exportExcel": "Ekspor Excel",
     "photoCompressed": "Kompresi foto selesai",
     "photoCompressionFailed": "Gagal mengompresi foto",
-    "saved": "Hemat"
+    "saved": "Tersimpan"
   },
   "status": {
     "reported": "Dilaporkan",
@@ -189,13 +196,6 @@
     "testing": "Pengujian",
     "maintenance": "Perawatan"
   },
-  "assignForm": {
-    "title": "Tugaskan Laporan",
-    "assignTo": "Tugaskan ke",
-    "dueDate": "Waktu Tenggat",
-    "priority": "Prioritas",
-    "notes": "Catatan"
-  },
   "progressUpdate": {
     "title": "Perbarui Kemajuan",
     "status": "Status Baru",
@@ -205,10 +205,10 @@
     "heading": "Perbarui kemajuan",
     "updater": "Diperbarui oleh",
     "updaterPlaceholder": "Nama petugas",
-    "newStatus": "Status baru",
-    "note": "Catatan penanganan",
+    "newStatus": "Sekarang sampai mana?",
+    "note": "Apa yang sudah dikerjakan?",
     "notePlaceholder": "Jelaskan penanganan, temuan, spare yang diganti...",
-    "photos": "Foto (maks 5, auto-kompres)",
+    "photos": "Foto hasil kerja (opsional)",
     "compressing": "Mengompres...",
     "addPhoto": "Tambah foto",
     "submit": "Kirim pembaruan",
@@ -233,7 +233,8 @@
     "partsCost": "Biaya suku cadang (opsional)",
     "saveToKb": "Simpan ke knowledge base (bisa dicari lain kali)",
     "repairMethod": "Cara perbaikan (opsional; jika kosong pakai catatan di bawah)",
-    "repairMethodPh": "mis. ganti bearing 6205, kalibrasi ulang posisi sensor…"
+    "repairMethodPh": "mis. ganti bearing 6205, kalibrasi ulang posisi sensor…",
+    "sectionHint": "Catat apa yang sudah dikerjakan dan apa yang ditemukan, boleh lampirkan foto"
   },
   "pm": {
     "manageTitle": "Manajemen PM",
@@ -245,9 +246,9 @@
     "calendarHeading": "📅 Kalender Perawatan",
     "plannedTag": "Terjadwal",
     "adhocTag": "Tak terjadwal",
-    "maintainerName": "Dikerjakan oleh",
+    "maintainerName": "Siapa yang mengerjakan?",
     "namePlaceholder": "Nama",
-    "maintenanceNote": "Catatan perawatan",
+    "maintenanceNote": "Apa yang dikerjakan?",
     "notePlaceholder": "Penggantian part, penyetelan, temuan...",
     "saveBtn": "Simpan",
     "recordAdded": "Catatan perawatan ditambahkan",
@@ -356,7 +357,7 @@
     "completedMaintenance": "Perawatan selesai",
     "skippedDone": "Dilewati",
     "allMachines2": "Semua Mesin",
-    "responsible": "Penanggung jawab (multi-pilih)",
+    "responsible": "Penanggung jawab (pilih banyak)",
     "onlyMine": "Hanya milik saya",
     "monthBtn": "Bulan",
     "weekBtn": "Minggu",
@@ -382,7 +383,7 @@
     "delayReasons": {
       "no_shutdown": "Tidak Ada Shutdown",
       "no_manpower": "Kurang Tenaga Kerja",
-      "no_parts": "Parts Tidak Ada",
+      "no_parts": "Parts Tidak Tersedia",
       "production_priority": "Prioritas Produksi",
       "forgot": "Terlupa"
     },
@@ -392,12 +393,13 @@
     "badgeInDays": "{count} hr lagi",
     "searchMachine": "Cari nama atau kode mesin...",
     "noMatchingMachines": "Tidak ada mesin yang cocok",
-    "noUpcoming": "Tidak ada pemeliharaan mendatang",
+    "noUpcoming": "Tidak ada perawatan mendatang",
     "confirmDone": "Konfirmasi selesai",
     "done": "Selesai",
     "checklistHeading": "Checklist",
     "checklistLabel": "Checklist (opsional, satu item per baris)",
-    "checklistPlaceholder": "mis.\nCek pelumasan bearing\nBersihkan heatsink\nUkur suhu operasi"
+    "checklistPlaceholder": "mis.\nCek pelumasan bearing\nBersihkan heatsink\nUkur suhu operasi",
+    "dueListHint": "Tugas perawatan yang akan datang dan yang terlambat"
   },
   "weekdays": {
     "0": "Min",
@@ -567,7 +569,7 @@
     "deactivate": "Nonaktifkan",
     "activate": "Aktifkan",
     "pmSectionTitle": "Jadwal PM",
-    "pmSectionDesc": "Tambah rencana pemeliharaan preventif",
+    "pmSectionDesc": "Tambah rencana perawatan preventif",
     "pwdResetHint": "🔒 Demi keamanan, kata sandi lama tidak dapat ditampilkan. Ketik yang baru untuk mengubah, atau kosongkan untuk tetap.",
     "namePwdRequired": "Nama login dan kata sandi wajib diisi",
     "loginName": "Nama login",
@@ -607,9 +609,9 @@
     "testFailed": "Gagal mengirim tes",
     "testSent": "Terkirim: {sent}, gagal: {failed}",
     "sendTest": "Kirim Tes Notifikasi",
-    "flagNewIncident": "Incident Baru",
+    "flagNewIncident": "Insiden Baru",
     "flagSlaAlert": "SLA Alert",
-    "flagBlocking": "Blocking",
+    "flagBlocking": "Kasus Tertahan",
     "flagDailySummary": "Ringkasan Harian",
     "howToTitle": "Cara mendapatkan Group ID? (3 langkah)",
     "step1": "Tambahkan bot FAMMS ini ke group Telegram Anda",
@@ -675,13 +677,12 @@
     "heading": "Papan Laporan",
     "noIncidents": "Tidak ada laporan",
     "unassigned": "Belum ditugaskan",
-    "onlySupervisorAssign": "Hanya supervisor yang dapat menugaskan",
     "problem": "Masalah",
     "overdue": "Terlambat",
     "due": "Tenggat",
     "obsDue": "Masa observasi selesai",
-    "noInFilter": "Tidak ada kasus di tab ini",
-    "emptyMine": "Tidak ada kasus yang ditugaskan atau dilaporkan oleh Anda",
+    "noInFilter": "Tidak ada laporan di tab ini",
+    "emptyMine": "Tidak ada laporan yang ditugaskan atau dilaporkan oleh Anda",
     "reportCta": "Lapor masalah",
     "tabBoard": "Papan",
     "tabSearch": "Cari",
@@ -721,7 +722,7 @@
     "colAssignedTo": "Ditugaskan ke",
     "colReportedAt": "Waktu Lapor",
     "unknown": "Tidak diketahui",
-    "limitNote": "Menampilkan 200 kasus terbaru — gunakan pencarian untuk kasus lama"
+    "limitNote": "Menampilkan 200 laporan terbaru — gunakan pencarian untuk laporan lama"
   },
   "boardStatus": {
     "reported": "Baru",
@@ -757,7 +758,7 @@
     "updateFailed": "Gagal memperbarui"
   },
   "login": {
-    "appTitle": "Sistem Maintenance Pabrik",
+    "appTitle": "Sistem Perawatan Pabrik",
     "appSubtitle": "Factory Asset & Maintenance Management",
     "signIn": "Masuk",
     "account": "Akun / Nama login",
@@ -774,7 +775,7 @@
     "progressLog": "Catatan penanganan",
     "noRecords": "Belum ada catatan penanganan",
     "maintenanceStaff": "Petugas",
-    "expected": "Target",
+    "expected": "Tenggat",
     "overdue": "Terlambat",
     "closed": "Kasus ini sudah ditutup",
     "photoHint": "Ketuk gambar untuk memperbesar ({count} foto)",
@@ -784,27 +785,13 @@
     "manageSection": "Edit / Hapus Kasus"
   },
   "nextStep": {
-    "now": "Sekarang",
-    "next": "Selanjutnya",
     "doneLabel": "Selesai",
     "doneNote": "Pertimbangkan membuat entri knowledge base untuk referensi.",
     "awaitClose": "Menunggu konfirmasi Anda",
     "awaitCloseNote": "Tutup setelah mesin berjalan stabil.",
-    "hint": {
-      "reported": "teknisi menerima",
-      "accepted": "inspeksi & cari penyebab",
-      "analyzing": "setelah diperbaiki",
-      "repairing": "setelah diperbaiki",
-      "testing": "jika lulus uji",
-      "observation": "stabil, supervisor menutup",
-      "waiting_parts": "setelah spare tiba",
-      "waiting_approval": "setelah disetujui",
-      "waiting_vendor": "setelah vendor selesai",
-      "waiting_shutdown": "setelah shutdown diatur"
-    },
     "reported": "Supervisor menerima kasus ini dan menetapkan penanggung jawab",
     "accepted": "Penanggung jawab cek di lokasi, lalu ubah status ke \"Proses\"",
-    "analyzing": "Temukan penyebab dan mulai perbaikan; jika kurang parts ubah ke \"Menunggu Parts\"",
+    "analyzing": "Temukan penyebab dan mulai perbaikan; jika kurang parts ubah ke \"Tunggu Spare\"",
     "waiting_parts": "Saat parts tiba, kembalikan ke \"Proses\" dan lanjutkan",
     "waiting_approval": "Setelah disetujui, kembali ke \"Proses\"",
     "waiting_vendor": "Setelah vendor selesai, kembali ke \"Proses\"",
@@ -823,14 +810,15 @@
     "unregistered": "{count} penanggung jawab belum set Telegram pribadi, hanya dapat notifikasi group",
     "noRecipients": "Terkirim, tetapi belum ada penerima Telegram yang berlangganan",
     "failed": "Gagal mengirim pengingat",
-    "confirmTap": "Ketuk lagi untuk konfirmasi"
+    "confirmTap": "Ketuk lagi untuk konfirmasi",
+    "sectionHint": "Kirim pengingat Telegram ke penanggung jawab"
   },
   "profile": {
     "title": "Profil",
     "fullName": "Nama Lengkap",
     "factory": "Pabrik",
     "selectFactory": "Pilih pabrik",
-    "role": "Role",
+    "role": "Peran",
     "contactAdmin": "Hubungi admin untuk ubah role",
     "save": "Simpan",
     "saved": "Profil berhasil disimpan"
@@ -864,9 +852,9 @@
     "area": "Daerah / Area",
     "selectArea": "Pilih area",
     "code": "Kode Mesin (Opsional)",
-    "codePlaceholder": "e.g., M001, PUMP-01 (atau kosongkan)",
+    "codePlaceholder": "mis. M001, PUMP-01 (atau kosongkan)",
     "name": "Nama Mesin",
-    "namePlaceholder": "e.g., Homogenizer Line 1",
+    "namePlaceholder": "mis. Homogenizer Line 1",
     "serial": "No. Seri",
     "purchaseDate": "Tanggal Pembelian",
     "installDate": "Tanggal Instalasi",
@@ -887,7 +875,7 @@
     "running": "Beroperasi",
     "repairing": "Perbaikan",
     "standby": "Standby",
-    "scrapped": "Dihapus"
+    "scrapped": "Afkir"
   },
   "pmType": {
     "daily": "Harian",
@@ -909,6 +897,9 @@
     "closed": "Selesai",
     "heading": "Progres Alur"
   },
+  "progressTimeline": {
+    "sectionHint": "Riwayat lengkap semua update pada laporan ini"
+  },
   "audit": {
     "heading": "Riwayat Aktivitas",
     "loading": "Memuat riwayat...",
@@ -919,7 +910,8 @@
     "status_change": "Status diubah",
     "assign": "Ditugaskan",
     "comment": "Komentar",
-    "system": "Sistem"
+    "system": "Sistem",
+    "sectionHint": "Siapa mengubah apa, dan kapan"
   },
   "accountDisabled": {
     "title": "Akun dinonaktifkan",
@@ -946,7 +938,7 @@
     "pmCompleted": "Selesai",
     "pmSkipped": "Dilewati",
     "pmCompliance": "Kepatuhan PM",
-    "adhoc": "Perawatan tambahan",
+    "adhoc": "Perawatan tak terjadwal",
     "costs": "Biaya perawatan",
     "costLabor": "Tenaga kerja",
     "costParts": "Suku cadang",
@@ -1018,7 +1010,7 @@
     "closedAt": "Waktu Selesai",
     "closedBy": "Ditutup Oleh",
     "laborCost": "Biaya Tenaga Kerja",
-    "partsCost": "Biaya Part",
+    "partsCost": "Biaya Suku Cadang",
     "totalCost": "Total",
     "noParts": "Tidak ada permintaan part",
     "colPartName": "Item",
@@ -1026,7 +1018,7 @@
     "kpiResponse": "Lapor → Diterima",
     "kpiRepair": "Diterima → Selesai",
     "kpiTotal": "Total Durasi",
-    "kpiDueDate": "Target Selesai",
+    "kpiDueDate": "Tenggat Waktu",
     "kpiDueMet": "Tepat Waktu",
     "kpiDueMissed": "Terlambat",
     "kpiDueOpen": "Belum Selesai",

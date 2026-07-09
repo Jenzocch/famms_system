@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { I18nProvider, LOCALE_COOKIE, type Locale } from '@/lib/i18n'
+import ServiceWorkerRegister from '@/components/shared/ServiceWorkerRegister'
+import OfflineBanner from '@/components/shared/OfflineBanner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -24,6 +26,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={initialLocale ?? 'id'} className="h-full">
       <body className={`${inter.className} h-full bg-gray-50`}>
         <I18nProvider initialLocale={initialLocale}>
+          <ServiceWorkerRegister />
+          <OfflineBanner />
           {children}
           <Toaster richColors position="top-right" />
         </I18nProvider>

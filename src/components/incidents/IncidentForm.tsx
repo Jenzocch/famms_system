@@ -25,17 +25,6 @@ import ReportPhotoPicker from './report/ReportPhotoPicker'
 
 interface IssueType { value: string; label: string }
 
-// Fallback list used if the incident_types table is empty/unavailable.
-const DEFAULT_ISSUE_TYPES: IssueType[] = [
-  { value: 'machine', label: '🔧 機器故障' },
-  { value: 'pipe', label: '🚿 水管/管線' },
-  { value: 'electrical', label: '💡 電力/照明' },
-  { value: 'facility', label: '🏭 設施/基礎建設' },
-  { value: 'safety', label: '⚠️ 安全問題' },
-  { value: 'cleanliness', label: '🧹 衛生/清潔' },
-  { value: 'other', label: '📋 其他' },
-]
-
 // Three urgency levels (mapped to impact codes A / C / D). "High" (B) is
 // retired from the picker but still renders for any legacy incident that has it.
 const URGENCY = [
@@ -55,6 +44,19 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
 
   const { types: cachedTypes } = useIncidentTypes()
   const typeLabel = useIncidentTypeLabel()
+  // Fallback list used if the incident_types table is empty/unavailable.
+  // Built from i18n (issueTypes.*) so an Indonesian-locale user never sees a
+  // hardcoded Chinese label — fallback strings below are only used if a
+  // locale is somehow missing the key.
+  const DEFAULT_ISSUE_TYPES: IssueType[] = [
+    { value: 'machine', label: t('issueTypes.machine', '🔧 機器故障') },
+    { value: 'pipe', label: t('issueTypes.pipe', '🚿 水管/管線') },
+    { value: 'electrical', label: t('issueTypes.electrical', '💡 電力/照明') },
+    { value: 'facility', label: t('issueTypes.facility', '🏭 設施/基礎建設') },
+    { value: 'safety', label: t('issueTypes.safety', '⚠️ 安全問題') },
+    { value: 'cleanliness', label: t('issueTypes.cleanliness', '🧹 衛生/清潔') },
+    { value: 'other', label: t('issueTypes.other', '📋 其他') },
+  ]
   // Use shared cache when populated; otherwise the built-in defaults. Labels
   // follow the active app language.
   const issueTypes: IssueType[] = cachedTypes.length > 0
@@ -69,6 +71,11 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Generated ONCE per form instance (not per submit attempt) so that a retry
+  // after a flaky-signal timeout — user hits submit again because it looked
+  // like it failed — is recognized as the same report instead of creating a
+  // duplicate incident. See submitIncidentReport's idempotency check.
+  const [clientRequestId] = useState(() => crypto.randomUUID())
 
   async function submit() {
     if (!location.factoryId || !title.trim() || !description.trim()) {
@@ -101,6 +108,7 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
         locationNote,
         photos: photoCapture.photos,
         userId: user?.id ?? null,
+        clientRequestId,
       })
 
       if (photoUploadFailed) toast.warning('工單已建立，但照片上傳失敗')
@@ -120,21 +128,30 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
     }
   }
 
+  const submitDisabled =
+    submitting || !location.factoryId || !title.trim() || !description.trim() ||
+    (issueType === 'other' && !customType.trim())
+
   return (
-    <div className="space-y-5 lg:space-y-6">
+    // Extra bottom padding on phone clears the fixed submit bar (which itself
+    // sits above BottomNav) — see the fixed bar below. Not needed on desktop,
+    // where submit is inline.
+    <div className="space-y-5 lg:space-y-6 pb-24 lg:pb-0">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t('report.title')}</h1>
         <p className="text-base text-gray-500 mt-1">{t('report.subtitle')}</p>
       </div>
 
       {/* Two-column on desktop so the form uses the horizontal space instead of
-          a single narrow stack; collapses to one column on mobile. */}
+          a single narrow stack. On phone the two column divs simply stack
+          full-width one after another, which is exactly the intended reading
+          order: reporter → ①location → ②issue text → photos → ③urgency. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-6 gap-y-5 lg:items-start">
-      {/* ---- Left column ---- */}
+      {/* ---- Left column (desktop) / top of page (phone) ---- */}
       <div className="space-y-5">
-      {/* Reporter — pick a registered account or type a name manually */}
+      {/* Reporter — compact, sits above the numbered sections */}
       <div>
-        <Label className="text-base">{t('report.reporterName')}</Label>
+        <Label className="text-sm">{t('report.reporterName')}</Label>
         {reporter.accounts.length > 0 && (
           <Select
             value={reporter.reporterAccountId}
@@ -164,42 +181,101 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
             if (reporter.reporterAccountId) reporter.setReporterAccountId('')
           }}
           placeholder={t('report.reporterPlaceholder')}
-          className="mt-2"
+          className="mt-1.5"
         />
       </div>
 
-      {/* Issue Type */}
+      {/* ① Where */}
       <div>
-        <Label className="text-base">{t('report.issueType')} <span className="text-red-500">*</span></Label>
-        <div className="grid grid-cols-2 gap-2 mt-1">
-          {issueTypes.map(it => (
-            <button
-              key={it.value}
-              type="button"
-              onClick={() => setIssueType(it.value)}
-              className={`text-left rounded-lg border px-3 py-2.5 text-base font-medium transition-colors ${
-                issueType === it.value
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-700'
-              }`}
-            >
-              {it.label}
-            </button>
-          ))}
-        </div>
-        {issueType === 'other' && (
-          <Input
-            value={customType}
-            onChange={e => setCustomType(e.target.value)}
-            placeholder={t('report.otherPlaceholder')}
-            className="mt-2"
-          />
-        )}
+        <SectionHeader number={1} title={t('report.sectionLocation', '在哪裡')} />
+        <ReportLocationFields
+          factories={location.factories}
+          areas={location.areas}
+          assets={location.assets}
+          factoryId={location.factoryId}
+          setFactoryId={location.setFactoryId}
+          areaId={location.areaId}
+          setAreaId={location.setAreaId}
+          assetId={location.assetId}
+          setAssetId={location.setAssetId}
+          locationNote={locationNote}
+          setLocationNote={setLocationNote}
+        />
       </div>
 
-      {/* Urgency — shows label + description of production impact */}
+      {/* ② What's wrong — text parts. Photos are grouped with this section on
+          phone (they render immediately after, with no header in between,
+          since the two-column divs stack seamlessly) but move to the right
+          column on desktop. */}
+      <div className="space-y-4">
+        <SectionHeader number={2} title={t('report.sectionIssue', '什麼問題')} />
+
+        <div>
+          <Label className="text-base">{t('report.issueType')} <span className="text-red-500">*</span></Label>
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            {issueTypes.map(it => (
+              <button
+                key={it.value}
+                type="button"
+                onClick={() => setIssueType(it.value)}
+                className={`text-left rounded-lg border px-3 py-2.5 text-base font-medium transition-colors ${
+                  issueType === it.value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+          {issueType === 'other' && (
+            <Input
+              value={customType}
+              onChange={e => setCustomType(e.target.value)}
+              placeholder={t('report.otherPlaceholder')}
+              className="mt-2"
+            />
+          )}
+        </div>
+
+        <div>
+          <Label className="text-base">{t('report.problemTitle')} <span className="text-red-500">*</span></Label>
+          <Input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder={t('report.titlePlaceholder')}
+            className="mt-1"
+          />
+        </div>
+
+        <div>
+          <Label className="text-base">{t('report.problemDesc')} <span className="text-red-500">*</span></Label>
+          <Textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder={t('report.descPlaceholder')}
+            className="mt-1"
+            rows={4}
+          />
+        </div>
+      </div>
+      </div>
+      {/* ---- Right column (desktop) / continues down the page (phone) ---- */}
+      <div className="space-y-5">
+
+      {/* Photos — big obvious tap target, see ReportPhotoPicker */}
+      <ReportPhotoPicker
+        photos={photoCapture.photos}
+        photoPreviews={photoCapture.photoPreviews}
+        compressing={photoCapture.compressing}
+        maxPhotos={5}
+        onAddPhotos={photoCapture.addPhotos}
+        onRemovePhoto={photoCapture.removePhoto}
+      />
+
+      {/* ③ How urgent */}
       <div>
-        <Label className="text-base">{t('report.urgency')} <span className="text-red-500">*</span></Label>
+        <SectionHeader number={3} title={t('report.sectionUrgency', '有多急')} />
         <div className="grid grid-cols-3 gap-1.5 mt-1">
           {URGENCY.map(u => (
             <button
@@ -217,89 +293,72 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
             </button>
           ))}
         </div>
+
+        {/* Deadline — advanced/optional. Collapsed by default so new users
+            aren't distracted: leaving it empty auto-derives the date from
+            urgency. */}
+        <details className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 mt-3">
+          <summary className="text-sm text-gray-600 cursor-pointer select-none">
+            {t('report.advancedOptions', '進階選項（截止日，可不填）')}
+          </summary>
+          <div className="mt-2">
+            <Label className="text-sm">{t('report.dueDate', '截止日')}</Label>
+            <Input
+              type="date"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              className="mt-1"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {t('report.dueDateHint', '留空則依緊急程度自動計算（緊急=當天、高=1天、中=3天、低=7天）')}
+            </p>
+          </div>
+        </details>
       </div>
 
-      {/* Deadline — advanced/optional. Collapsed by default so new users aren't
-          distracted: leaving it empty auto-derives the date from urgency. */}
-      <details className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-        <summary className="text-sm text-gray-600 cursor-pointer select-none">
-          {t('report.advancedOptions', '進階選項（截止日，可不填）')}
-        </summary>
-        <div className="mt-2">
-          <Label className="text-sm">{t('report.dueDate', '截止日')}</Label>
-          <Input
-            type="date"
-            value={dueDate}
-            onChange={e => setDueDate(e.target.value)}
-            className="mt-1"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            {t('report.dueDateHint', '留空則依緊急程度自動計算（緊急=當天、高=1天、中=3天、低=7天）')}
-          </p>
-        </div>
-      </details>
-      </div>
-      {/* ---- Right column ---- */}
-      <div className="space-y-5">
-
-      <ReportLocationFields
-        factories={location.factories}
-        areas={location.areas}
-        assets={location.assets}
-        factoryId={location.factoryId}
-        setFactoryId={location.setFactoryId}
-        areaId={location.areaId}
-        setAreaId={location.setAreaId}
-        assetId={location.assetId}
-        setAssetId={location.setAssetId}
-        locationNote={locationNote}
-        setLocationNote={setLocationNote}
-      />
-
-      {/* Title */}
-      <div>
-        <Label className="text-base">{t('report.problemTitle')} <span className="text-red-500">*</span></Label>
-        <Input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder={t('report.titlePlaceholder')}
-          className="mt-1"
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <Label className="text-base">{t('report.problemDesc')} <span className="text-red-500">*</span></Label>
-        <Textarea
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder={t('report.descPlaceholder')}
-          className="mt-1"
-          rows={4}
-        />
-      </div>
-      </div>
-      {/* ---- End two-column grid ---- */}
-      </div>
-
-      {/* Photos (full width) */}
-      <ReportPhotoPicker
-        photos={photoCapture.photos}
-        photoPreviews={photoCapture.photoPreviews}
-        compressing={photoCapture.compressing}
-        maxPhotos={5}
-        onAddPhotos={photoCapture.addPhotos}
-        onRemovePhoto={photoCapture.removePhoto}
-      />
-
+      {/* Submit — inline on desktop only; phone uses the fixed bottom bar below */}
       <Button
         onClick={submit}
-        disabled={submitting || !location.factoryId || !title.trim() || !description.trim() || (issueType === 'other' && !customType.trim())}
-        className="w-full h-12 text-base"
+        disabled={submitDisabled}
+        className="hidden lg:flex w-full h-12 text-base"
       >
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         {t('report.submit')}
       </Button>
+      </div>
+      {/* ---- End two-column grid ---- */}
+      </div>
+
+      {/* Sticky submit bar (phone only) — pinned just above BottomNav (h-16)
+          so it's always reachable without scrolling back up. z-40 keeps it
+          below BottomNav's z-50 in case of any visual overlap. */}
+      <div className="lg:hidden fixed inset-x-0 bottom-16 z-40 border-t border-gray-200 bg-white/95 backdrop-blur px-4 py-3 safe-area-bottom">
+        <div className="max-w-lg mx-auto">
+          <Button
+            onClick={submit}
+            disabled={submitDisabled}
+            className="w-full h-12 text-base"
+          >
+            {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {t('report.submit')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Big numbered circle + short title — lets non-technical staff scanning the
+// page on a phone always know which of the three chunks they're in.
+function SectionHeader({ number, title }: { number: number; title: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-2">
+      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold shrink-0">
+        {number}
+      </span>
+      <h2 className="text-base font-bold text-gray-900">
+        {title} <span className="text-red-500">*</span>
+      </h2>
     </div>
   )
 }

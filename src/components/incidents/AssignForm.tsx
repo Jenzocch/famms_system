@@ -88,6 +88,13 @@ export default function AssignForm({
   }
 
   function clearAll() {
+    // A technician who is mid-repair loses access to the case the moment they're
+    // removed from the assignment (detail page guard), so confirm before wiping
+    // everyone — this isn't a harmless UI reset.
+    if (selectedIds.length > 0 &&
+        !window.confirm(t('assign.confirmClearAll', '確定要清空所有指派嗎？被指派中的人員將無法再看到此工單。'))) {
+      return
+    }
     setSelectedIds([])
   }
 
@@ -185,7 +192,15 @@ export default function AssignForm({
         }).catch(() => {})
       }
 
-      toast.success(t('assign.saved', '派工已更新'))
+      // If no internal account is on the assignment (vendor / free-text only, or
+      // fully cleared), technicians can't see this case — only supervisors+ can.
+      // Warn the assigner instead of a plain success, so a work order doesn't
+      // silently vanish from every technician's board.
+      if (selectedIds.length === 0) {
+        toast.warning(t('assign.savedNoInternal', '已儲存，但未指派任何內部帳號 — 技師將看不到此工單，只有主管看得到'))
+      } else {
+        toast.success(t('assign.saved', '派工已更新'))
+      }
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : (err && typeof err === 'object' && 'message' in err ? String((err as any).message) : '更新失敗'))
@@ -196,10 +211,12 @@ export default function AssignForm({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-      <h3 className="font-semibold text-gray-900 flex items-center gap-1.5">
-        <UserCheck className="w-4 h-4" /> {t('assign.title', '派工指派')}
-      </h3>
-
+      <div>
+        <h3 className="font-semibold text-gray-900 flex items-center gap-1.5">
+          <UserCheck className="w-4 h-4" /> {t('assign.title', '派工指派')}
+        </h3>
+        <p className="text-xs text-gray-500 mt-0.5">{t('assign.sectionHint', '選誰來處理這張工單，可以多選')}</p>
+      </div>
 
       {/* Account multi-select */}
       <div>

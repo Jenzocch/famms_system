@@ -173,13 +173,16 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold text-gray-700 text-sm flex items-center gap-1.5">
-          <CalendarClock className="w-4 h-4" /> {t('pm.dueTaskList', '保養待辦')}
-          {overdueCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">{t('pm.overdue', '逾期')} {overdueCount}</span>
-          )}
-        </h2>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-semibold text-gray-700 text-sm flex items-center gap-1.5">
+            <CalendarClock className="w-4 h-4" /> {t('pm.dueTaskList', '保養待辦')}
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('pm.dueListHint', '接下來與逾期的保養工作')}</p>
+        </div>
+        {overdueCount > 0 && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">{t('pm.overdue', '逾期')} {overdueCount}</span>
+        )}
       </div>
 
       {/* Search */}
@@ -210,58 +213,64 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
             const checklist = task.checklist ?? []
             return (
               <div key={task.record_id} className="bg-white rounded-xl border border-gray-200 p-3">
-                <div className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${meta.dot}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
-                      {task.machine_code ? `[${task.machine_code}] ` : ''}{task.machine_name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {task.scheduled_date}
-                      {task.pm_type && ` · ${t(PM_TYPE_KEYS[task.pm_type] ?? '', PM_TYPE_LABELS[task.pm_type] || task.pm_type)}`}
-                    </p>
+                {/* Stacks on mobile so the primary action below gets a full-width
+                    tap target; sits inline again from `sm:` up. */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${meta.dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">
+                        {task.machine_code ? `[${task.machine_code}] ` : ''}{task.machine_name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {task.scheduled_date}
+                        {task.pm_type && ` · ${t(PM_TYPE_KEYS[task.pm_type] ?? '', PM_TYPE_LABELS[task.pm_type] || task.pm_type)}`}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded shrink-0 ${meta.cls}`}>
+                      {meta.text}
+                    </span>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded shrink-0 ${meta.cls}`}>
-                    {meta.text}
-                  </span>
                   {arming ? (
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
-                        size="sm"
+                        size="lg"
                         disabled={saving}
                         onClick={() => completeTask(task)}
-                        className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
+                        className="h-11 sm:h-8 flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white gap-1.5"
                       >
-                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                        {saving ? <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 animate-spin" /> : <CheckCircle className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
                         {t('pm.confirmDone', '確認完成')}
                       </Button>
                       <button
                         type="button"
                         aria-label={t('common.cancel', '取消')}
                         onClick={() => setConfirmId(null)}
-                        className="p-1.5 text-gray-400 hover:text-gray-600"
+                        className="p-2.5 sm:p-1.5 text-gray-400 hover:text-gray-600 shrink-0"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-5 h-5 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   ) : (
                     <Button
-                      size="sm"
+                      size="lg"
                       variant="outline"
                       onClick={() => { setConfirmId(task.record_id); setChecks(checklist.map(() => false)) }}
-                      className="h-8 shrink-0 gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                      className="h-11 sm:h-8 w-full sm:w-auto shrink-0 gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
                     >
-                      <CheckCircle className="w-3.5 h-3.5" /> {t('pm.done', '完成')}
+                      <CheckCircle className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> {t('pm.done', '完成')}
                     </Button>
                   )}
                 </div>
 
-                {/* Checklist tick-off expands while confirming */}
+                {/* Checklist tick-off expands while confirming — the whole row
+                    is the tap target (native <label> wraps the checkbox), sized
+                    generously since this gets tapped once per item, per task. */}
                 {arming && checklist.length > 0 && (
-                  <div className="mt-2 ml-5 space-y-1">
+                  <div className="mt-2 sm:ml-5 space-y-1.5">
                     <p className="text-xs font-medium text-gray-500">{t('pm.checklistHeading', '檢查清單 Checklist')}</p>
                     {checklist.map((item, i) => (
-                      <label key={i} className="flex items-start gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-2.5 py-1.5 cursor-pointer">
+                      <label key={i} className="flex items-start gap-2.5 text-sm text-gray-700 bg-gray-50 active:bg-gray-100 rounded-lg px-3 py-2.5 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={checks[i] ?? false}
@@ -270,7 +279,7 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
                             next[i] = e.target.checked
                             setChecks(next)
                           }}
-                          className="mt-0.5 w-4 h-4 accent-green-600 shrink-0"
+                          className="mt-0.5 w-5 h-5 accent-green-600 shrink-0"
                         />
                         <span className={checks[i] ? 'line-through text-gray-400' : ''}>{item}</span>
                       </label>

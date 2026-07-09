@@ -52,7 +52,7 @@ export default function Sidebar({ profile, incidentBadge = 0 }: SidebarProps) {
   }
 
   return (
-    <aside className="print:hidden hidden lg:flex lg:flex-col w-60 shrink-0 bg-white border-r border-gray-200 h-screen sticky top-0">
+    <aside className="print:hidden hidden lg:flex lg:flex-col w-52 shrink-0 bg-white border-r border-gray-200 h-screen sticky top-0">
       {/* Brand */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2 text-blue-600 min-w-0">

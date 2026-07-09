@@ -27,13 +27,13 @@ export async function POST(req: Request) {
   }
 
   if (!pm_schedule_id || !scheduled_date) {
-    return NextResponse.json({ error: 'pm_schedule_id dan scheduled_date wajib diisi' }, { status: 400 })
+    return NextResponse.json({ error: 'Jadwal perawatan dan tanggal wajib diisi' }, { status: 400 })
   }
   if (status !== 'completed' && status !== 'skipped') {
     return NextResponse.json({ error: 'status harus completed atau skipped' }, { status: 400 })
   }
   if (status === 'skipped' && !delay_reason) {
-    return NextResponse.json({ error: 'delay_reason wajib diisi saat skip' }, { status: 400 })
+    return NextResponse.json({ error: 'Alasan keterlambatan wajib diisi saat dilewati' }, { status: 400 })
   }
 
   const { data: schedule, error: scheduleErr } = await supabase

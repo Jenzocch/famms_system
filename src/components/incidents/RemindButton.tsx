@@ -34,6 +34,7 @@ export default function RemindButton({ incidentId }: { incidentId: string }) {
         onClick={remind}
         disabled={sending}
         variant="outline"
+        title={t('remind.sectionHint', '發 Telegram 提醒給負責人')}
         className="w-full h-11 text-base border-amber-300 text-amber-700 hover:bg-amber-50"
       >
         {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BellRing className="w-4 h-4 mr-2" />}

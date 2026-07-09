@@ -198,7 +198,10 @@ export default function ProgressUpdate({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
-      <h3 className="font-semibold text-gray-900">{t('progressUpdate.heading')}</h3>
+      <div>
+        <h3 className="font-semibold text-gray-900">{t('progressUpdate.heading')}</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{t('progressUpdate.sectionHint', '記錄目前做了什麼、發現什麼問題，可附照片')}</p>
+      </div>
 
       <div>
         <Label>{t('progressUpdate.updater')}</Label>

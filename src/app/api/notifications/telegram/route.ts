@@ -41,7 +41,7 @@ export async function POST(req: Request) {
           '👋 <b>FAMMS Bot</b>',
           `Chat ID Anda: <code>${chatId}</code>`,
           '',
-          'Berikan ID ini ke admin untuk mengaktifkan notifikasi incident.',
+          'Berikan ID ini ke admin untuk mengaktifkan notifikasi insiden.',
         ].join('\n')
     await sendTelegramMessage(chatId, reply)
   }
