@@ -33,6 +33,9 @@ export default function AssignForm({
   const supabase = createClient()
   const { t } = useI18n()
   const canAssign = PERMISSIONS.assignIncident(userRole)
+  // Assignment is open to everyone (technicians self-organize), but the due
+  // date drives overdue/SLA tracking, so only supervisor+ may set or move it.
+  const canEditDueDate = PERMISSIONS.editDueDate(userRole)
 
   const [accounts, setAccounts] = useState<Account[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>(assignedUserIds ?? [])
@@ -142,15 +145,20 @@ export default function AssignForm({
       const allNames = [...accountNames, ...selectedVendorNames, ...extras]
       const displaySummary = allNames.length > 0 ? allNames.join(', ') : null
 
+      // Technicians' saves must not touch due_date at all — sending the
+      // (disabled) field's value would still overwrite whatever a supervisor
+      // set. Only include it when the role is allowed to edit it.
+      const patch: Record<string, unknown> = {
+        assigned_user_ids: selectedIds,
+        assigned_to: displaySummary,
+        assigned_dept: dept || null,
+        updated_at: new Date().toISOString(),
+      }
+      if (canEditDueDate) patch.due_date = due || null
+
       const { error } = await supabase
         .from('incidents')
-        .update({
-          assigned_user_ids: selectedIds,
-          assigned_to: displaySummary,
-          assigned_dept: dept || null,
-          due_date: due || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(patch)
         .eq('id', incidentId)
       if (error) throw error
 
@@ -337,7 +345,10 @@ export default function AssignForm({
         </div>
         <div>
           <Label>{t('assign.dueDate', '預計完成日')}</Label>
-          <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" disabled={!canAssign} />
+          <Input type="date" value={due} onChange={e => setDue(e.target.value)} className="mt-1" disabled={!canAssign || !canEditDueDate} />
+          {canAssign && !canEditDueDate && (
+            <p className="text-xs text-gray-400 mt-1">{t('assign.dueDateSupervisorOnly', '完成日由主管設定')}</p>
+          )}
         </div>
       </div>
 

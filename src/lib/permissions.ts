@@ -27,6 +27,9 @@ export const PERMISSIONS = {
   // Anyone can assign / reassign — technicians often self-organize who handles a
   // case (add a colleague, hand it over) without waiting for a supervisor.
   assignIncident: (_role: UserRole) => true,
+  // ...but the due date is the yardstick for overdue/SLA tracking, so the
+  // person being measured can't be the one moving it: supervisor+ only.
+  editDueDate: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   closeIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   // RCA records satisfy the mandatory-RCA close-gate — same tier as closing,
   // since a technician self-approving their own RCA would defeat the gate.

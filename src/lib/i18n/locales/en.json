@@ -38,7 +38,8 @@
     "noMatch": "No matching accounts",
     "showAllAccounts": "Show accounts from other factories ({count})",
     "showFactoryOnly": "Show this factory only",
-    "vendors": "Vendors"
+    "vendors": "Vendors",
+    "dueDateSupervisorOnly": "Due date is set by a supervisor"
   },
   "report": {
     "title": "Report Issue",

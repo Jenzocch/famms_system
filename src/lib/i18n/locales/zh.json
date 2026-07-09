@@ -38,7 +38,8 @@
     "noMatch": "找不到符合的帳號",
     "showAllAccounts": "顯示其他工廠人員（{count}）",
     "showFactoryOnly": "只顯示本廠人員",
-    "vendors": "常用廠商"
+    "vendors": "常用廠商",
+    "dueDateSupervisorOnly": "完成日由主管設定"
   },
   "report": {
     "title": "回報問題",

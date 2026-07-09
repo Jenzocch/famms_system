@@ -38,7 +38,8 @@
     "noMatch": "Tidak ada akun yang cocok",
     "showAllAccounts": "Tampilkan akun pabrik lain ({count})",
     "showFactoryOnly": "Hanya pabrik ini",
-    "vendors": "Vendor"
+    "vendors": "Vendor",
+    "dueDateSupervisorOnly": "Tanggal target ditetapkan oleh supervisor"
   },
   "report": {
     "title": "Lapor Masalah",
