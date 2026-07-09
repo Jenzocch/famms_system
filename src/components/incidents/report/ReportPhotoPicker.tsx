@@ -50,15 +50,16 @@ export default function ReportPhotoPicker({
           </div>
         )}
         {photos.length < maxPhotos && (
-          <label className={`flex items-center gap-2 border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${
-            compressing ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+          // Large, unmistakable tap target — this is usually tapped one-handed
+          // while standing at the fault location, so it needs to be big and
+          // obvious rather than a small inline row.
+          <label className={`flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-xl w-full h-28 cursor-pointer transition-colors ${
+            compressing ? 'border-blue-300 bg-blue-50' : 'border-blue-300 bg-blue-50/60 active:bg-blue-100 hover:border-blue-400'
           }`}>
-            <Camera className="w-5 h-5 text-gray-400" />
-            <div className="flex-1 text-sm">
-              <span className="text-gray-500">
-                {compressing ? t('report.compressing') : t('report.takePhoto')}
-              </span>
-            </div>
+            <Camera className="w-8 h-8 text-blue-500" />
+            <span className="text-sm font-semibold text-blue-700">
+              {compressing ? t('report.compressing') : t('report.takePhoto')}
+            </span>
             <input
               type="file"
               accept="image/*"

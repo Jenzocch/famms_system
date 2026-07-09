@@ -71,107 +71,125 @@ export default function DashboardView({
         </Link>
       </div>
 
-      {/* Action inbox — the three queues to drain daily; each deep-links to the
-          board pre-set to the matching filter tab */}
-      <Section icon={<Inbox className="w-4 h-4 text-blue-500" />} title={t('dash.inbox', '需要你處理')}>
-        <div className="grid grid-cols-3 gap-2">
-          <InboxCard
-            href="/incidents?filter=reported"
-            label={t('dash.inboxAccept', '未接單')}
-            count={inbox.reported}
-            activeClass="border-blue-300 bg-blue-50 text-blue-700"
-          />
-          <InboxCard
-            href="/incidents?filter=waiting"
-            label={t('dash.inboxWaiting', '等待中')}
-            count={inbox.waiting}
-            activeClass="border-amber-300 bg-amber-50 text-amber-700"
-          />
-          <InboxCard
-            href="/incidents?filter=confirm"
-            label={t('dash.inboxConfirm', '待確認結案')}
-            count={inbox.confirm}
-            activeClass="border-teal-300 bg-teal-50 text-teal-700"
-          />
+      {/* Inbox and the 4 KPI tiles swap relative order by breakpoint: on
+          phone, a supervisor checking "does anything need me" wants the
+          inbox first, then the tiles. On desktop, the tiles read as a
+          top-level stat row above the two-column detail grid, so they come
+          first. Same two elements, just reordered via flex `order`. */}
+      <div className="flex flex-col gap-5 lg:gap-6">
+        <div className="order-2 lg:order-1 grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
+          <SummaryCard label={t('dash.open')} value={openCount} color="text-blue-600" href="/incidents" />
+          <SummaryCard label={t('dash.urgent')} value={urgentCount} color="text-red-600" href="#dash-urgent" />
+          <SummaryCard label={t('dash.stale')} value={staleCount} color="text-amber-600" href="#dash-stale" />
+          <SummaryCard label={t('dash.overdueMachines')} value={overdue.length} color="text-red-600" href="/pm" />
         </div>
-      </Section>
 
-      {/* Summary cards — each jumps to its detail (board / section below) */}
-      <div className="grid grid-cols-3 gap-2">
-        <SummaryCard label={t('dash.open')} value={openCount} color="text-blue-600" href="/incidents" />
-        <SummaryCard label={t('dash.urgent')} value={urgentCount} color="text-red-600" href="#dash-urgent" />
-        <SummaryCard label={t('dash.stale')} value={staleCount} color="text-amber-600" href="#dash-stale" />
+        <div className="order-1 lg:order-2">
+          {/* Action inbox — the three queues to drain daily; each deep-links to
+              the board pre-set to the matching filter tab */}
+          <Section icon={<Inbox className="w-4 h-4 text-blue-500" />} title={t('dash.inbox', '需要你處理')}>
+            <div className="grid grid-cols-3 gap-2">
+              <InboxCard
+                href="/incidents?filter=reported"
+                label={t('dash.inboxAccept', '未接單')}
+                count={inbox.reported}
+                activeClass="border-blue-300 bg-blue-50 text-blue-700"
+              />
+              <InboxCard
+                href="/incidents?filter=waiting"
+                label={t('dash.inboxWaiting', '等待中')}
+                count={inbox.waiting}
+                activeClass="border-amber-300 bg-amber-50 text-amber-700"
+              />
+              <InboxCard
+                href="/incidents?filter=confirm"
+                label={t('dash.inboxConfirm', '待確認結案')}
+                count={inbox.confirm}
+                activeClass="border-teal-300 bg-teal-50 text-teal-700"
+              />
+            </div>
+          </Section>
+        </div>
       </div>
 
-      {/* Per-factory open counts */}
-      <Section icon={<Factory className="w-4 h-4" />} title={t('dash.openByFactory')}>
-        {byFactory.length === 0 ? (
-          <Empty text={t('dash.noOpen')} />
-        ) : (
-          <div className="space-y-1.5">
-            {byFactory.map(([name, count, factoryId]) => {
-              const content = (
-                <>
-                  <span className="text-sm font-medium text-gray-700">{name}</span>
-                  <span className="flex items-center gap-1">
-                    <span className="text-sm font-bold text-blue-600">{t('dash.cases').replace('{count}', String(count))}</span>
-                    {factoryId && <ChevronRight className="w-4 h-4 text-gray-300" />}
-                  </span>
-                </>
-              )
-              // Clickable when we know the factory id → jump to a filtered board.
-              return factoryId ? (
-                <Link
-                  key={name}
-                  href={`/incidents?factory=${factoryId}`}
-                  className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5 active:bg-gray-50 hover:border-blue-300 transition-colors"
-                >
-                  {content}
-                </Link>
-              ) : (
-                <div key={name} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
-                  {content}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Section>
+      {/* Detail grid: LEFT = case lists needing attention (urgent, stale),
+          RIGHT = aggregate views (per-factory, PM overdue). On phone these
+          two column divs simply stack full-width, one after another. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-6 gap-y-5 lg:items-start">
+        <div className="space-y-5">
+          {/* Urgent cases */}
+          <Section id="dash-urgent" icon={<AlertTriangle className="w-4 h-4 text-red-500" />} title={t('dash.urgentCases')}>
+            {urgent.length === 0 ? <Empty text={t('dash.noUrgent')} /> : <CaseList rows={urgent} t={t} dateLocale={dateLocale} userRole={userRole} />}
+          </Section>
 
-      {/* Urgent cases */}
-      <Section id="dash-urgent" icon={<AlertTriangle className="w-4 h-4 text-red-500" />} title={t('dash.urgentCases')}>
-        {urgent.length === 0 ? <Empty text={t('dash.noUrgent')} /> : <CaseList rows={urgent} t={t} dateLocale={dateLocale} userRole={userRole} />}
-      </Section>
+          {/* Stale cases */}
+          <Section id="dash-stale" icon={<Clock className="w-4 h-4 text-amber-500" />} title={t('dash.staleCases')}>
+            {stale.length === 0 ? <Empty text={t('dash.noStale')} /> : <CaseList rows={stale} t={t} dateLocale={dateLocale} userRole={userRole} />}
+          </Section>
+        </div>
 
-      {/* Stale cases */}
-      <Section id="dash-stale" icon={<Clock className="w-4 h-4 text-amber-500" />} title={t('dash.staleCases')}>
-        {stale.length === 0 ? <Empty text={t('dash.noStale')} /> : <CaseList rows={stale} t={t} dateLocale={dateLocale} userRole={userRole} />}
-      </Section>
-
-      {/* Overdue maintenance */}
-      <Section icon={<Wrench className="w-4 h-4 text-red-500" />} title={t('dash.overdueMachines')}>
-        {overdue.length === 0 ? (
-          <Empty text={t('dash.noOverdue')} />
-        ) : (
-          <div className="space-y-1.5">
-            {overdue.map(m => (
-              <div key={m.machine_id} className="bg-red-50 rounded-lg border border-red-200 px-3 py-2.5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">
-                      {m.machine_code ? `[${m.machine_code}] ` : ''}{m.machine_name}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {t('pm.maintenanceFreq')}: {pmTypeLabel(m.pm_type)}
-                    </p>
-                  </div>
-                  <p className="text-sm font-bold text-red-600">{t('pm.overdueDays').replace('{count}', String(m.days_overdue))}</p>
-                </div>
+        <div className="space-y-5">
+          {/* Per-factory open counts */}
+          <Section icon={<Factory className="w-4 h-4" />} title={t('dash.openByFactory')}>
+            {byFactory.length === 0 ? (
+              <Empty text={t('dash.noOpen')} />
+            ) : (
+              <div className="space-y-1.5">
+                {byFactory.map(([name, count, factoryId]) => {
+                  const content = (
+                    <>
+                      <span className="text-sm font-medium text-gray-700">{name}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-sm font-bold text-blue-600">{t('dash.cases').replace('{count}', String(count))}</span>
+                        {factoryId && <ChevronRight className="w-4 h-4 text-gray-300" />}
+                      </span>
+                    </>
+                  )
+                  // Clickable when we know the factory id → jump to a filtered board.
+                  return factoryId ? (
+                    <Link
+                      key={name}
+                      href={`/incidents?factory=${factoryId}`}
+                      className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5 active:bg-gray-50 hover:border-blue-300 transition-colors"
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={name} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
+                      {content}
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
-        )}
-      </Section>
+            )}
+          </Section>
+
+          {/* Overdue maintenance */}
+          <Section icon={<Wrench className="w-4 h-4 text-red-500" />} title={t('dash.overdueMachines')}>
+            {overdue.length === 0 ? (
+              <Empty text={t('dash.noOverdue')} />
+            ) : (
+              <div className="space-y-1.5">
+                {overdue.map(m => (
+                  <div key={m.machine_id} className="bg-red-50 rounded-lg border border-red-200 px-3 py-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          {m.machine_code ? `[${m.machine_code}] ` : ''}{m.machine_name}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {t('pm.maintenanceFreq')}: {pmTypeLabel(m.pm_type)}
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold text-red-600">{t('pm.overdueDays').replace('{count}', String(m.days_overdue))}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+      </div>
     </div>
   )
 }
@@ -218,10 +236,12 @@ function Section({ id, icon, title, children }: { id?: string; icon: React.React
 }
 
 function Empty({ text }: { text: string }) {
+  // Slim, single muted line — this fires often (most queues are empty most of
+  // the time), so it shouldn't compete visually with sections that have work.
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
-      <CheckCircle2 className="w-4 h-4 text-green-400" /> {text}
-    </div>
+    <p className="flex items-center gap-1.5 text-sm text-gray-400 py-1">
+      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" /> {text}
+    </p>
   )
 }
 
@@ -253,7 +273,7 @@ function CaseList({
             </p>
             {r.status !== 'closed' && (
               <div className="mt-1.5 pt-1.5 border-t border-gray-100">
-                <NextStepHint status={r.status} variant="inline" userRole={userRole} />
+                <NextStepHint status={r.status} userRole={userRole} />
               </div>
             )}
           </Link>
