@@ -32,6 +32,12 @@ export async function GET() {
     console.error('listUsers failed (returning profiles without emails):', e)
   }
 
+  // So the edit form can prefill "already has a Telegram chat_id registered"
+  // without a second round-trip from the client.
+  const telegramByProfileId = new Map<string, number>()
+  const { data: tgUsers } = await admin.from('telegram_users').select('profile_id, telegram_chat_id')
+  for (const t of tgUsers ?? []) telegramByProfileId.set(t.profile_id, t.telegram_chat_id)
+
   const users = (profiles ?? []).map(p => ({
     id: p.id,
     email: emailById.get(p.id) ?? '',
@@ -40,6 +46,7 @@ export async function GET() {
     factory_id: p.factory_id ?? null,
     is_active: p.is_active ?? true,
     created_at: p.created_at,
+    telegram_chat_id: telegramByProfileId.get(p.id) ?? null,
   }))
 
   // newest first
@@ -59,6 +66,7 @@ export async function POST(req: Request) {
     full_name?: string
     role?: string
     factory_id?: string
+    telegram_chat_id?: string | number
   }
   try {
     body = await req.json()
@@ -122,5 +130,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: upsertErr.message }, { status: 400 })
   }
 
-  return NextResponse.json({ id: created.user.id }, { status: 201 })
+  // Optional: register a personal Telegram chat_id in the same step, so admins
+  // don't have to separately visit Settings → Telegram right after creating an
+  // account. Requires a single factory (telegram_users.factory_id is NOT
+  // NULL) — cross-factory accounts skip this and stay creatable as before.
+  // Best-effort: the account itself is already created and must not be rolled
+  // back over a Telegram hiccup (e.g. chat_id already used by someone else).
+  let telegramLinkError: string | null = null
+  const chatIdRaw = body.telegram_chat_id
+  if (chatIdRaw !== undefined && chatIdRaw !== null && String(chatIdRaw).trim() !== '') {
+    if (!resolvedFactoryId) {
+      telegramLinkError = '跨廠帳號無法在此設定 Telegram，請至設定頁的 Telegram 個人通知新增'
+    } else {
+      const { error: tgErr } = await admin.from('telegram_users').insert({
+        factory_id: resolvedFactoryId,
+        profile_id: created.user.id,
+        telegram_chat_id: Number(chatIdRaw),
+      })
+      if (tgErr) {
+        telegramLinkError = tgErr.code === '23505'
+          ? '此 Telegram Chat ID 已被其他帳號使用'
+          : tgErr.message
+      }
+    }
+  }
+
+  return NextResponse.json({ id: created.user.id, telegramLinkError }, { status: 201 })
 }

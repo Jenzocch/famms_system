@@ -22,6 +22,7 @@ export async function PATCH(
     factory_id?: string | null
     is_active?: boolean
     password?: string
+    telegram_chat_id?: string | number
   }
   try {
     body = await req.json()
@@ -69,7 +70,36 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
-  return NextResponse.json({ ok: true })
+  // Optional: set/update the personal Telegram chat_id from the same edit
+  // form. An empty value is a no-op (never auto-removes — deletion stays a
+  // deliberate action in Settings → Telegram). Requires a single factory
+  // (telegram_users.factory_id is NOT NULL): use factory_id from this same
+  // request if provided, else look up the account's current one.
+  let telegramLinkError: string | null = null
+  const chatIdRaw = body.telegram_chat_id
+  if (chatIdRaw !== undefined && chatIdRaw !== null && String(chatIdRaw).trim() !== '') {
+    let resolvedFactoryId = 'factory_id' in body ? (body.factory_id || null) : undefined
+    if (resolvedFactoryId === undefined) {
+      const { data: prof } = await admin.from('profiles').select('factory_id').eq('id', id).single()
+      resolvedFactoryId = prof?.factory_id ?? null
+    }
+    if (!resolvedFactoryId) {
+      telegramLinkError = '跨廠帳號無法在此設定 Telegram，請至設定頁的 Telegram 個人通知新增'
+    } else {
+      const { error: tgErr } = await admin.from('telegram_users').upsert({
+        factory_id: resolvedFactoryId,
+        profile_id: id,
+        telegram_chat_id: Number(chatIdRaw),
+      }, { onConflict: 'factory_id,profile_id' })
+      if (tgErr) {
+        telegramLinkError = tgErr.code === '23505'
+          ? '此 Telegram Chat ID 已被其他帳號使用'
+          : tgErr.message
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true, telegramLinkError })
 }
 
 // DELETE — remove a user entirely (admin only)

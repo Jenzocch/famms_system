@@ -9,7 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Trash2, Plus, Pencil, ShieldCheck, KeyRound } from 'lucide-react'
+import { Loader2, Trash2, Plus, Pencil, ShieldCheck, KeyRound, Send } from 'lucide-react'
 import { ROLE_ZH } from '@/lib/incident-display'
 import type { UserRole } from '@/types'
 import { useI18n } from '@/lib/i18n'
@@ -23,6 +23,7 @@ interface ManagedUser {
   factory_id: string | null
   is_active: boolean
   created_at: string
+  telegram_chat_id: number | null
 }
 
 // Manager / director were removed from the assignable set — only technician,
@@ -58,6 +59,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<UserRole>('technician')
   const [factoryId, setFactoryId] = useState('')
+  const [telegramChatId, setTelegramChatId] = useState('')
 
   useEffect(() => {
     supabase.from('factories').select('id, name').order('name').then(({ data }) => {
@@ -86,6 +88,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
     setFullName('')
     setRole('technician')
     setFactoryId(factories[0]?.id ?? '')
+    setTelegramChatId('')
     setShowForm(true)
   }
 
@@ -95,6 +98,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
     setFullName(u.full_name)
     setRole(u.role)
     setFactoryId(u.factory_id ?? '')
+    setTelegramChatId(u.telegram_chat_id != null ? String(u.telegram_chat_id) : '')
     setShowForm(true)
   }
 
@@ -102,6 +106,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
     setShowForm(false)
     setEditingId(null)
     setPassword('')
+    setTelegramChatId('')
   }
 
   async function submit() {
@@ -119,23 +124,27 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
             full_name: fullName,
             role,
             factory_id: factoryId || null,
+            telegram_chat_id: telegramChatId.trim() || undefined,
             ...(password ? { password } : {}),
           }),
         })
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || t('settings.updateFailed'))
         toast.success(password ? t('settings.updatedWithPwd') : t('settings.updated'))
+        if (json.telegramLinkError) toast.warning(json.telegramLinkError)
       } else {
         const res = await fetch('/api/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             password, full_name: fullName, role, factory_id: factoryId || null,
+            telegram_chat_id: telegramChatId.trim() || undefined,
           }),
         })
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || t('settings.createFailed'))
         toast.success(t('settings.userCreated'))
+        if (json.telegramLinkError) toast.warning(json.telegramLinkError)
       }
       resetForm()
       loadUsers()
@@ -252,6 +261,25 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div>
+            <Label className="flex items-center gap-1">
+              <Send className="w-3.5 h-3.5" />
+              {t('settings.telegramChatId', 'Telegram Chat ID（選填）')}
+            </Label>
+            <Input
+              value={telegramChatId}
+              onChange={e => setTelegramChatId(e.target.value)}
+              placeholder="5003966994"
+              disabled={!factoryId}
+              className="mt-1 font-mono"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {factoryId
+                ? t('settings.telegramChatIdHint', '員工在 Telegram 私訊 bot 傳送 /start 取得。留空則不設定。')
+                : t('settings.telegramChatIdNeedsFactory', '跨廠帳號無法在此設定，請至設定頁的 Telegram 個人通知新增')}
+            </p>
           </div>
 
           <div className="flex gap-2">

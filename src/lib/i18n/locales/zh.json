@@ -584,7 +584,10 @@
     "vendorNameRequired": "請輸入廠商名稱",
     "vendorAdded": "廠商已新增",
     "vendorConfirmDelete": "確定要移除這個廠商嗎？",
-    "vendorEmpty": "尚無廠商，點擊上方新增"
+    "vendorEmpty": "尚無廠商，點擊上方新增",
+    "telegramChatId": "Telegram Chat ID（選填）",
+    "telegramChatIdHint": "員工在 Telegram 私訊 bot 傳送 /start 取得。留空則不設定。",
+    "telegramChatIdNeedsFactory": "跨廠帳號無法在此設定，請至設定頁的 Telegram 個人通知新增"
   },
   "telegram": {
     "configured": "Telegram Bot 已設定（TELEGRAM_BOT_TOKEN 已啟用）。",
