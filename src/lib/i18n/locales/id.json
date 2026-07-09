@@ -39,7 +39,9 @@
     "showAllAccounts": "Tampilkan akun pabrik lain ({count})",
     "showFactoryOnly": "Hanya pabrik ini",
     "vendors": "Vendor",
-    "dueDateSupervisorOnly": "Tanggal target ditetapkan oleh supervisor"
+    "dueDateSupervisorOnly": "Tanggal target ditetapkan oleh supervisor",
+    "confirmClearAll": "Hapus semua petugas? Orang yang saat ini ditugaskan tidak akan bisa melihat work order ini lagi.",
+    "savedNoInternal": "Tersimpan, tetapi tidak ada akun internal yang ditugaskan — teknisi tidak akan melihat work order ini, hanya supervisor"
   },
   "report": {
     "title": "Lapor Masalah",
@@ -675,7 +677,6 @@
     "heading": "Papan Laporan",
     "noIncidents": "Tidak ada laporan",
     "unassigned": "Belum ditugaskan",
-    "onlySupervisorAssign": "Hanya supervisor yang dapat menugaskan",
     "problem": "Masalah",
     "overdue": "Terlambat",
     "due": "Tenggat",

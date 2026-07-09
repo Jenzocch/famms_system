@@ -39,7 +39,9 @@
     "showAllAccounts": "Show accounts from other factories ({count})",
     "showFactoryOnly": "Show this factory only",
     "vendors": "Vendors",
-    "dueDateSupervisorOnly": "Due date is set by a supervisor"
+    "dueDateSupervisorOnly": "Due date is set by a supervisor",
+    "confirmClearAll": "Clear all assignees? People currently assigned will no longer be able to see this work order.",
+    "savedNoInternal": "Saved, but no internal account is assigned — technicians won’t see this work order, only supervisors will"
   },
   "report": {
     "title": "Report Issue",
@@ -675,7 +677,6 @@
     "heading": "Work Orders",
     "noIncidents": "No work orders",
     "unassigned": "Unassigned",
-    "onlySupervisorAssign": "Only supervisors can assign",
     "problem": "Issue",
     "overdue": "Overdue",
     "due": "Due",

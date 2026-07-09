@@ -39,7 +39,9 @@
     "showAllAccounts": "顯示其他工廠人員（{count}）",
     "showFactoryOnly": "只顯示本廠人員",
     "vendors": "常用廠商",
-    "dueDateSupervisorOnly": "完成日由主管設定"
+    "dueDateSupervisorOnly": "完成日由主管設定",
+    "confirmClearAll": "確定要清空所有指派嗎？被指派中的人員將無法再看到此工單。",
+    "savedNoInternal": "已儲存，但未指派任何內部帳號 — 技師將看不到此工單，只有主管看得到"
   },
   "report": {
     "title": "回報問題",
@@ -675,7 +677,6 @@
     "heading": "工單看板",
     "noIncidents": "沒有工單",
     "unassigned": "未指派",
-    "onlySupervisorAssign": "只有主管可以派工",
     "problem": "問題",
     "overdue": "逾期",
     "due": "截止",
