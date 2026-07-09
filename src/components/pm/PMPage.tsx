@@ -188,121 +188,106 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
     machines.map(m => [m.id, `${m.machine_code ? `[${m.machine_code}] ` : ''}${m.machine_name}`])
   )
 
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  // ---- Build each section once, then arrange it below. -------------------
+  // At `lg:` the page splits into a wide work column (calendar + recent
+  // records) and a narrower sticky rail (the technician's due-list, plus
+  // whichever form is toggled open) — same technique as the incident detail
+  // page: plain CSS Grid column placement (`lg:col-start-*`), not a reorder
+  // hack, so the DOM order below still matches the real mobile reading order.
+  const scheduleManagerEl = canManageSchedules && showSchedules && (
+    <div key="schedules" className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
+      <div className="flex items-start gap-2">
+        <CalendarClock className="w-5 h-5 text-green-700 shrink-0 mt-0.5" />
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('pm.manageTitle')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('pm.manageSubtitle')}</p>
+          <h3 className="font-semibold text-green-900">{t('pm.plansBtn')}</h3>
+          <p className="text-xs text-green-700 mt-0.5">{t('pm.plansHint')}</p>
         </div>
-        <div className="flex gap-2">
-          {canManageSchedules && (
-            <Button onClick={() => { setShowSchedules(!showSchedules); setShowForm(false) }} variant="outline" className="gap-2 flex-1 sm:flex-none">
-              <CalendarClock className="w-4 h-4" /> {t('pm.plansBtn')}
-            </Button>
-          )}
-          <Button onClick={() => { setShowForm(!showForm); setShowSchedules(false) }} className="gap-2 flex-1 sm:flex-none">
-            <Wrench className="w-4 h-4" /> {t('pm.addMaintenance')}
-          </Button>
+      </div>
+      <PMScheduleManager />
+    </div>
+  )
+
+  // Add Maintenance Form — log a ONE-OFF job already done; opens right where
+  // the user clicked.
+  const logFormEl = showForm && (
+    <div key="logForm" className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
+      <div className="flex items-start gap-2">
+        <Wrench className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+        <div>
+          <h3 className="font-semibold text-blue-900">{t('pm.logMaintenance')}</h3>
+          <p className="text-xs text-blue-700 mt-0.5">{t('pm.logHint')}</p>
         </div>
       </div>
 
-      {/* Factory selector */}
-      <Select value={factoryId} onValueChange={(v) => { setFactoryId(v ?? ''); setAreaId('') }} items={factoryItems}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={t('report.selectFactory')} />
-        </SelectTrigger>
-        <SelectContent>
-          {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-
-      {/* PM Schedule Manager — set up RECURRING plans. Rendered up top so the
-          button visibly opens it (it used to render below the calendar). */}
-      {canManageSchedules && showSchedules && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <CalendarClock className="w-5 h-5 text-green-700 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-green-900">{t('pm.plansBtn')}</h3>
-              <p className="text-xs text-green-700 mt-0.5">{t('pm.plansHint')}</p>
-            </div>
-          </div>
-          <PMScheduleManager />
-        </div>
+      {/* Factory is already chosen at the top of the page — the form just
+          needs area → machine, so there's no duplicate factory picker here. */}
+      {areas.length > 0 && (
+        <Select value={areaId} onValueChange={(v) => setAreaId(v ?? '')} items={areaItems}>
+          <SelectTrigger><SelectValue placeholder={t('report.selectArea')} /></SelectTrigger>
+          <SelectContent>
+            {areas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       )}
 
-      {/* Add Maintenance Form — log a ONE-OFF job already done; opens right
-          where the user clicked */}
-      {showForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
-          <div className="flex items-start gap-2">
-            <Wrench className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-blue-900">{t('pm.logMaintenance')}</h3>
-              <p className="text-xs text-blue-700 mt-0.5">{t('pm.logHint')}</p>
-            </div>
-          </div>
-
-          {/* Factory is already chosen at the top of the page — the form just
-              needs area → machine, so there's no duplicate factory picker here. */}
-          {areas.length > 0 && (
-            <Select value={areaId} onValueChange={(v) => setAreaId(v ?? '')} items={areaItems}>
-              <SelectTrigger><SelectValue placeholder={t('report.selectArea')} /></SelectTrigger>
-              <SelectContent>
-                {areas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-
-          {machines.length > 0 && (
-            <Select value={selectedMachineId} onValueChange={(v) => setSelectedMachineId(v ?? '')} items={machineItems}>
-              <SelectTrigger><SelectValue placeholder={t('report.selectMachine')} /></SelectTrigger>
-              <SelectContent>
-                {machines.map(m => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.machine_code ? `[${m.machine_code}] ` : ''}{m.machine_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <div>
-            <Label>{t('pm.maintainerName')}</Label>
-            <input
-              value={performer}
-              onChange={e => setPerformer(e.target.value)}
-              placeholder={t('pm.namePlaceholder')}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-
-          <div>
-            <Label>{t('pm.maintenanceNote')}</Label>
-            <Textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder={t('pm.notePlaceholder')}
-              className="mt-1"
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={submitLog} disabled={submitting || !selectedMachineId}>
-              {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {t('pm.saveBtn')}
-            </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)}>{t('common.cancel')}</Button>
-          </div>
-        </div>
+      {machines.length > 0 && (
+        <Select value={selectedMachineId} onValueChange={(v) => setSelectedMachineId(v ?? '')} items={machineItems}>
+          <SelectTrigger><SelectValue placeholder={t('report.selectMachine')} /></SelectTrigger>
+          <SelectContent>
+            {machines.map(m => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.machine_code ? `[${m.machine_code}] ` : ''}{m.machine_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
 
-      {/* Technician due-list: dates at a glance + search */}
+      <div>
+        <Label>{t('pm.maintainerName')}</Label>
+        <input
+          value={performer}
+          onChange={e => setPerformer(e.target.value)}
+          placeholder={t('pm.namePlaceholder')}
+          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+        />
+      </div>
+
+      <div>
+        <Label>{t('pm.maintenanceNote')}</Label>
+        <Textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder={t('pm.notePlaceholder')}
+          className="mt-1"
+          rows={3}
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={submitLog} disabled={submitting || !selectedMachineId}>
+          {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {t('pm.saveBtn')}
+        </Button>
+        <Button variant="outline" onClick={() => setShowForm(false)}>{t('common.cancel')}</Button>
+      </div>
+    </div>
+  )
+
+  // Right rail: technician's actionable due-list, plus whichever form is
+  // toggled open above it. Sticky on desktop so it stays in view while the
+  // calendar/recent-records column (much taller) scrolls.
+  const rightRailEl = (
+    <div key="rail" className="space-y-5 lg:col-start-2 lg:sticky lg:top-4">
+      {scheduleManagerEl}
+      {logFormEl}
       {factoryId && <PMDueList factoryId={factoryId} />}
+    </div>
+  )
 
-      {/* Factory PM Calendar */}
+  // Left/main column: the calendar + the merged recent-records history below it.
+  const leftMainEl = (
+    <div key="main" className="space-y-5 lg:col-start-1">
       {factoryId && (
         <div className="space-y-2">
           <h2 className="font-semibold text-gray-700 text-sm">{t('pm.calendarHeading')}</h2>
@@ -314,10 +299,7 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
       <div className="space-y-2">
         <h3 className="font-semibold text-gray-700 text-sm">{t('pm.recentRecords')}</h3>
         {recent.length === 0 ? (
-          <div className="text-center py-10 text-gray-400">
-            <Wrench className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">{t('pm.noRecords')}</p>
-          </div>
+          <p className="text-sm text-gray-400 py-2">{t('pm.noRecords')}</p>
         ) : (
           recent.map(item => (
             <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-3">
@@ -354,6 +336,46 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
             </div>
           ))
         )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">{t('pm.manageTitle')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('pm.manageSubtitle')}</p>
+        </div>
+        <div className="flex gap-2">
+          {canManageSchedules && (
+            <Button onClick={() => { setShowSchedules(!showSchedules); setShowForm(false) }} variant="outline" className="gap-2 flex-1 sm:flex-none">
+              <CalendarClock className="w-4 h-4" /> {t('pm.plansBtn')}
+            </Button>
+          )}
+          <Button onClick={() => { setShowForm(!showForm); setShowSchedules(false) }} className="gap-2 flex-1 sm:flex-none">
+            <Wrench className="w-4 h-4" /> {t('pm.addMaintenance')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Factory selector — full width, above the two-column split */}
+      <Select value={factoryId} onValueChange={(v) => { setFactoryId(v ?? ''); setAreaId('') }} items={factoryItems}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={t('report.selectFactory')} />
+        </SelectTrigger>
+        <SelectContent>
+          {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+
+      {/* Below `lg:` this is a plain stacked column (rail content, then main
+          content — the real mobile reading order). At `lg:` it becomes a
+          2-column grid; `lg:col-start-*` on each piece repositions it into
+          the right column regardless of this DOM order. */}
+      <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-[2fr_1fr] lg:gap-5 lg:items-start">
+        {rightRailEl}
+        {leftMainEl}
       </div>
     </div>
   )
