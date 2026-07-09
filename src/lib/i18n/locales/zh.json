@@ -785,24 +785,10 @@
     "manageSection": "編輯 / 刪除工單"
   },
   "nextStep": {
-    "now": "現在",
-    "next": "接下來",
     "doneLabel": "已完成",
     "doneNote": "建議建立知識庫紀錄，供日後相同故障參考。",
     "awaitClose": "待你確認結案",
     "awaitCloseNote": "確認運轉穩定後即可結案。",
-    "hint": {
-      "reported": "技師接收工單",
-      "accepted": "現場檢查找原因",
-      "analyzing": "修好後切換",
-      "repairing": "修好後切換",
-      "testing": "測試通過後",
-      "observation": "運轉穩定，主管結案",
-      "waiting_parts": "料件到貨後繼續",
-      "waiting_approval": "核准後繼續",
-      "waiting_vendor": "外包完成後繼續",
-      "waiting_shutdown": "安排停機後維修"
-    },
     "reported": "主管接收此工單，並指派負責人",
     "accepted": "負責人到現場檢查，把狀態改為「處理中」",
     "analyzing": "找出原因並開始維修；若缺料件改為「等待料件」",

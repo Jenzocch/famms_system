@@ -785,24 +785,10 @@
     "manageSection": "Edit / Delete Case"
   },
   "nextStep": {
-    "now": "Now",
-    "next": "Next",
     "doneLabel": "Completed",
     "doneNote": "Consider adding a knowledge base entry for future reference.",
     "awaitClose": "Awaiting your close",
     "awaitCloseNote": "Close it once the machine runs stably.",
-    "hint": {
-      "reported": "technician accepts it",
-      "accepted": "inspect and find the cause",
-      "analyzing": "after the fix",
-      "repairing": "after the fix",
-      "testing": "if the test passes",
-      "observation": "once stable, supervisor closes",
-      "waiting_parts": "after parts arrive",
-      "waiting_approval": "once approved",
-      "waiting_vendor": "after vendor finishes",
-      "waiting_shutdown": "after shutdown is arranged"
-    },
     "reported": "A supervisor accepts this case and assigns an owner",
     "accepted": "The owner inspects on-site, then sets status to \"In Progress\"",
     "analyzing": "Find the cause and start the repair; if parts are missing, set \"Waiting for Parts\"",

@@ -12,7 +12,6 @@ import PartsRequestTracker from '@/components/incidents/PartsRequestTracker'
 import StatusChip from '@/components/incidents/StatusChip'
 import { BackLink, UrgencyChip, DueDateChip, ClosedBanner, CollapsibleSection, PrintReportLink } from '@/components/incidents/IncidentDetailChrome'
 import AssignForm from '@/components/incidents/AssignForm'
-import NextStepHint from '@/components/incidents/NextStepHint'
 import IncidentActions from '@/components/incidents/IncidentActions'
 import AuditTrail from '@/components/incidents/AuditTrail'
 import IncidentTypeText from '@/components/incidents/IncidentTypeText'
@@ -105,96 +104,85 @@ export default async function IncidentDetailPage({
   const updateRows = (updates ?? []) as UpdateRow[]
   const isClosed = status === 'closed'
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <BackLink />
-        <PrintReportLink incidentId={id} />
+  // ---- Build each section once, then arrange them below. ----------------
+  // At `xl:` the page splits into a work column (the case story + the action)
+  // and a sticky management rail (AssignForm/RemindButton/GudangRequest/
+  // PartsRequestTracker) — see the grid below. Below `xl:` it's one column,
+  // ordered by what the viewer most likely needs next for this status (a
+  // fresh, unowned case needs an owner before progress updates make sense;
+  // once assigned, the technician's main job is logging progress).
+  //
+  // `xl:col-start-1` / `xl:col-start-2` place each piece in its column
+  // regardless of where it sits in the (status-dependent) mobile order below;
+  // this is plain CSS Grid column placement, not an `order-*` reorder hack —
+  // the DOM order below still matches the real mobile reading order.
+
+  const headerCard = (
+    <div key="header" className="bg-white rounded-xl border border-gray-200 p-4 xl:col-start-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <StatusChip status={status} />
+        <UrgencyChip impact={incident.downtime_impact} color={urgency.color} fallbackLabel={urgency.label} />
+        <span className="text-sm text-gray-800 font-mono font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded">{incident.incident_no}</span>
       </div>
 
-      {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <StatusChip status={status} />
-          <UrgencyChip impact={incident.downtime_impact} color={urgency.color} fallbackLabel={urgency.label} />
-          <span className="text-sm text-gray-800 font-mono font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded">{incident.incident_no}</span>
+      <h1 className="text-lg font-bold text-gray-900 mt-2">
+        {incident.title || <IncidentTypeText code={incident.incident_type} problemFallback />}
+      </h1>
+
+      <div className="mt-2 space-y-1 text-sm text-gray-600">
+        <p><IncidentTypeText code={incident.incident_type} /></p>
+        <p>
+          📍 {factory?.name || '?'}
+          {machine ? ` · ${machine.machine_code ? `[${machine.machine_code}] ` : ''}${machine.machine_name}` : ''}
+          {incident.location_note ? ` · ${incident.location_note}` : ''}
+        </p>
+        {incident.reporter_name && (
+          <p className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {incident.reporter_name}</p>
+        )}
+        <p className="flex items-center gap-1 text-gray-400">
+          <Clock className="w-3.5 h-3.5" /> {format(new Date(incident.reported_at), 'yyyy-MM-dd HH:mm')}
+        </p>
+      </div>
+
+      {incident.description && (
+        <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">
+          {incident.description}
         </div>
+      )}
 
-        <h1 className="text-lg font-bold text-gray-900 mt-2">
-          {incident.title || <IncidentTypeText code={incident.incident_type} problemFallback />}
-        </h1>
+      {/* Photos attached to the original report */}
+      {reportPhotos.length > 0 && (
+        <div className="mt-3">
+          <ImageViewer paths={reportPhotos} supabaseUrl={supabaseUrl} />
+        </div>
+      )}
 
-        <div className="mt-2 space-y-1 text-sm text-gray-600">
-          <p><IncidentTypeText code={incident.incident_type} /></p>
-          <p>
-            📍 {factory?.name || '?'}
-            {machine ? ` · ${machine.machine_code ? `[${machine.machine_code}] ` : ''}${machine.machine_name}` : ''}
-            {incident.location_note ? ` · ${incident.location_note}` : ''}
-          </p>
-          {incident.reporter_name && (
-            <p className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {incident.reporter_name}</p>
+      {(incident.assigned_to || incident.due_date) && (
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {incident.assigned_to && (
+            <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+              <UserCheck className="w-3.5 h-3.5" />
+              {incident.assigned_to}{incident.assigned_dept ? ` · ${incident.assigned_dept}` : ''}
+            </span>
           )}
-          <p className="flex items-center gap-1 text-gray-400">
-            <Clock className="w-3.5 h-3.5" /> {format(new Date(incident.reported_at), 'yyyy-MM-dd HH:mm')}
-          </p>
+          {incident.due_date && (
+            <DueDateChip dueDate={incident.due_date} isClosed={isClosed} />
+          )}
         </div>
+      )}
+    </div>
+  )
 
-        {incident.description && (
-          <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">
-            {incident.description}
-          </div>
-        )}
+  // Workflow progress bar + the single role-aware "what to do next" hint line
+  // (merged — previously a separate NextStepHint card repeated this).
+  const progressCard = (
+    <div key="progress" className="xl:col-start-1">
+      <WorkflowProgress status={status} userRole={user?.role} />
+    </div>
+  )
 
-        {/* Photos attached to the original report */}
-        {reportPhotos.length > 0 && (
-          <div className="mt-3">
-            <ImageViewer paths={reportPhotos} supabaseUrl={supabaseUrl} />
-          </div>
-        )}
-
-        {(incident.assigned_to || incident.due_date) && (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            {incident.assigned_to && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                <UserCheck className="w-3.5 h-3.5" />
-                {incident.assigned_to}{incident.assigned_dept ? ` · ${incident.assigned_dept}` : ''}
-              </span>
-            )}
-            {incident.due_date && (
-              <DueDateChip dueDate={incident.due_date} isClosed={isClosed} />
-            )}
-          </div>
-        )}
-      </div>
-
-{/* Workflow progress bar — visual status pipeline */}
-      <WorkflowProgress status={status} />
-
-      {/* "What to do next" guidance — forward steps only; closed cases are
-          covered by the ClosedBanner below (avoids a duplicate green banner). */}
-      {!isClosed && <NextStepHint status={status} userRole={user?.role} />}
-
-      {/* Progress timeline (client component → labels follow app language) */}
-      <ProgressTimeline
-        rows={updateRows.map(u => ({ ...u, photos: parsePhotos(u.photos) }))}
-        supabaseUrl={supabaseUrl}
-      />
-
-      {/* Assignment (派工) first — a fresh case needs an owner before progress
-          updates make sense. Also available after close so a case can be
-          re-routed to whoever follow-up work belongs to. */}
-      <AssignForm
-        incidentId={id}
-        assignedTo={incident.assigned_to}
-        assignedDept={incident.assigned_dept}
-        assignedUserIds={incident.assigned_user_ids}
-        dueDate={incident.due_date}
-        factoryId={incident.factory_id}
-        userRole={user?.role}
-        userName={user?.full_name}
-      />
-
-      {/* Update form */}
+  const progressOrClosedEl = (
+    <div key="progressOrClosed" className="xl:col-start-1">
       {!isClosed ? (
         <ProgressUpdate
           incidentId={id}
@@ -205,19 +193,20 @@ export default async function IncidentDetailPage({
       ) : (
         <ClosedBanner closedAt={incident.closed_at} />
       )}
+    </div>
+  )
 
-      {/* Nudge assignees via Telegram (supervisors+ only, open cases only) */}
-      {!isClosed && user && PERMISSIONS.remindProgress(user.role) && (
-        <RemindButton incidentId={id} />
-      )}
+  const timelineEl = (
+    <div key="timeline" className="xl:col-start-1">
+      <ProgressTimeline
+        rows={updateRows.map(u => ({ ...u, photos: parsePhotos(u.photos) }))}
+        supabaseUrl={supabaseUrl}
+      />
+    </div>
+  )
 
-      {/* Request spare parts / materials from Gudang One (open cases only) */}
-      {!isClosed && user && <GudangRequest incidentId={id} />}
-
-      {/* Read-only status of parts already sent to Gudang One (any status) */}
-      <PartsRequestTracker requests={partsRequests ?? []} />
-
-      {/* Low-frequency sections collapsed by default to keep the page short */}
+  const manageEl = (
+    <div key="manage" className="xl:col-start-1">
       <CollapsibleSection titleKey="incidentDetail.manageSection" fallback="編輯 / 刪除工單">
         <IncidentActions
           incidentId={id}
@@ -231,10 +220,66 @@ export default async function IncidentDetailPage({
           factoryId={incident.factory_id}
         />
       </CollapsibleSection>
+    </div>
+  )
 
+  const auditEl = (
+    <div key="audit" className="xl:col-start-1">
       <CollapsibleSection titleKey="audit.heading" fallback="操作歷史">
         <AuditTrail resourceId={id} resourceType="incident" showHeading={false} />
       </CollapsibleSection>
+    </div>
+  )
+
+  // Assignment — always the top of the management rail on desktop. On mobile,
+  // a fresh/unowned case (status === 'reported') needs an owner before
+  // progress updates make sense, so it's placed earlier in that one case (see
+  // the `order` arrays below); every other status keeps it with the rest of
+  // the rail, right after the timeline.
+  const assignFormEl = (
+    <div key="assign" className="xl:col-start-2 xl:[grid-row:1] xl:sticky xl:top-4">
+      <AssignForm
+        incidentId={id}
+        assignedTo={incident.assigned_to}
+        assignedDept={incident.assigned_dept}
+        assignedUserIds={incident.assigned_user_ids}
+        dueDate={incident.due_date}
+        factoryId={incident.factory_id}
+        userRole={user?.role}
+        userName={user?.full_name}
+      />
+    </div>
+  )
+
+  // Remaining management-rail pieces: nudge (Telegram), Gudang One parts
+  // request, and the read-only parts-request tracker — always in this order,
+  // always right after AssignForm.
+  const railRestEl = (
+    <div key="railRest" className="space-y-4 xl:col-start-2 xl:[grid-row:2/-1] xl:sticky xl:top-4">
+      {!isClosed && user && PERMISSIONS.remindProgress(user.role) && (
+        <RemindButton incidentId={id} />
+      )}
+      {!isClosed && user && <GudangRequest incidentId={id} />}
+      <PartsRequestTracker requests={partsRequests ?? []} />
+    </div>
+  )
+
+  // Single flat order — this is the real mobile reading/DOM order; the grid
+  // above just repositions the two rail pieces into column 2 at `xl:`.
+  const order = status === 'reported'
+    ? [headerCard, progressCard, assignFormEl, progressOrClosedEl, timelineEl, railRestEl, manageEl, auditEl]
+    : [headerCard, progressCard, progressOrClosedEl, timelineEl, assignFormEl, railRestEl, manageEl, auditEl]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <BackLink />
+        <PrintReportLink incidentId={id} />
+      </div>
+
+      <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-6 xl:items-start">
+        {order}
+      </div>
     </div>
   )
 }

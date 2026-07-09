@@ -186,7 +186,7 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
                 {/* Next-step nudge: what this case needs next, at a glance */}
                 {inc.status !== 'closed' && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
-                    <NextStepHint status={inc.status} variant="inline" userRole={userRole} />
+                    <NextStepHint status={inc.status} userRole={userRole} />
                   </div>
                 )}
 

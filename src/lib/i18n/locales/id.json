@@ -785,24 +785,10 @@
     "manageSection": "Edit / Hapus Kasus"
   },
   "nextStep": {
-    "now": "Sekarang",
-    "next": "Selanjutnya",
     "doneLabel": "Selesai",
     "doneNote": "Pertimbangkan membuat entri knowledge base untuk referensi.",
     "awaitClose": "Menunggu konfirmasi Anda",
     "awaitCloseNote": "Tutup setelah mesin berjalan stabil.",
-    "hint": {
-      "reported": "teknisi menerima",
-      "accepted": "inspeksi & cari penyebab",
-      "analyzing": "setelah diperbaiki",
-      "repairing": "setelah diperbaiki",
-      "testing": "jika lulus uji",
-      "observation": "stabil, supervisor menutup",
-      "waiting_parts": "setelah spare tiba",
-      "waiting_approval": "setelah disetujui",
-      "waiting_vendor": "setelah vendor selesai",
-      "waiting_shutdown": "setelah shutdown diatur"
-    },
     "reported": "Supervisor menerima kasus ini dan menetapkan penanggung jawab",
     "accepted": "Penanggung jawab cek di lokasi, lalu ubah status ke \"Proses\"",
     "analyzing": "Temukan penyebab dan mulai perbaikan; jika kurang parts ubah ke \"Menunggu Parts\"",
