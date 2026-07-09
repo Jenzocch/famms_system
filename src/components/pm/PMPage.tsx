@@ -349,11 +349,19 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
         </div>
         <div className="flex gap-2">
           {canManageSchedules && (
-            <Button onClick={() => { setShowSchedules(!showSchedules); setShowForm(false) }} variant="outline" className="gap-2 flex-1 sm:flex-none">
+            <Button
+              onClick={() => { setShowSchedules(!showSchedules); setShowForm(false) }}
+              variant={showSchedules ? 'default' : 'outline'}
+              className="gap-2 flex-1 sm:flex-none"
+            >
               <CalendarClock className="w-4 h-4" /> {t('pm.plansBtn')}
             </Button>
           )}
-          <Button onClick={() => { setShowForm(!showForm); setShowSchedules(false) }} className="gap-2 flex-1 sm:flex-none">
+          <Button
+            onClick={() => { setShowForm(!showForm); setShowSchedules(false) }}
+            variant={showForm ? 'default' : 'outline'}
+            className="gap-2 flex-1 sm:flex-none"
+          >
             <Wrench className="w-4 h-4" /> {t('pm.addMaintenance')}
           </Button>
         </div>
