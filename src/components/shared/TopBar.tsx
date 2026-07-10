@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types'
 import { ROLE_ZH } from '@/lib/incident-display'
-import { Settings, LogOut, User } from 'lucide-react'
+import { Wrench, LogOut, User } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -34,7 +34,7 @@ export default function TopBar({ profile }: TopBarProps) {
     <header className="print:hidden bg-white border-b border-gray-100 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 h-12 max-w-lg mx-auto">
         <div className="flex items-center gap-2 text-blue-600 min-w-0">
-          <Settings className="w-5 h-5 shrink-0" />
+          <Wrench className="w-5 h-5 shrink-0" />
           <span className="text-base font-extrabold tracking-tight">FAMMS</span>
         </div>
 

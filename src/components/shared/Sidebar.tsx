@@ -56,7 +56,7 @@ export default function Sidebar({ profile, incidentBadge = 0 }: SidebarProps) {
       {/* Brand */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2 text-blue-600 min-w-0">
-          <Settings className="w-5 h-5 shrink-0" />
+          <Wrench className="w-5 h-5 shrink-0" />
           <span className="flex flex-col leading-tight min-w-0">
             <span className="text-base font-extrabold tracking-tight">FAMMS</span>
             <span className="text-[10px] text-gray-400 font-medium truncate">{t('appName', '工廠維修系統')}</span>
