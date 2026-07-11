@@ -17,7 +17,10 @@
 //     another factory's stale data after a role/session change; not worth
 //     the risk for this first pass.
 
-const CACHE_VERSION = 'famms-v1'
+// Bump this whenever the caching rules change — the activate handler purges
+// every cache that isn't the current version, so returning users don't get
+// stuck on stale assets served by an older service worker.
+const CACHE_VERSION = 'famms-v2'
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()
@@ -55,14 +58,32 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Hashed static assets — cache-first, they never change under the same URL.
-  if (url.pathname.startsWith('/_next/static/') || /\.(?:png|jpg|jpeg|svg|ico|webp)$/.test(url.pathname)) {
+  // Hashed build assets under /_next/static/ are content-addressed (the hash is
+  // in the URL), so cache-first is always safe and never serves stale content.
+  if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((res) => {
         const copy = res.clone()
         caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
         return res
       }))
+    )
+    return
+  }
+
+  // Icons and other images live at STABLE urls (/icon-192.png, /favicon.ico,
+  // /apple-icon.png…), so cache-first would pin the old artwork forever — a
+  // redesigned icon would never reach a returning device. Network-first: use
+  // the fresh copy online, fall back to cache only when offline.
+  if (/\.(?:png|jpg|jpeg|svg|ico|webp)$/.test(url.pathname)) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          const copy = res.clone()
+          caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+          return res
+        })
+        .catch(() => caches.match(request))
     )
   }
 })
