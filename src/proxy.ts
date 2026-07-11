@@ -85,5 +85,14 @@ export const config = {
   // installer can't read the icons, and the home-screen icon falls back to a
   // generated monogram. /offline is the service worker's offline fallback page
   // and must render without auth for the same reason.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)'],
+  //
+  // The extension exclusion is deliberately [^/]* (a single path segment),
+  // NOT .* — all of our static assets (icon-192.png, favicon.ico, …) live at
+  // the root. .* would match across slashes too, so e.g. /incidents/x.png
+  // would satisfy "path ends in .png" and skip this guard entirely, even
+  // though [id] there is a dynamic route segment, not a real file. That's
+  // currently caught by the (dashboard) layout's own auth check and each API
+  // route's own guard, but a route added without one would silently inherit
+  // the bypass — keep this scoped to actual top-level static filenames.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline|[^/]*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)'],
 }

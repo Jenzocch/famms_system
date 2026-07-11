@@ -1,18 +1,17 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signOutAndClearCaches } from '@/lib/sign-out'
 import { Button } from '@/components/ui/button'
 import { ShieldX } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 export default function AccountDisabled() {
   const router = useRouter()
-  const supabase = createClient()
   const { t } = useI18n()
 
   async function signOut() {
-    await supabase.auth.signOut()
+    await signOutAndClearCaches()
     router.push('/login')
     router.refresh()
   }

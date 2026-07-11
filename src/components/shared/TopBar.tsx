@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signOutAndClearCaches } from '@/lib/sign-out'
 import { Profile } from '@/types'
 import { ROLE_ZH } from '@/lib/incident-display'
 import { Wrench, LogOut, User } from 'lucide-react'
@@ -18,11 +18,10 @@ interface TopBarProps {
 
 export default function TopBar({ profile }: TopBarProps) {
   const router = useRouter()
-  const supabase = createClient()
   const { t } = useI18n()
 
   async function signOut() {
-    await supabase.auth.signOut()
+    await signOutAndClearCaches()
     router.push('/login')
   }
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signOutAndClearCaches } from '@/lib/sign-out'
 import { ClipboardList, Plus, LayoutDashboard, Settings, Wrench, LogOut, User, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Profile, UserRole } from '@/types'
@@ -36,7 +36,6 @@ interface SidebarProps {
 export default function Sidebar({ profile, incidentBadge = 0 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
   const { t } = useI18n()
   const userRole = (profile?.role ?? 'technician') as UserRole
 
@@ -47,7 +46,7 @@ export default function Sidebar({ profile, incidentBadge = 0 }: SidebarProps) {
     : 'U'
 
   async function signOut() {
-    await supabase.auth.signOut()
+    await signOutAndClearCaches()
     router.push('/login')
   }
 

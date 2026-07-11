@@ -366,6 +366,7 @@ OPENAI_API_KEY=sk-...
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij
+TELEGRAM_WEBHOOK_SECRET=your_random_secret # required — the webhook rejects all calls without it (set the same value via setWebhook's secret_token)
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000 (or production URL)
