@@ -39,11 +39,22 @@ supabase functions deploy famms-request
 | SJA | SJA |
 | OLT | OLENTIA |
 
+## 狀態回寫（Gudang → FAMMS）
+Gudang One 處理完一筆申請（改成已叫貨/已到貨/拒絕）後，會呼叫
+`POST /api/external/parts-requests`（Bearer `GUDANG_SYNC_SECRET`）把狀態寫回
+FAMMS。FAMMS 收到後：
+- 更新 `parts_requests` 該筆狀態
+- **私訊叫料的技師本人**（Telegram，`formatPartsStatus`）——不用自己回去點開工單查
+- 工單詳情頁的叫料狀態列表，在還有未結案的申請時每 20 秒自動重新整理一次，
+  全部結案（received/rejected）後自動停止輪詢
+
 ## 測試
 1. FAMMS 開任一未關閉的 incident → 底部「📦 向倉庫叫料」
 2. 填零件名＋數量 → 送出
 3. Gudang One → Permintaan 分頁應出現該筆（含 WO 編號、機台、急迫度）；
    Telegram 群同時收到通知
+4. Gudang One 把該筆狀態改成「已到貨」或「拒絕」→ 叫料的技師應在
+   Telegram 收到個人通知，FAMMS 工單頁的叫料狀態列表也會在 20 秒內更新
 
 ## 安全說明
 - 密鑰只存在 Vercel env 與 Supabase secrets，不進版控、不到瀏覽器

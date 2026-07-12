@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ExternalLink, Package, Warehouse } from 'lucide-react'
 import { format } from 'date-fns'
 import { useI18n } from '@/lib/i18n'
@@ -23,10 +25,23 @@ const STATUS_STYLE: Record<TrackedRequest['status'], string> = {
 
 // Read-only status list for parts/materials already sent to Gudang One via
 // GudangRequest. Gudang One writes status forward (requested -> ordered ->
-// received/rejected); FAMMS never polls, so this just reflects the latest
-// row state — no submit form here (that lives in GudangRequest).
+// received/rejected) via a server-to-server webhook the viewing technician
+// has no session for, so there's nothing here to subscribe to directly —
+// instead, poll for a fresh server render while any request is still open,
+// so a status change (e.g. an urgent part arriving) shows up without the
+// technician having to remember to reload the page. Stops once every
+// request is resolved. No submit form here (that lives in GudangRequest).
 export default function PartsRequestTracker({ requests }: { requests: TrackedRequest[] }) {
   const { t } = useI18n()
+  const router = useRouter()
+  const hasOpenRequest = requests.some(r => r.status === 'requested' || r.status === 'ordered')
+
+  useEffect(() => {
+    if (!hasOpenRequest) return
+    const id = setInterval(() => router.refresh(), 20_000)
+    return () => clearInterval(id)
+  }, [hasOpenRequest, router])
+
   if (requests.length === 0) return null
 
   return (

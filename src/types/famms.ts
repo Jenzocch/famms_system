@@ -425,7 +425,8 @@ export type NotificationType =
   | 'sla_alert'
   | 'pm_reminder'
   | 'daily_summary'
-  | 'weekly_summary';
+  | 'weekly_summary'
+  | 'parts_status';
 
 export type NotificationLog = {
   id: string;
