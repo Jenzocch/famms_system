@@ -45,6 +45,9 @@ export interface ReportData {
   byMachine: [string, number][]
   costs: Record<string, number>
   incidents: ReportIncidentRow[]
+  // True when any underlying query hit its row cap — the numbers on screen
+  // would silently undercount without a warning.
+  truncated?: boolean
 }
 
 function shiftMonth(month: string, delta: number): string {
@@ -119,6 +122,11 @@ export default function MonthlyReport({ data }: { data: ReportData }) {
 
   return (
     <div className="space-y-5 print:space-y-3">
+      {data.truncated && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg px-3 py-2">
+          {t('reports.truncated', '⚠️ 本月資料量超過統計上限，以下數字可能少算，請縮小範圍（選單一工廠）後重看。')}
+        </div>
+      )}
       {/* Header + controls (controls hidden when printing) */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

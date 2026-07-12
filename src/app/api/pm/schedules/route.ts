@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import { nextScheduledDate, toDateStr } from '@/lib/pm'
+import { nextOccurrenceAfter, wibTodayStr } from '@/lib/pm'
 import type { PMType } from '@/types'
 
 // POST /api/pm/schedules — create a PM schedule for a machine,
@@ -74,9 +74,12 @@ export async function POST(req: Request) {
 
   // Generate the first pending record. Use first_due_date if provided,
   // otherwise schedule one interval from today.
+  // One interval from factory-local today (WIB) — new Date() alone is the
+  // server's UTC clock, which is still "yesterday" for 7 hours each night.
+  const wibToday = wibTodayStr()
   const dueDate = first_due_date
     ? first_due_date
-    : toDateStr(nextScheduledDate(new Date(), pm_type, interval_days))
+    : nextOccurrenceAfter(wibToday, wibToday, pm_type, interval_days)
 
   const { data: record, error: recordErr } = await supabase
     .from('pm_records')

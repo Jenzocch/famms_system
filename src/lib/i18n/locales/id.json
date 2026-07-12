@@ -960,7 +960,8 @@
     "colMachine": "Mesin",
     "colFactory": "Pabrik",
     "colReported": "Dilaporkan",
-    "colClosed": "Ditutup"
+    "colClosed": "Ditutup",
+    "truncated": "⚠️ Data bulan ini melebihi batas baris — angka di bawah mungkin kurang. Persempit cakupan (pilih satu pabrik) lalu muat ulang."
   },
   "gudang": {
     "open": "Minta ke Gudang (Gudang One)",

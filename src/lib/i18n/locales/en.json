@@ -960,7 +960,8 @@
     "colMachine": "Machine",
     "colFactory": "Factory",
     "colReported": "Reported",
-    "colClosed": "Closed"
+    "colClosed": "Closed",
+    "truncated": "⚠️ This month exceeded the row cap — numbers below may undercount. Narrow the scope (pick one factory) and reload."
   },
   "gudang": {
     "open": "Request from Warehouse (Gudang One)",

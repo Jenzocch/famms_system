@@ -85,7 +85,6 @@ export async function submitIncidentReport(
   // retry. Without the DB constraint this still works; it just can't catch a
   // true simultaneous collision.
   let incident: { id: string; incident_no: string } | null = null
-  let lastErr: unknown = null
   let seq = (count ?? 0) + 1
   for (let attempt = 0; attempt < 6; attempt++) {
     const incident_no = `FIT-${ym}-${String(seq).padStart(3, '0')}`
@@ -103,10 +102,31 @@ export async function submitIncidentReport(
       sendClientRequestId = false
       continue
     }
-    if (error.code === '23505') { seq++; lastErr = error; continue }
+    if (error.code === '23505') {
+      // Two distinct unique constraints can fire here — tell them apart:
+      //  - client_request_id UNIQUE: a parallel duplicate of THIS submission
+      //    (double-tap racing past the top-of-function check) already
+      //    inserted. Bumping incident_no forever can't fix that — every
+      //    retry hits the same conflict, and the user got a raw Postgres
+      //    error. Fetch the winner and return it as our own success.
+      //  - incident_no collision: two people reporting at once — bump the
+      //    sequence and retry as before.
+      if (sendClientRequestId && `${error.message} ${error.details ?? ''}`.includes('client_request_id')) {
+        const { data: winner } = await supabase
+          .from('incidents')
+          .select('id, incident_no')
+          .eq('client_request_id', input.clientRequestId!)
+          .maybeSingle()
+        if (winner) {
+          return { id: winner.id, incident_no: winner.incident_no, photoUploadFailed: false }
+        }
+      }
+      seq++; continue
+    }
     throw error
   }
-  if (!incident) throw lastErr ?? new Error('無法產生不重複的工單編號，請重試')
+  // Exhausted retries: surface a human message, never the raw unique-violation.
+  if (!incident) throw new Error('無法產生不重複的工單編號，請重試 / Gagal membuat nomor laporan, coba lagi')
   const incident_no = incident.incident_no
 
   // Upload photos if any. Best-effort: the incident is already saved, so a
@@ -114,9 +134,11 @@ export async function submitIncidentReport(
   let photoUploadFailed = false
   if (input.photos.length > 0) {
     try {
-      for (const photo of input.photos) {
+      for (const [i, photo] of input.photos.entries()) {
         const ext = photo.name.split('.').pop()
-        const path = `${incident.id}/${Date.now()}.${ext}`
+        // -{i} disambiguates same-millisecond uploads (same convention as
+        // ProgressUpdate) — a name collision failed the whole batch.
+        const path = `${incident.id}/${Date.now()}-${i}.${ext}`
         const { error: upErr } = await supabase.storage.from('incident-photos').upload(path, photo)
         if (upErr) throw upErr
       }

@@ -44,7 +44,7 @@ export default async function ReportsPage({
       reported_at, accepted_at, closed_at, factory_id,
       machine:machines(machine_name, machine_code),
       factory:factories(name)
-    `)
+    `, { count: 'exact' })
     .gte('reported_at', `${start}T00:00:00Z`)
     .lt('reported_at', `${end}T00:00:00Z`)
     .order('reported_at', { ascending: true })
@@ -53,7 +53,7 @@ export default async function ReportsPage({
 
   let pmQuery = supabase
     .from('pm_records')
-    .select('id, status, scheduled_date, schedule:pm_schedules!inner(factory_id)')
+    .select('id, status, scheduled_date, schedule:pm_schedules!inner(factory_id)', { count: 'exact' })
     .gte('scheduled_date', start)
     .lt('scheduled_date', end)
     .limit(2000)
@@ -61,7 +61,7 @@ export default async function ReportsPage({
 
   let logsQuery = supabase
     .from('maintenance_logs')
-    .select('id, performed_at, machine:machines!inner(factory_id)')
+    .select('id, performed_at, machine:machines!inner(factory_id)', { count: 'exact' })
     .gte('performed_at', `${start}T00:00:00Z`)
     .lt('performed_at', `${end}T00:00:00Z`)
     .limit(2000)
@@ -69,7 +69,7 @@ export default async function ReportsPage({
 
   let costsQuery = supabase
     .from('maintenance_costs')
-    .select('cost_type, amount, cost_date')
+    .select('cost_type, amount, cost_date', { count: 'exact' })
     .gte('cost_date', start)
     .lt('cost_date', end)
     .limit(2000)
@@ -80,6 +80,12 @@ export default async function ReportsPage({
   ])
 
   const incidents = (incidentsRes.data ?? []) as unknown as ReportIncidentRow[]
+
+  // Row caps exist so one huge month can't stall the page — but hitting one
+  // must show a warning, not silently undercount the report.
+  const hitCap = (res: { data: unknown[] | null; count: number | null }) =>
+    (res.count ?? 0) > (res.data?.length ?? 0)
+  const truncated = [incidentsRes, pmRes, logsRes, costsRes].some(r => hitCap(r as never))
 
   // ---- Aggregations (server-side so the client stays a dumb renderer) ----
   const closed = incidents.filter(i => i.status === 'closed')
@@ -143,6 +149,7 @@ export default async function ReportsPage({
     byMachine: Object.entries(byMachine).sort((a, b) => b[1] - a[1]).slice(0, 10),
     costs: costBy,
     incidents,
+    truncated,
   }
 
   return <MonthlyReport data={data} />

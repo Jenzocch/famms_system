@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { nextScheduledDate, parseDateStr, toDateStr } from '@/lib/pm'
+import { nextOccurrenceAfter } from '@/lib/pm'
 import type { PMType, PMDelayReason } from '@/types'
 
 // POST /api/pm/records — complete or skip a *projected* PM occurrence.
@@ -38,11 +38,28 @@ export async function POST(req: Request) {
 
   const { data: schedule, error: scheduleErr } = await supabase
     .from('pm_schedules')
-    .select('id, pm_type, interval_days, is_active')
+    .select('id, pm_type, interval_days, is_active, checklist')
     .eq('id', pm_schedule_id)
     .single()
   if (scheduleErr || !schedule) {
     return NextResponse.json({ error: 'Jadwal PM tidak ditemukan' }, { status: 404 })
+  }
+
+  // The schedule's own checklist is the source of truth: completing requires
+  // every item ticked. Checking only the client-sent array would let a client
+  // that omits checklist_results (or sends fewer items) bypass the rule.
+  if (status === 'completed') {
+    let required = 0
+    try { required = (JSON.parse(schedule.checklist || '[]') as unknown[]).length } catch { required = 0 }
+    if (required > 0) {
+      const done = Array.isArray(checklist_results) ? checklist_results.filter(c => c?.done).length : 0
+      if (done < required) {
+        return NextResponse.json(
+          { error: 'Semua item checklist harus dicentang sebelum menandai selesai' },
+          { status: 400 }
+        )
+      }
+    }
   }
 
   const values = {
@@ -76,7 +93,25 @@ export async function POST(req: Request) {
       scheduled_date,
       ...values,
     })
-    recordErrMsg = error?.message ?? null
+    if (error?.code === '23505') {
+      // Race lost: someone materialised this (schedule, date) between our
+      // check and insert — the unique index (migration_pm_records_unique)
+      // stopped a duplicate. Apply our result to the winner's row instead.
+      const { data: winner } = await supabase
+        .from('pm_records')
+        .select('id')
+        .eq('pm_schedule_id', pm_schedule_id)
+        .eq('scheduled_date', scheduled_date)
+        .single()
+      if (winner) {
+        const { error: updErr } = await supabase.from('pm_records').update(values).eq('id', winner.id)
+        recordErrMsg = updErr?.message ?? null
+      } else {
+        recordErrMsg = error.message
+      }
+    } else {
+      recordErrMsg = error?.message ?? null
+    }
   }
   if (recordErrMsg) return NextResponse.json({ error: recordErrMsg }, { status: 500 })
 
@@ -84,8 +119,20 @@ export async function POST(req: Request) {
   // PATCH /api/pm/records/[id] flow).
   let nextRecord = null
   if (schedule.is_active) {
-    const nextDate = toDateStr(
-      nextScheduledDate(parseDateStr(scheduled_date), schedule.pm_type as PMType, schedule.interval_days)
+    // Anchor to the schedule's earliest record so month-length clamping never
+    // drifts the cadence (see lib/pm.ts rule 1).
+    const { data: firstRec } = await supabase
+      .from('pm_records')
+      .select('scheduled_date')
+      .eq('pm_schedule_id', schedule.id)
+      .order('scheduled_date', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    const nextDate = nextOccurrenceAfter(
+      firstRec?.scheduled_date ?? scheduled_date,
+      scheduled_date,
+      schedule.pm_type as PMType,
+      schedule.interval_days
     )
     const { data: nextExisting } = await supabase
       .from('pm_records')

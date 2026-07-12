@@ -960,7 +960,8 @@
     "colMachine": "設備",
     "colFactory": "工廠",
     "colReported": "回報時間",
-    "colClosed": "結案時間"
+    "colClosed": "結案時間",
+    "truncated": "⚠️ 本月資料量超過統計上限，以下數字可能少算，請縮小範圍（選單一工廠）後重看。"
   },
   "gudang": {
     "open": "向倉庫叫料（Gudang One）",

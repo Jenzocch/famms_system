@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { nextScheduledDate, toDateStr } from '@/lib/pm'
+import { nextOccurrenceAfter } from '@/lib/pm'
 import type { PMType, PMDelayReason } from '@/types'
 
 // PATCH /api/pm/records/[id] — complete or skip a PM record.
@@ -36,11 +36,29 @@ export async function PATCH(
   // Load the record + its schedule (for recurrence + active check)
   const { data: record, error: recordErr } = await supabase
     .from('pm_records')
-    .select('*, schedule:pm_schedules(id, pm_type, interval_days, is_active)')
+    .select('*, schedule:pm_schedules(id, pm_type, interval_days, is_active, checklist)')
     .eq('id', id)
     .single()
   if (recordErr || !record) {
     return NextResponse.json({ error: 'PM record tidak ditemukan' }, { status: 404 })
+  }
+
+  // The schedule's own checklist is the source of truth: completing requires
+  // every item ticked. "Completed" with unticked items is exactly the
+  // paper-whipping this module exists to prevent — enforce it server-side.
+  if (status === 'completed') {
+    const scheduleChecklist = (record.schedule as { checklist?: string | null } | null)?.checklist
+    let required = 0
+    try { required = (JSON.parse(scheduleChecklist || '[]') as unknown[]).length } catch { required = 0 }
+    if (required > 0) {
+      const done = Array.isArray(checklist_results) ? checklist_results.filter(c => c?.done).length : 0
+      if (done < required) {
+        return NextResponse.json(
+          { error: 'Semua item checklist harus dicentang sebelum menandai selesai' },
+          { status: 400 }
+        )
+      }
+    }
   }
 
   const { error: updateErr } = await supabase
@@ -66,8 +84,19 @@ export async function PATCH(
   const schedule = record.schedule as { id: string; pm_type: PMType; interval_days: number | null; is_active: boolean } | null
   let nextRecord = null
   if (schedule?.is_active) {
-    const anchor = new Date(record.scheduled_date)
-    const nextDate = toDateStr(nextScheduledDate(anchor, schedule.pm_type, schedule.interval_days))
+    // Anchor to the schedule's EARLIEST record, not this one: chaining month
+    // math off the previous (possibly clamped) date drifts permanently
+    // (Jan 31 → Feb 28 → stuck on 28). nextOccurrenceAfter computes
+    // anchor + n×interval, so the original day-of-month is preserved.
+    const { data: firstRec } = await supabase
+      .from('pm_records')
+      .select('scheduled_date')
+      .eq('pm_schedule_id', schedule.id)
+      .order('scheduled_date', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    const anchor = firstRec?.scheduled_date ?? record.scheduled_date
+    const nextDate = nextOccurrenceAfter(anchor, record.scheduled_date, schedule.pm_type, schedule.interval_days)
 
     // Avoid duplicate next records for the same schedule + date
     const { data: existing } = await supabase

@@ -36,12 +36,17 @@ export default async function DashboardPage() {
 
   const supabase = await createClient()
 
-  // Scope incidents to the user's factory (admins without factory see all)
+  // Scope incidents to the user's factory (admins without factory see all).
+  // Filter to open statuses IN SQL: the dashboard only counts open cases, and
+  // fetching "newest 500 of everything" then filtering in memory silently
+  // undercounted open/urgent/stale once total history passed 500 rows —
+  // old-but-still-open cases fell off the end.
   let incidentQuery = supabase
     .from('incidents')
     .select('id, incident_no, status, downtime_impact, incident_type, title, reported_at, updated_at, factory_id, factory:factories(name)')
+    .in('status', OPEN_STATUSES)
     .order('reported_at', { ascending: false })
-    .limit(500)
+    .limit(1000)
   if (user.factory_id && user.role !== 'admin') incidentQuery = incidentQuery.eq('factory_id', user.factory_id)
 
   // Only maintenance within the last year can affect "overdue" (anything older
@@ -71,8 +76,7 @@ export default async function DashboardPage() {
       .limit(2000),
   ])
 
-  const rows = (data ?? []) as unknown as DashboardRow[]
-  const open = rows.filter(r => OPEN_STATUSES.includes(r.status))
+  const open = (data ?? []) as unknown as DashboardRow[]
 
   // pm_records is keyed by pm_schedule_id, so map through the schedules.
   const scheduleToMachine: Record<string, string> = {}
