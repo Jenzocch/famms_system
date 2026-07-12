@@ -324,7 +324,7 @@ export default async function IncidentDetailPage({
         <RemindButton incidentId={id} />
       )}
       {!isClosed && user && <GudangRequest incidentId={id} />}
-      <PartsRequestTracker requests={partsRequests ?? []} />
+      <PartsRequestTracker requests={partsRequests ?? []} incidentClosed={isClosed} />
     </div>
   )
 

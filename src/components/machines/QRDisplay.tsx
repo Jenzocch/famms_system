@@ -17,6 +17,10 @@ export default function QRDisplay({ machineCode, machineId, appUrl = 'http://loc
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
+  // NEXT_PUBLIC_APP_URL missing in production means every printed QR points
+  // at localhost — scans on the factory floor would silently go nowhere.
+  const misconfigured = !appUrl || appUrl.includes('localhost')
+
   useEffect(() => {
     async function generateQR() {
       try {
@@ -56,6 +60,12 @@ export default function QRDisplay({ machineCode, machineId, appUrl = 'http://loc
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-8 space-y-6">
+      {misconfigured && (
+        <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg px-3 py-2">
+          ⚠️ NEXT_PUBLIC_APP_URL belum di-set — QR ini mengarah ke localhost dan
+          TIDAK akan berfungsi kalau dicetak. Set env var lalu buat ulang QR.
+        </div>
+      )}
       <div className="text-center">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">QR Code — {machineCode}</h2>
         <p className="text-sm text-gray-500">Scan untuk lapor masalah mesin ini · 掃描直接報修</p>

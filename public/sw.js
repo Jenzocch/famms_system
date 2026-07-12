@@ -49,8 +49,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+          // Only cache good responses: a transient 5xx/404 resolves (doesn't
+          // throw), and caching it would overwrite the last GOOD copy of the
+          // page — offline users would then see the cached error page.
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+          }
           return res
         })
         .catch(() => caches.match(request).then((cached) => cached || caches.match('/offline')))
@@ -63,8 +68,10 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((res) => {
-        const copy = res.clone()
-        caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+        if (res.ok) {
+          const copy = res.clone()
+          caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+        }
         return res
       }))
     )
@@ -79,8 +86,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(CACHE_VERSION).then((c) => c.put(request, copy))
+          }
           return res
         })
         .catch(() => caches.match(request))

@@ -31,10 +31,13 @@ const STATUS_STYLE: Record<TrackedRequest['status'], string> = {
 // so a status change (e.g. an urgent part arriving) shows up without the
 // technician having to remember to reload the page. Stops once every
 // request is resolved. No submit form here (that lives in GudangRequest).
-export default function PartsRequestTracker({ requests }: { requests: TrackedRequest[] }) {
+export default function PartsRequestTracker({ requests, incidentClosed = false }: { requests: TrackedRequest[]; incidentClosed?: boolean }) {
   const { t } = useI18n()
   const router = useRouter()
-  const hasOpenRequest = requests.some(r => r.status === 'requested' || r.status === 'ordered')
+  // Closed incidents stop polling even if a request is stuck un-resolved
+  // (e.g. Gudang never followed up) — refreshing a finished case forever
+  // serves nobody.
+  const hasOpenRequest = !incidentClosed && requests.some(r => r.status === 'requested' || r.status === 'ordered')
 
   useEffect(() => {
     if (!hasOpenRequest) return
