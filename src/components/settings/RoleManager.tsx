@@ -48,7 +48,7 @@ export default function RoleManager() {
   const [labelEn, setLabelEn] = useState('')
   const [labelId, setLabelId] = useState('')
   const [baseRole, setBaseRole] = useState<UserRole>('technician')
-  const [caps, setCaps] = useState<CapMap>({ dashboard: false, boardFull: false })
+  const [caps, setCaps] = useState<CapMap>({ dashboard: false, boardFull: false, viewMachines: true })
 
   useEffect(() => { load() }, [])
 
@@ -62,9 +62,9 @@ export default function RoleManager() {
       ])
       setRoles((roleRows ?? []) as CustomRole[])
       const byRole: Record<string, CapMap> = {}
-      for (const r of (roleRows ?? [])) byRole[r.key] = { dashboard: false, boardFull: false }
+      for (const r of (roleRows ?? [])) byRole[r.key] = { dashboard: false, boardFull: false, viewMachines: true }
       for (const c of (capRows ?? [])) {
-        if (!byRole[c.role_key]) byRole[c.role_key] = { dashboard: false, boardFull: false }
+        if (!byRole[c.role_key]) byRole[c.role_key] = { dashboard: false, boardFull: false, viewMachines: true }
         if ((CAPABILITY_KEYS as readonly string[]).includes(c.capability)) {
           byRole[c.role_key][c.capability as CapabilityKey] = c.allowed
         }
@@ -90,7 +90,7 @@ export default function RoleManager() {
     setLabelEn('')
     setLabelId('')
     setBaseRole('technician')
-    setCaps({ dashboard: false, boardFull: false })
+    setCaps({ dashboard: false, boardFull: false, viewMachines: true })
     setShowForm(true)
   }
 
@@ -101,7 +101,7 @@ export default function RoleManager() {
     setLabelEn(r.label_en)
     setLabelId(r.label_id)
     setBaseRole(r.base_role)
-    setCaps({ ...(capsByRole[r.key] ?? { dashboard: false, boardFull: false }) })
+    setCaps({ ...(capsByRole[r.key] ?? { dashboard: false, boardFull: false, viewMachines: true }) })
     setShowForm(true)
   }
 

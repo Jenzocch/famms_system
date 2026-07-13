@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthClaims } from '@/lib/auth'
+import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import QRDisplay from '@/components/machines/QRDisplay'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,10 @@ import { ArrowLeft } from 'lucide-react'
 export const metadata = { title: 'QR Code | FAMMS' }
 
 export default async function MachineQRPage({ params }: { params: { id: string } }) {
-  const claims = await getAuthClaims()
-  if (!claims) redirect('/login')
+  // Was completely unguarded — reachable by direct URL for anyone logged in,
+  // even though MachinesList only ever links here for manager+ (canManage).
+  const user = await getCurrentUser()
+  if (!user || !PERMISSIONS.manageMachines(user.role)) redirect('/machines')
   const supabase = await createClient()
 
   const { data: machine } = await supabase

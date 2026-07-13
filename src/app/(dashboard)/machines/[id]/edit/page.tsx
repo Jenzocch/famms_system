@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthClaims } from '@/lib/auth'
+import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import MachineForm from '@/components/machines/MachineForm'
 
 export const metadata = { title: 'Edit Machine | FAMMS' }
 
 export default async function EditMachinePage({ params }: { params: { id: string } }) {
-  const claims = await getAuthClaims()
-  if (!claims) redirect('/login')
+  // Was completely unguarded — reachable by direct URL for anyone logged in,
+  // even though only manager+ can actually save (RLS). Gate the page itself.
+  const user = await getCurrentUser()
+  if (!user || !PERMISSIONS.manageMachines(user.role)) redirect('/machines')
   const supabase = await createClient()
 
   const { data: machine } = await supabase

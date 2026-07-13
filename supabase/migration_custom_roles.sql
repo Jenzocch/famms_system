@@ -14,10 +14,13 @@
 --     migration, still hardcoded, still safe
 --   - role_capabilities only overrides a small, fixed allow-list of SOFT
 --     capabilities that were already pure UI/app-layer switches with no RLS
---     backing (dashboard visibility, full-board visibility) — toggling them
---     can never grant access to data a role couldn't already read, because
---     the underlying incidents/machines SELECT policies are factory-scoped,
---     not role-scoped, for every role already.
+--     backing (dashboard visibility, full-board visibility, equipment-master
+--     page access) — toggling them can never grant access to data a role
+--     couldn't already read, because the underlying incidents/machines SELECT
+--     policies are factory-scoped, not role-scoped, for every role already
+--     (e.g. turning viewMachines off only hides the /machines browse pages —
+--     the machine picker in the incident report form is a separate query
+--     path and stays available, since reporting needs it).
 --
 -- Idempotent — safe to run repeatedly.
 -- ============================================================================
@@ -75,13 +78,32 @@ ON CONFLICT (key) DO NOTHING;
 
 INSERT INTO role_capabilities (role_key, capability, allowed) VALUES
   ('qc', 'dashboard', true),
-  ('qc', 'boardFull', true)
+  ('qc', 'boardFull', true),
+  ('qc', 'viewMachines', true)
 ON CONFLICT (role_key, capability) DO UPDATE SET allowed = EXCLUDED.allowed;
 
 -- Any profile with the legacy role='qc' becomes role='technician' (the tier
 -- it always behaved as at the DB layer) + custom_role_key='qc' (the label
 -- and soft-capability overlay). No-op if none exist yet.
 UPDATE profiles SET role = 'technician', custom_role_key = 'qc' WHERE role = 'qc';
+
+-- ---------------------------------------------------------------------------
+-- Seed 一般員工 (General Staff) as a second system role: technician-tier
+-- (report incidents, do assigned PM tasks — nothing DB-enforced beyond that),
+-- with every soft capability OFF — including viewMachines, so casual/temp
+-- staff can't browse the equipment master (they can still pick a machine
+-- when filing a report; that dropdown reads factory-scoped RLS directly and
+-- isn't gated by this capability).
+-- ---------------------------------------------------------------------------
+INSERT INTO custom_roles (key, label_zh, label_en, label_id, base_role, is_system)
+VALUES ('general_staff', '一般員工', 'General Staff', 'Staf Umum', 'technician', true)
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO role_capabilities (role_key, capability, allowed) VALUES
+  ('general_staff', 'dashboard', false),
+  ('general_staff', 'boardFull', false),
+  ('general_staff', 'viewMachines', false)
+ON CONFLICT (role_key, capability) DO UPDATE SET allowed = EXCLUDED.allowed;
 
 -- Verify
 SELECT 'custom_roles table' AS check, to_regclass('public.custom_roles') IS NOT NULL AS ok

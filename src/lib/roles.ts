@@ -11,12 +11,13 @@ import { PERMISSIONS } from '@/lib/permissions'
 // never what a role could already technically read. Extend this list only
 // with capabilities that hold the same property; DB-enforced actions
 // (accept/close/RCA/manage-*) stay hardcoded in lib/permissions.ts.
-export const CAPABILITY_KEYS = ['dashboard', 'boardFull'] as const
+export const CAPABILITY_KEYS = ['dashboard', 'boardFull', 'viewMachines'] as const
 export type CapabilityKey = typeof CAPABILITY_KEYS[number]
 
 export const CAPABILITY_LABELS: Record<CapabilityKey, { zh: string; en: string; id: string }> = {
   dashboard: { zh: 'KPI 儀表板', en: 'KPI dashboard', id: 'Dasbor KPI' },
   boardFull: { zh: '完整工單看板（非僅自己相關案件）', en: 'Full incident board (not just own cases)', id: 'Papan insiden penuh (bukan hanya kasus sendiri)' },
+  viewMachines: { zh: '設備主檔（機器列表與詳情頁）', en: 'Equipment master (machine list & detail pages)', id: 'Data induk mesin (daftar & detail mesin)' },
 }
 
 // The 3 tiers a custom role may inherit from — deliberately excludes
@@ -39,6 +40,7 @@ export function baseCapabilityDefaults(baseRole: UserRole): EffectiveCapabilitie
   return {
     dashboard: PERMISSIONS.dashboard(baseRole),
     boardFull: PERMISSIONS.boardFull(baseRole),
+    viewMachines: PERMISSIONS.viewMachines(baseRole),
   }
 }
 

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthClaims } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,9 @@ import { id } from 'date-fns/locale'
 export const metadata = { title: 'Machine | FAMMS' }
 
 export default async function MachineDetailPage({ params }: { params: { id: string } }) {
-  const claims = await getAuthClaims()
-  if (!claims) redirect('/login')
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  if (!user.capabilities.viewMachines) redirect('/incidents')
   const supabase = await createClient()
 
   const { data: machine } = await supabase

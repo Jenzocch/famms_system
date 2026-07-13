@@ -10,6 +10,9 @@ export default async function MachinesPage() {
   // auth+profile lookup instead of re-running both queries for this page.
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  // capabilities.viewMachines defaults true for every base role; a custom
+  // role (e.g. 一般員工) can turn it off in Settings → 角色管理.
+  if (!user.capabilities.viewMachines) redirect('/incidents')
 
   const supabase = await createClient()
 
