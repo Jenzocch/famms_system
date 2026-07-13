@@ -599,7 +599,6 @@
     "vendorEmpty": "No vendors yet — add one above",
     "telegramChatId": "Telegram Chat ID (optional)",
     "telegramChatIdHint": "The employee gets this by DMing the bot /start on Telegram. Leave blank to skip.",
-    "telegramChatIdNeedsFactory": "Can't set this for a cross-factory account here — add it under Settings → Telegram personal notifications instead",
     "machineHasHistory": "This machine has repair history and cannot be deleted. Set its status to \"Scrapped\" instead to keep the history.",
     "areaHasMachines": "This area still has {n} machines. Move or remove them before deleting the area.",
     "factoryHasAreas": "This factory still has {n} areas. Empty its areas and machines before deleting it.",

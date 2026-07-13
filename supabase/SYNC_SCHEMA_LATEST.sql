@@ -44,6 +44,15 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS client_request_id UUID UNIQUE;
 -- enough for recognition — not a gallery, so no separate table.
 ALTER TABLE areas ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
+-- Personal Telegram notifications never filter by factory (notifyAssignees
+-- looks up by profile_id), but the NOT NULL factory_id blocked cross-factory
+-- accounts (admins) from registering a chat_id at all. NULL = "not tied to
+-- one factory"; the partial unique index replaces UNIQUE(factory_id,
+-- profile_id) for those rows, which treats NULLs as distinct.
+ALTER TABLE telegram_users ALTER COLUMN factory_id DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS telegram_users_profile_nullfactory_uniq
+  ON telegram_users(profile_id) WHERE factory_id IS NULL;
+
 -- The report form treats machine + failure code as optional, and some cases
 -- span all/none of the factories — relax the old NOT NULLs.
 ALTER TABLE incidents ALTER COLUMN machine_id      DROP NOT NULL;
@@ -259,4 +268,8 @@ UNION ALL SELECT 'incidents.location_note',
 UNION ALL SELECT 'parts_requests table', to_regclass('public.parts_requests') IS NOT NULL
 UNION ALL SELECT 'areas.photo_url',
        EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name='areas' AND column_name='photo_url');
+               WHERE table_name='areas' AND column_name='photo_url')
+UNION ALL SELECT 'telegram_users.factory_id nullable',
+       EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name='telegram_users' AND column_name='factory_id'
+                 AND is_nullable='YES');

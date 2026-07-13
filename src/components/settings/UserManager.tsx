@@ -321,13 +321,10 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
               value={telegramChatId}
               onChange={e => setTelegramChatId(e.target.value)}
               placeholder="5003966994"
-              disabled={!factoryId}
               className="mt-1 font-mono"
             />
             <p className="text-xs text-gray-400 mt-1">
-              {factoryId
-                ? t('settings.telegramChatIdHint', '員工在 Telegram 私訊 bot 傳送 /start 取得。留空則不設定。')
-                : t('settings.telegramChatIdNeedsFactory', '跨廠帳號無法在此設定，請至設定頁的 Telegram 個人通知新增')}
+              {t('settings.telegramChatIdHint', '員工在 Telegram 私訊 bot 傳送 /start 取得。留空則不設定。')}
             </p>
           </div>
 

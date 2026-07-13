@@ -599,7 +599,6 @@
     "vendorEmpty": "Belum ada vendor — tambahkan di atas",
     "telegramChatId": "Telegram Chat ID (opsional)",
     "telegramChatIdHint": "Karyawan dapatkan ini dengan chat /start ke bot Telegram. Kosongkan jika tidak perlu.",
-    "telegramChatIdNeedsFactory": "Tidak bisa diatur di sini untuk akun lintas pabrik — tambahkan lewat Pengaturan → Notifikasi personal Telegram",
     "machineHasHistory": "Mesin ini punya riwayat perbaikan dan tidak bisa dihapus. Ubah statusnya menjadi \"Scrapped\" agar riwayat tetap tersimpan.",
     "areaHasMachines": "Area ini masih punya {n} mesin. Pindahkan atau hapus mesinnya dulu sebelum menghapus area.",
     "factoryHasAreas": "Pabrik ini masih punya {n} area. Kosongkan area dan mesinnya dulu sebelum menghapus pabrik.",

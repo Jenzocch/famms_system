@@ -78,10 +78,12 @@ export default function TelegramSettings({
       )
     )
 
+    // Include NULL-factory rows: cross-factory accounts (admins) register
+    // without a factory, and this list is the only place to manage them.
     const { data: regs } = await supabase
       .from('telegram_users')
       .select('id, profile_id, telegram_chat_id, notification_enabled')
-      .eq('factory_id', factoryId)
+      .or(`factory_id.eq.${factoryId},factory_id.is.null`)
     setUsers((regs ?? []) as PersonalUser[])
   }
 
