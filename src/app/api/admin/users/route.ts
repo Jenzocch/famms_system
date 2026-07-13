@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { accountNameToEmail, isValidLoginName } from '@/lib/login-name'
 import type { UserRole } from '@/types'
 
-const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
+const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin', 'qc']
 
 // GET — list all users, admin only.
 // Source of truth is the profiles table (always reliable). Emails come from the

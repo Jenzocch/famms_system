@@ -126,7 +126,8 @@
     "supervisor": "主管",
     "manager": "經理",
     "director": "廠長",
-    "admin": "系統管理員"
+    "admin": "系統管理員",
+    "qc": "品管"
   },
   "incidents": {
     "title": "工單",

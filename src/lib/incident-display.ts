@@ -10,6 +10,7 @@ export const ROLE_ZH: Record<UserRole, string> = {
   manager: '經理',
   director: '廠長',
   admin: '系統管理員',
+  qc: '品管',
 }
 
 export const ISSUE_TYPE_LABELS: Record<string, string> = {

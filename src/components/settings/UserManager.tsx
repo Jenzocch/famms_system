@@ -27,10 +27,10 @@ interface ManagedUser {
 }
 
 // Manager / director were removed from the assignable set — only technician,
-// supervisor (the single elevated operational role) and admin remain. Legacy
-// accounts that still carry manager/director keep working (label maps below
-// still cover them); they just can't be picked for new/edited users.
-const ROLES: UserRole[] = ['technician', 'supervisor', 'admin']
+// supervisor (the single elevated operational role), qc, and admin remain.
+// Legacy accounts that still carry manager/director keep working (label maps
+// below still cover them); they just can't be picked for new/edited users.
+const ROLES: UserRole[] = ['technician', 'supervisor', 'qc', 'admin']
 
 // Sentinel for "not bound to a single factory" (cross-factory). Base UI Select
 // can't use an empty-string value, so we map this <-> null factory_id.
@@ -42,6 +42,7 @@ const ROLE_BADGE: Record<UserRole, string> = {
   manager: 'bg-purple-100 text-purple-700',
   director: 'bg-amber-100 text-amber-700',
   admin: 'bg-red-100 text-red-700',
+  qc: 'bg-teal-100 text-teal-700',
 }
 
 export default function UserManager({ currentUserId }: { currentUserId: string }) {

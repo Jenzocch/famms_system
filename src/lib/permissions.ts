@@ -6,9 +6,14 @@ import type { UserRole } from '@/types'
 //
 // Role hierarchy (low -> high authority):
 //   technician < supervisor < manager < director < admin
+//   qc sits alongside technician operationally, but sees everything
+//   supervisor+ sees (full board + dashboard) — it just can't ACT on cases.
 //
 // Rough intent:
 //   - technician: report incidents, view board, do PM tasks, view machines
+//   - qc:         full board + dashboard visibility (sign-off decisions need
+//                   it) + report incidents — but no accept/close/assign due
+//                   date/RCA/settings; that stays with maintenance leadership
 //   - supervisor: + accept / assign / close / edit incidents, dashboard
 //   - manager:    + manage equipment master (machines/areas/factories),
 //                   PM schedules, edit settings (but NOT user accounts)
@@ -16,13 +21,13 @@ import type { UserRole } from '@/types'
 //   - admin:      everything, including user & password management
 export const PERMISSIONS = {
   // --- Dashboard / KPI ---
-  dashboard: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
+  dashboard: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin', 'qc'].includes(role),
 
   // --- Incident board / workflow ---
   // Everyone can view the board and report incidents.
   viewBoard: (_role: UserRole) => true,
   reportIncident: (_role: UserRole) => true,
-  boardFull: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
+  boardFull: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin', 'qc'].includes(role),
   acceptIncident: (role: UserRole) => ['supervisor', 'manager', 'director', 'admin'].includes(role),
   // Anyone can assign / reassign — technicians often self-organize who handles a
   // case (add a colleague, hand it over) without waiting for a supervisor.

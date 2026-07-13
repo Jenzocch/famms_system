@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { accountNameToEmail, isValidLoginName } from '@/lib/login-name'
 import type { UserRole } from '@/types'
 
-const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
+const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin', 'qc']
 
 // PATCH — update profile fields and/or reset password (admin only)
 export async function PATCH(

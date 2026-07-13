@@ -126,7 +126,8 @@
     "supervisor": "Supervisor",
     "manager": "Manajer",
     "director": "Direktur",
-    "admin": "Admin"
+    "admin": "Admin",
+    "qc": "QC"
   },
   "incidents": {
     "title": "Laporan",

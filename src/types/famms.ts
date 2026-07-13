@@ -5,7 +5,7 @@
 // Auth & Organization
 // ============================================================================
 
-export type UserRole = 'technician' | 'supervisor' | 'manager' | 'director' | 'admin';
+export type UserRole = 'technician' | 'supervisor' | 'manager' | 'director' | 'admin' | 'qc';
 
 export type Factory = {
   id: string;
@@ -539,6 +539,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   manager: 'Manajer',
   director: 'Kepala Pabrik',
   admin: 'Admin Sistem',
+  qc: 'QC',
 };
 
 // Extended descriptions for admin/settings pages where context helps.
@@ -548,6 +549,7 @@ export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   manager: 'Pantau KPI & persetujuan',
   director: 'Lihat laporan strategis',
   admin: 'Kelola semua master data & akun',
+  qc: 'Lihat status mesin & dasbor, bisa lapor insiden',
 };
 
 export const ACTION_TYPE_LABELS: Record<ActionType, string> = {

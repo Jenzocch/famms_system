@@ -126,7 +126,8 @@
     "supervisor": "Supervisor",
     "manager": "Manager",
     "director": "Plant Director",
-    "admin": "System Admin"
+    "admin": "System Admin",
+    "qc": "QC"
   },
   "incidents": {
     "title": "Work Orders",
