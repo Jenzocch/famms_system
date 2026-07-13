@@ -23,6 +23,7 @@
     "title": "Penugasan",
     "assignees": "Penanggung jawab (pilih banyak)",
     "allTechnicians": "Tugaskan ke semua teknisi",
+    "allCustomRole": "Tugaskan semua {role}",
     "clearAll": "Hapus semua",
     "noAccounts": "Belum ada akun yang bisa ditugaskan",
     "extraNames": "Orang lain (eksternal / vendor, pisahkan dengan koma)",

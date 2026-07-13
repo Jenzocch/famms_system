@@ -14,6 +14,7 @@ import { ROLE_ZH } from '@/lib/incident-display'
 import { logAuditEvent } from '@/lib/audit'
 import { useI18n } from '@/lib/i18n'
 import { useVendors } from '@/lib/useVendors'
+import { customRoleLabel, type CustomRole } from '@/lib/roles'
 
 interface Account { id: string; full_name: string | null; role: UserRole; factory_id: string | null; custom_role_key: string | null }
 
@@ -31,13 +32,14 @@ export default function AssignForm({
 }) {
   const router = useRouter()
   const supabase = createClient()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const canAssign = PERMISSIONS.assignIncident(userRole)
   // Assignment is open to everyone (technicians self-organize), but the due
   // date drives overdue/SLA tracking, so only supervisor+ may set or move it.
   const canEditDueDate = PERMISSIONS.editDueDate(userRole)
 
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>(assignedUserIds ?? [])
   const { vendors } = useVendors()
   const [selectedVendorNames, setSelectedVendorNames] = useState<string[]>([])
@@ -56,6 +58,11 @@ export default function AssignForm({
       .eq('is_active', true)
       .order('full_name')
       .then(({ data }) => setAccounts((data ?? []) as Account[]))
+    // Custom roles (Settings → 角色管理) are how an admin defines a job
+    // function like "辦公室人員" without a code change — one quick-assign
+    // button per role with members lets that group be one-click assignable
+    // the same way "全部技師" already is, for whatever roles get created.
+    supabase.from('custom_roles').select('*').then(({ data }) => setCustomRoles((data ?? []) as CustomRole[]))
   }, [])
 
   // Re-sync the editable fields to the saved assignment whenever the incident's
@@ -88,6 +95,21 @@ export default function AssignForm({
 
   function assignAllTechnicians() {
     setSelectedIds(prev => Array.from(new Set([...prev, ...factoryTechnicians.map(a => a.id)])))
+  }
+
+  // One quick-assign button per custom role that has members relevant to this
+  // incident's factory — e.g. an admin-created "辦公室人員" role becomes
+  // one-click assignable the moment accounts are put on it (Settings → 使用者
+  // 管理), no code change needed.
+  const customRoleGroups = customRoles
+    .map(cr => ({
+      role: cr,
+      members: accounts.filter(a => a.custom_role_key === cr.key && (!factoryId || !a.factory_id || a.factory_id === factoryId)),
+    }))
+    .filter(g => g.members.length > 0)
+
+  function assignGroup(memberIds: string[]) {
+    setSelectedIds(prev => Array.from(new Set([...prev, ...memberIds])))
   }
 
   function clearAll() {
@@ -226,7 +248,7 @@ export default function AssignForm({
         <div className="flex items-center justify-between gap-2">
           <Label>{t('assign.assignees', '負責人（可多選）')}</Label>
           {canAssign && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {factoryTechnicians.length > 0 && (
                 <button
                   type="button"
@@ -237,6 +259,17 @@ export default function AssignForm({
                   {t('assign.allTechnicians', '指派給全部技師')} ({factoryTechnicians.length})
                 </button>
               )}
+              {customRoleGroups.map(({ role, members }) => (
+                <button
+                  key={role.key}
+                  type="button"
+                  onClick={() => assignGroup(members.map(m => m.id))}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  {t('assign.allCustomRole', '指派給{role}').replace('{role}', customRoleLabel(role, locale))} ({members.length})
+                </button>
+              ))}
               {selectedIds.length > 0 && (
                 <button
                   type="button"

@@ -23,6 +23,7 @@
     "title": "Assignment",
     "assignees": "Assignees (multi-select)",
     "allTechnicians": "Assign to all technicians",
+    "allCustomRole": "Assign all {role}",
     "clearAll": "Clear all",
     "noAccounts": "No assignable accounts yet",
     "extraNames": "Other people (external / vendor, comma-separated)",
