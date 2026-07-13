@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import imageCompression from 'browser-image-compression'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Loader2, Trash2, Edit2, Plus, ChevronDown, ChevronRight, MapPin } from 'lucide-react'
+import { Loader2, Trash2, Edit2, Plus, ChevronDown, ChevronRight, MapPin, Camera } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { invalidateFactories } from '@/lib/useFactories'
 
@@ -23,6 +24,7 @@ interface Area {
   name: string
   code: string
   description: string | null
+  photo_url: string | null
 }
 
 // One hierarchical manager for factories AND their areas. Areas used to live
@@ -49,7 +51,8 @@ export default function FactoryManager() {
   // "which card has an open form" flag.
   const [areaFormFactoryId, setAreaFormFactoryId] = useState<string | null>(null)
   const [editingArea, setEditingArea] = useState<string | null>(null)
-  const [areaForm, setAreaForm] = useState({ name: '', code: '', description: '' })
+  const [areaForm, setAreaForm] = useState({ name: '', code: '', description: '', photo_url: '' as string | null })
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
     loadAll()
@@ -146,20 +149,39 @@ export default function FactoryManager() {
 
   function startAddArea(factoryId: string) {
     setEditingArea(null)
-    setAreaForm({ name: '', code: '', description: '' })
+    setAreaForm({ name: '', code: '', description: '', photo_url: null })
     setAreaFormFactoryId(factoryId)
   }
 
   function startEditArea(a: Area) {
     setEditingArea(a.id)
-    setAreaForm({ name: a.name, code: a.code, description: a.description || '' })
+    setAreaForm({ name: a.name, code: a.code, description: a.description || '', photo_url: a.photo_url })
     setAreaFormFactoryId(a.factory_id)
   }
 
   function resetAreaForm() {
     setAreaFormFactoryId(null)
     setEditingArea(null)
-    setAreaForm({ name: '', code: '', description: '' })
+    setAreaForm({ name: '', code: '', description: '', photo_url: null })
+  }
+
+  // One compressed photo per area, uploaded immediately on pick so the form
+  // only needs to carry a URL (not a File) through submit/edit/reset.
+  async function uploadAreaPhoto(file: File) {
+    if (!file.type.startsWith('image/')) return
+    setUploadingPhoto(true)
+    try {
+      const compressed = await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 800, useWebWorker: true })
+      const path = `areas/${crypto.randomUUID()}.jpg`
+      const { error: upErr } = await supabase.storage.from('incident-photos').upload(path, compressed)
+      if (upErr) throw upErr
+      const { data } = supabase.storage.from('incident-photos').getPublicUrl(path)
+      setAreaForm(prev => ({ ...prev, photo_url: data.publicUrl }))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('settings.operationFailed'))
+    } finally {
+      setUploadingPhoto(false)
+    }
   }
 
   async function submitArea() {
@@ -176,6 +198,7 @@ export default function FactoryManager() {
             name: areaForm.name,
             code: areaForm.code,
             description: areaForm.description || null,
+            photo_url: areaForm.photo_url,
           })
           .eq('id', editingArea)
         if (error) throw error
@@ -188,6 +211,7 @@ export default function FactoryManager() {
             name: areaForm.name,
             code: areaForm.code,
             description: areaForm.description || null,
+            photo_url: areaForm.photo_url,
           }])
         if (error) throw error
         toast.success(t('settings.areaAdded'))
@@ -323,7 +347,12 @@ export default function FactoryManager() {
                   {factoryAreas.map(a => (
                     <div key={a.id} className="flex items-center justify-between p-2.5 border rounded-lg bg-white gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <MapPin className="w-4 h-4 text-gray-300 shrink-0" />
+                        {a.photo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={a.photo_url} alt={a.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <MapPin className="w-4 h-4 text-gray-300 shrink-0" />
+                        )}
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{a.name}</p>
                           <p className="text-xs text-gray-500">{t('settings.codeLabel').replace('{code}', a.code)}</p>
@@ -382,8 +411,29 @@ export default function FactoryManager() {
                           rows={2}
                         />
                       </div>
+                      <div>
+                        <Label>{t('settings.areaPhoto', '參考照片（選填，方便回報時辨識位置）')}</Label>
+                        <div className="mt-1 flex items-center gap-3">
+                          {areaForm.photo_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={areaForm.photo_url} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                          )}
+                          <label className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50">
+                            {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                            {areaForm.photo_url ? t('settings.areaPhotoReplace', '更換照片') : t('settings.areaPhotoAdd', '新增照片')}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              disabled={uploadingPhoto}
+                              onChange={e => { const f = e.target.files?.[0]; if (f) uploadAreaPhoto(f); e.target.value = '' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
                       <div className="flex gap-2">
-                        <Button onClick={submitArea} disabled={submitting}>
+                        <Button onClick={submitArea} disabled={submitting || uploadingPhoto}>
                           {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           {editingArea ? t('settings.update') : t('settings.create')}
                         </Button>

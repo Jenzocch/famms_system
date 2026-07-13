@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { accountNameToEmail, isValidLoginName } from '@/lib/login-name'
+import { accountNameToEmail, isValidLoginName, SYNTHETIC_EMAIL_DOMAIN } from '@/lib/login-name'
 import type { UserRole } from '@/types'
 
 const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
@@ -42,14 +42,23 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
-  // The login name IS the full name, so keep the synthetic auth email in sync
-  // when the name changes (otherwise the login name would drift from display).
+  // For a synthetic-login account (created via a plain "login name", not a
+  // real email — see login-name.ts), the login name IS the full name, so keep
+  // the auth email in sync when the name changes. An account created with a
+  // REAL email must never have this happen: overwriting it to
+  // "<name>@famms.local" silently invalidates the person's actual email
+  // credential the next time they try to sign in with it (this bit someone —
+  // editing just the display name broke their working email login).
   if (body.full_name !== undefined && body.full_name.trim()) {
-    if (!isValidLoginName(body.full_name)) {
-      return NextResponse.json({ error: '登入名稱請使用英文或數字' }, { status: 400 })
+    const { data: existing } = await admin.auth.admin.getUserById(id)
+    const currentEmail = existing?.user?.email ?? ''
+    if (currentEmail.endsWith(`@${SYNTHETIC_EMAIL_DOMAIN}`)) {
+      if (!isValidLoginName(body.full_name)) {
+        return NextResponse.json({ error: '登入名稱請使用英文或數字' }, { status: 400 })
+      }
+      const { error } = await admin.auth.admin.updateUserById(id, { email: accountNameToEmail(body.full_name) })
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     }
-    const { error } = await admin.auth.admin.updateUserById(id, { email: accountNameToEmail(body.full_name) })
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
   // Build profile update from provided fields only
@@ -95,9 +104,11 @@ export async function PATCH(
 
   // Optional: set/update the personal Telegram chat_id from the same edit
   // form. An empty value is a no-op (never auto-removes — deletion stays a
-  // deliberate action in Settings → Telegram). Requires a single factory
-  // (telegram_users.factory_id is NOT NULL): use factory_id from this same
-  // request if provided, else look up the account's current one.
+  // deliberate action in Settings → Telegram). factory_id may be NULL for
+  // cross-factory accounts — personal nudges (notifyAssignees) look up by
+  // profile_id, never by factory. Update-then-insert instead of upsert: the
+  // NULL-factory uniqueness lives in a partial index, which PostgREST's
+  // onConflict can't target.
   let telegramLinkError: string | null = null
   const chatIdRaw = body.telegram_chat_id
   if (chatIdRaw !== undefined && chatIdRaw !== null && String(chatIdRaw).trim() !== '') {
@@ -106,19 +117,25 @@ export async function PATCH(
       const { data: prof } = await admin.from('profiles').select('factory_id').eq('id', id).single()
       resolvedFactoryId = prof?.factory_id ?? null
     }
-    if (!resolvedFactoryId) {
-      telegramLinkError = '跨廠帳號無法在此設定 Telegram，請至設定頁的 Telegram 個人通知新增'
-    } else {
-      const { error: tgErr } = await admin.from('telegram_users').upsert({
-        factory_id: resolvedFactoryId,
-        profile_id: id,
-        telegram_chat_id: Number(chatIdRaw),
-      }, { onConflict: 'factory_id,profile_id' })
-      if (tgErr) {
-        telegramLinkError = tgErr.code === '23505'
-          ? '此 Telegram Chat ID 已被其他帳號使用'
-          : tgErr.message
-      }
+    const { data: existingTg } = await admin
+      .from('telegram_users')
+      .select('id')
+      .eq('profile_id', id)
+      .limit(1)
+      .maybeSingle()
+    const { error: tgErr } = existingTg
+      ? await admin.from('telegram_users')
+          .update({ telegram_chat_id: Number(chatIdRaw), factory_id: resolvedFactoryId })
+          .eq('id', existingTg.id)
+      : await admin.from('telegram_users').insert({
+          factory_id: resolvedFactoryId,
+          profile_id: id,
+          telegram_chat_id: Number(chatIdRaw),
+        })
+    if (tgErr) {
+      telegramLinkError = tgErr.code === '23505'
+        ? '此 Telegram Chat ID 已被其他帳號使用'
+        : tgErr.message
     }
   }
 

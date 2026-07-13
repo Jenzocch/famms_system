@@ -150,26 +150,23 @@ export async function POST(req: Request) {
 
   // Optional: register a personal Telegram chat_id in the same step, so admins
   // don't have to separately visit Settings → Telegram right after creating an
-  // account. Requires a single factory (telegram_users.factory_id is NOT
-  // NULL) — cross-factory accounts skip this and stay creatable as before.
+  // account. factory_id may be NULL for cross-factory accounts — personal
+  // nudges (notifyAssignees) look up by profile_id, never by factory, so the
+  // registration works identically either way.
   // Best-effort: the account itself is already created and must not be rolled
   // back over a Telegram hiccup (e.g. chat_id already used by someone else).
   let telegramLinkError: string | null = null
   const chatIdRaw = body.telegram_chat_id
   if (chatIdRaw !== undefined && chatIdRaw !== null && String(chatIdRaw).trim() !== '') {
-    if (!resolvedFactoryId) {
-      telegramLinkError = '跨廠帳號無法在此設定 Telegram，請至設定頁的 Telegram 個人通知新增'
-    } else {
-      const { error: tgErr } = await admin.from('telegram_users').insert({
-        factory_id: resolvedFactoryId,
-        profile_id: created.user.id,
-        telegram_chat_id: Number(chatIdRaw),
-      })
-      if (tgErr) {
-        telegramLinkError = tgErr.code === '23505'
-          ? '此 Telegram Chat ID 已被其他帳號使用'
-          : tgErr.message
-      }
+    const { error: tgErr } = await admin.from('telegram_users').insert({
+      factory_id: resolvedFactoryId,
+      profile_id: created.user.id,
+      telegram_chat_id: Number(chatIdRaw),
+    })
+    if (tgErr) {
+      telegramLinkError = tgErr.code === '23505'
+        ? '此 Telegram Chat ID 已被其他帳號使用'
+        : tgErr.message
     }
   }
 

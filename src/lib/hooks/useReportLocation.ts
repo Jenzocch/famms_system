@@ -7,7 +7,7 @@ import { loadMyFactoryId } from '@/lib/useMyFactory'
 import { loadFactories } from '@/lib/useFactories'
 
 export interface ReportFactory { id: string; name: string; code: string }
-export interface ReportArea { id: string; factory_id: string; name: string }
+export interface ReportArea { id: string; factory_id: string; name: string; photo_url: string | null }
 export interface ReportAsset { id: string; area_id: string; machine_name: string; machine_code: string | null }
 
 const LAST_LOCATION_KEY = 'famms.lastReportLocation'

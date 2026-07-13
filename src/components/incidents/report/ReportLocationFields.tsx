@@ -69,6 +69,17 @@ export default function ReportLocationFields({
         />
       )}
 
+      {/* Reference photo for the picked area — helps tell apart areas with
+          similar names (e.g. two "Line 2"s in different buildings). */}
+      {(() => {
+        const picked = areas.find(a => a.id === areaId)
+        if (!picked?.photo_url) return null
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={picked.photo_url} alt={picked.name} className="w-full max-w-[200px] h-28 rounded-lg object-cover" />
+        )
+      })()}
+
       {assets.length > 0 && (
         <Select value={assetId} onValueChange={(v) => setAssetId(v ?? '')} items={Object.fromEntries(assets.map(a => [a.id, `${a.machine_code ? `[${a.machine_code}] ` : ''}${a.machine_name}`]))}>
           <SelectTrigger><SelectValue placeholder={t('report.selectMachine')} /></SelectTrigger>
@@ -82,13 +93,18 @@ export default function ReportLocationFields({
         </Select>
       )}
 
-      {/* Free-text "other" location — for spots not in the lists above */}
-      <Input
-        value={locationNote}
-        onChange={e => setLocationNote(e.target.value)}
-        placeholder={t('report.locationOther', '其他位置（自行填寫，選填）')}
-        className="mt-1"
-      />
+      {/* Free-text "other" location — for spots not in the lists above.
+          Hidden while the "__other__" area option is active: that input above
+          binds the SAME locationNote value, and showing both looked like two
+          mysteriously self-filling fields. */}
+      {areaId !== '__other__' && (
+        <Input
+          value={locationNote}
+          onChange={e => setLocationNote(e.target.value)}
+          placeholder={t('report.locationOther', '其他位置（自行填寫，選填）')}
+          className="mt-1"
+        />
+      )}
     </div>
   )
 }

@@ -158,7 +158,7 @@ export default async function IncidentDetailPage({
   // the DOM order below still matches the real mobile reading order.
 
   const headerCard = (
-    <div key="header" className="bg-white rounded-xl border border-gray-200 p-4 xl:col-start-1">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-2 flex-wrap">
         <StatusChip status={status} />
         <UrgencyChip impact={incident.downtime_impact} color={urgency.color} fallbackLabel={urgency.label} />
@@ -213,10 +213,14 @@ export default async function IncidentDetailPage({
     </div>
   )
 
-  // Workflow progress bar + the single role-aware "what to do next" hint line
-  // (merged — previously a separate NextStepHint card repeated this).
-  const progressCard = (
-    <div key="progress" className="xl:col-start-1">
+  // Header + workflow progress bar (with its role-aware "what to do next"
+  // hint) as ONE grid child: as separate grid rows, a tall right rail
+  // stretched row 1 and left a half-page gap between the header and the
+  // progress bar on desktop. Grouped, they always sit flush together at the
+  // top of the left column.
+  const headerAndProgressEl = (
+    <div key="headerProgress" className="space-y-4 xl:col-start-1">
+      {headerCard}
       <WorkflowProgress status={status} userRole={user?.role} />
     </div>
   )
@@ -318,8 +322,11 @@ export default async function IncidentDetailPage({
   // Remaining management-rail pieces: nudge (Telegram), Gudang One parts
   // request, and the read-only parts-request tracker — always in this order,
   // always right after AssignForm.
+  // NOT sticky: AssignForm above it is sticky at the same top offset, and two
+  // stacked sticky siblings pin to the same spot — this block slid up OVER the
+  // assign form while scrolling, hiding the assignee picker entirely.
   const railRestEl = (
-    <div key="railRest" className="space-y-4 xl:col-start-2 xl:[grid-row:2/-1] xl:sticky xl:top-4">
+    <div key="railRest" className="space-y-4 xl:col-start-2 xl:[grid-row:2/-1]">
       {!isClosed && user && PERMISSIONS.remindProgress(user.role) && (
         <RemindButton incidentId={id} />
       )}
@@ -331,8 +338,8 @@ export default async function IncidentDetailPage({
   // Single flat order — this is the real mobile reading/DOM order; the grid
   // above just repositions the two rail pieces into column 2 at `xl:`.
   const order = status === 'reported'
-    ? [headerCard, progressCard, assignFormEl, pastRecordsEl, progressOrClosedEl, timelineEl, railRestEl, manageEl, auditEl]
-    : [headerCard, progressCard, pastRecordsEl, progressOrClosedEl, timelineEl, assignFormEl, railRestEl, manageEl, auditEl]
+    ? [headerAndProgressEl, assignFormEl, pastRecordsEl, progressOrClosedEl, timelineEl, railRestEl, manageEl, auditEl]
+    : [headerAndProgressEl, pastRecordsEl, progressOrClosedEl, timelineEl, assignFormEl, railRestEl, manageEl, auditEl]
 
   return (
     <div className="space-y-4">
