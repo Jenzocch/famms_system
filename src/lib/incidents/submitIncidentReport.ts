@@ -96,9 +96,13 @@ export async function submitIncidentReport(
       .select('*')
       .single()
     if (!error) { incident = data; break }
-    if (error.code === '42703' && sendClientRequestId) {
-      // Column doesn't exist on this database yet — drop it and retry the
-      // SAME sequence number (this isn't an incident_no collision).
+    // Column doesn't exist on this database yet — drop it and retry the SAME
+    // sequence number (this isn't an incident_no collision). Postgres itself
+    // raises 42703 (undefined_column), but PostgREST's schema-cache lookup
+    // fails first and returns PGRST204 ("Could not find the 'X' column of
+    // 'Y' in the schema cache") — check both, or a DB that hasn't run
+    // SYNC_SCHEMA_LATEST.sql yet fails every report submission outright.
+    if ((error.code === '42703' || error.code === 'PGRST204') && sendClientRequestId) {
       sendClientRequestId = false
       continue
     }
