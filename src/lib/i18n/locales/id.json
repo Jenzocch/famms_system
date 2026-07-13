@@ -582,6 +582,8 @@
     "loginName": "Nama login",
     "loginNamePlaceholder": "mis. teknisi1",
     "loginNameHint": "Pengguna masuk dengan nama ini (huruf/angka), Anda yang menentukan.",
+    "displayNameOnly": "Nama tampilan",
+    "displayNameOnlyHint": "Akun ini login dengan email ({email}) — ini hanya mengubah nama tampilan, tidak memengaruhi cara login.",
     "loginNameShort": "Login",
     "userFallback": "Pengguna",
     "vendorSectionTitle": "Daftar Vendor",

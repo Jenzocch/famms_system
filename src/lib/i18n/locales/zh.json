@@ -582,6 +582,8 @@
     "loginName": "登入名稱",
     "loginNamePlaceholder": "例如：teknisi1",
     "loginNameHint": "使用者用這個名稱登入（英文或數字），由你設定。",
+    "displayNameOnly": "顯示名稱",
+    "displayNameOnlyHint": "此帳號用 email 登入（{email}），這裡只改顯示名稱，不影響登入方式。",
     "loginNameShort": "登入",
     "userFallback": "使用者",
     "vendorSectionTitle": "外包廠商名冊",

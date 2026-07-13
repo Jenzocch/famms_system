@@ -582,6 +582,8 @@
     "loginName": "Login name",
     "loginNamePlaceholder": "e.g. teknisi1",
     "loginNameHint": "The user signs in with this name (letters/numbers), set by you.",
+    "displayNameOnly": "Display name",
+    "displayNameOnlyHint": "This account logs in with email ({email}) — this only changes the display name, not the login.",
     "loginNameShort": "Login",
     "userFallback": "User",
     "vendorSectionTitle": "Vendor Roster",

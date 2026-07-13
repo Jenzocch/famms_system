@@ -66,6 +66,10 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
 
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  // Whether the account being edited logs in with a real email (not the
+  // synthetic name@famms.local scheme) — changes this field's meaning from
+  // "this IS the login" to "display name only, login stays the email".
+  const [editingRealEmail, setEditingRealEmail] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   // Either a plain UserRole ('technician'…) or `custom:<key>`.
@@ -112,6 +116,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
 
   function startAdd() {
     setEditingId(null)
+    setEditingRealEmail(null)
     setPassword('')
     setFullName('')
     setRoleSelection('technician')
@@ -122,6 +127,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
 
   function startEdit(u: ManagedUser) {
     setEditingId(u.id)
+    setEditingRealEmail(u.email.endsWith('@famms.local') ? null : u.email)
     setPassword('')
     setFullName(u.full_name)
     setRoleSelection(u.custom_role_key ? `${CUSTOM_PREFIX}${u.custom_role_key}` : u.role)
@@ -133,6 +139,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
   function resetForm() {
     setShowForm(false)
     setEditingId(null)
+    setEditingRealEmail(null)
     setPassword('')
     setTelegramChatId('')
   }
@@ -240,7 +247,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
           </p>
 
           <div>
-            <Label>{t('settings.loginName')}</Label>
+            <Label>{editingRealEmail ? t('settings.displayNameOnly', '顯示名稱') : t('settings.loginName')}</Label>
             <Input
               value={fullName}
               onChange={e => setFullName(e.target.value)}
@@ -249,7 +256,13 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
               autoCorrect="off"
               className="mt-1"
             />
-            <p className="text-xs text-gray-400 mt-1">{t('settings.loginNameHint')}</p>
+            {editingRealEmail ? (
+              <p className="text-xs text-gray-400 mt-1">
+                {t('settings.displayNameOnlyHint', '此帳號用 email 登入（{email}），這裡只改顯示名稱，不影響登入方式。').replace('{email}', editingRealEmail)}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-1">{t('settings.loginNameHint')}</p>
+            )}
           </div>
 
           <div>
@@ -335,10 +348,10 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
           users.map(u => {
             const { label: roleText, badgeClass } = displayRole(u)
             return (
-            <div key={u.id} className="flex items-center justify-between p-3 border rounded-lg bg-white gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{u.full_name || u.email}</p>
+            <div key={u.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg bg-white gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm truncate">{u.full_name || u.email}</p>
+                <div className="flex items-center gap-1 flex-wrap mt-1">
                   <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium ${badgeClass}`}>
                     {roleText}
                   </span>
@@ -346,12 +359,12 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
                     <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500">{t('settings.deactivated')}</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-gray-500 truncate mt-1">
                   {t('settings.loginNameShort')}: {u.email.endsWith('@famms.local') ? u.email.split('@')[0] : u.email}
                 </p>
                 <p className="text-xs text-gray-400">{factoryName(u.factory_id)}</p>
               </div>
-              <div className="flex gap-1 shrink-0">
+              <div className="flex gap-1 shrink-0 self-end sm:self-auto">
                 <Button
                   size="icon"
                   variant="outline"

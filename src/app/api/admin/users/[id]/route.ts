@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { accountNameToEmail, isValidLoginName } from '@/lib/login-name'
+import { accountNameToEmail, isValidLoginName, SYNTHETIC_EMAIL_DOMAIN } from '@/lib/login-name'
 import type { UserRole } from '@/types'
 
 const VALID_ROLES: UserRole[] = ['technician', 'supervisor', 'manager', 'director', 'admin']
@@ -42,14 +42,23 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
-  // The login name IS the full name, so keep the synthetic auth email in sync
-  // when the name changes (otherwise the login name would drift from display).
+  // For a synthetic-login account (created via a plain "login name", not a
+  // real email — see login-name.ts), the login name IS the full name, so keep
+  // the auth email in sync when the name changes. An account created with a
+  // REAL email must never have this happen: overwriting it to
+  // "<name>@famms.local" silently invalidates the person's actual email
+  // credential the next time they try to sign in with it (this bit someone —
+  // editing just the display name broke their working email login).
   if (body.full_name !== undefined && body.full_name.trim()) {
-    if (!isValidLoginName(body.full_name)) {
-      return NextResponse.json({ error: '登入名稱請使用英文或數字' }, { status: 400 })
+    const { data: existing } = await admin.auth.admin.getUserById(id)
+    const currentEmail = existing?.user?.email ?? ''
+    if (currentEmail.endsWith(`@${SYNTHETIC_EMAIL_DOMAIN}`)) {
+      if (!isValidLoginName(body.full_name)) {
+        return NextResponse.json({ error: '登入名稱請使用英文或數字' }, { status: 400 })
+      }
+      const { error } = await admin.auth.admin.updateUserById(id, { email: accountNameToEmail(body.full_name) })
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     }
-    const { error } = await admin.auth.admin.updateUserById(id, { email: accountNameToEmail(body.full_name) })
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
   // Build profile update from provided fields only
