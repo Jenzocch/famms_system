@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { notifyFactory, notifyAssignees } from '@/lib/telegram'
+import { notifyFactory, notifyAssignees, incidentActionButtons } from '@/lib/telegram'
 import { PERMISSIONS } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 
@@ -75,7 +75,10 @@ export async function POST(
     //    nudge lands in their personal chat — the real "催". 2) Also broadcast
     //    to the factory's groups so the team keeps visibility.
     const [personal, group] = await Promise.all([
-      notifyAssignees(supabase, { profileIds: assignedIds, type: 'status_update', html }),
+      // Personal nudges carry status buttons so the assignee can answer the
+      // nudge (開工/完成) right from Telegram; the group broadcast stays
+      // button-less — group members aren't necessarily the assignee.
+      notifyAssignees(supabase, { profileIds: assignedIds, type: 'status_update', html, replyMarkup: incidentActionButtons(incident.id) }),
       notifyFactory(supabase, { factoryId: incident.factory_id, type: 'status_update', html }),
     ])
 

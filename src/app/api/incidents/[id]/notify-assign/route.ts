@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { notifyAssignees, formatAssignment } from '@/lib/telegram'
+import { notifyAssignees, formatAssignment, incidentActionButtons } from '@/lib/telegram'
 import type { DowntimeImpact } from '@/types'
 
 // POST /api/incidents/[id]/notify-assign — personal Telegram ping for newly
@@ -60,6 +60,9 @@ export async function POST(
       profileIds: addedUserIds,
       type: 'assignment',
       html,
+      // Status buttons: the assignee can report 開工/完成 straight from
+      // Telegram without opening the app (handled by the bot webhook).
+      replyMarkup: incidentActionButtons(incident.id),
     })
     return NextResponse.json({ ok: true, ...result })
   } catch (err) {

@@ -28,7 +28,18 @@ export interface SendResult {
   error?: string
 }
 
-export async function sendTelegramMessage(chatId: number | string, html: string): Promise<SendResult> {
+// Inline keyboard support: buttons under a message that fire callback_query
+// updates back to the webhook — how assignees report status straight from
+// Telegram without opening the app.
+export interface InlineKeyboard {
+  inline_keyboard: { text: string; callback_data: string }[][]
+}
+
+export async function sendTelegramMessage(
+  chatId: number | string,
+  html: string,
+  replyMarkup?: InlineKeyboard
+): Promise<SendResult> {
   if (!TOKEN) return { ok: false, error: 'TELEGRAM_BOT_TOKEN belum dikonfigurasi' }
   try {
     const res = await fetch(`${API_BASE}/sendMessage`, {
@@ -39,6 +50,7 @@ export async function sendTelegramMessage(chatId: number | string, html: string)
         text: html,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
     })
     const json = await res.json()
@@ -47,6 +59,30 @@ export async function sendTelegramMessage(chatId: number | string, html: string)
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'network error' }
   }
+}
+
+// Status-report buttons attached to assignment/reminder DMs. callback_data
+// stays under Telegram's 64-byte cap: "st|<uuid36>|repairing" ≈ 50 bytes.
+// Only technician-safe forward statuses — closing stays in-app (RCA gate,
+// supervisor-only).
+export function incidentActionButtons(incidentId: string): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: '🔧 Mulai dikerjakan', callback_data: `st|${incidentId}|repairing` },
+      { text: '✅ Selesai, siap dicek', callback_data: `st|${incidentId}|testing` },
+    ]],
+  }
+}
+
+// Acknowledge a button tap (stops the client-side loading spinner). The text
+// shows as a small toast in Telegram.
+export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  if (!TOKEN) return
+  await fetch(`${API_BASE}/answerCallbackQuery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callback_query_id: callbackQueryId, ...(text ? { text } : {}) }),
+  }).catch(() => {})
 }
 
 // ----------------------------------------------------------------------------
@@ -232,7 +268,7 @@ export async function notifyFactory(
 // the caller can tell the supervisor "3 pinged, 1 not set up".
 export async function notifyAssignees(
   supabase: SupabaseClient,
-  args: { profileIds: string[]; type: NotificationType; html: string }
+  args: { profileIds: string[]; type: NotificationType; html: string; replyMarkup?: InlineKeyboard }
 ): Promise<{ sent: number; failed: number; unregistered: number }> {
   if (!TOKEN || args.profileIds.length === 0) return { sent: 0, failed: 0, unregistered: 0 }
 
@@ -254,7 +290,7 @@ export async function notifyAssignees(
   let sent = 0
   let failed = 0
   for (const u of targets) {
-    const r = await sendTelegramMessage(u.telegram_chat_id, args.html)
+    const r = await sendTelegramMessage(u.telegram_chat_id, args.html, args.replyMarkup)
     await supabase.from('notification_logs').insert({
       notification_type: args.type,
       recipient_type: 'user',
