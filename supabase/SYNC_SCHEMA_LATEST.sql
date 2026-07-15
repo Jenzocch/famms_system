@@ -44,6 +44,23 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS client_request_id UUID UNIQUE;
 -- move it — this column is how they communicate a date instead.
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS estimated_completion_date DATE;
 
+-- ---------------------------------------------------------------------------
+-- TELEGRAM — new-report drafts
+-- ---------------------------------------------------------------------------
+-- Holds the in-progress state of a /lapor conversation between the "describe
+-- the problem" prompt and the urgency button tap — Telegram gives no other
+-- way to carry state across two separate incoming updates on a serverless
+-- webhook. One row per chat (a second /lapor overwrites, not stacks); rows
+-- are deleted the moment the incident is actually created, so an abandoned
+-- draft just sits harmlessly until overwritten by the next /lapor.
+CREATE TABLE IF NOT EXISTS telegram_report_drafts (
+  chat_id      BIGINT PRIMARY KEY,
+  profile_id   UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  description  TEXT,
+  photo_file_id TEXT,
+  created_at   TIMESTAMP DEFAULT NOW()
+);
+
 -- Reference photo so a reporter can tell areas apart at a glance in the
 -- report form (e.g. two areas both named "Line 2"). One photo per area is
 -- enough for recognition — not a gallery, so no separate table.
@@ -291,4 +308,5 @@ UNION ALL SELECT 'telegram_groups.factory_id nullable (shared groups)',
                  AND is_nullable='YES')
 UNION ALL SELECT 'incidents.estimated_completion_date',
        EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name='incidents' AND column_name='estimated_completion_date');
+               WHERE table_name='incidents' AND column_name='estimated_completion_date')
+UNION ALL SELECT 'telegram_report_drafts table', to_regclass('public.telegram_report_drafts') IS NOT NULL;

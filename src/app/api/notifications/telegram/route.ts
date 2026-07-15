@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   sendTelegramMessage, answerCallbackQuery, editMessageKeyboard, downloadTelegramFile,
-  incidentActionButtons, incidentActionButtonsAfter, isTelegramConfigured, esc,
+  incidentActionButtons, incidentActionButtonsAfter, newReportUrgencyButtons,
+  newReportUrgencyButtonsAfter, notifyFactory, isTelegramConfigured, esc,
 } from '@/lib/telegram'
 import { logAuditEvent } from '@/lib/audit'
+import { deadlineFromUrgency } from '@/lib/incident-display'
 import type { IncidentStatus } from '@/types'
 
 // POST /api/notifications/telegram — Telegram bot webhook.
 //
-// Three things happen here:
+// Four things happen here:
 //  1. /start & /chatid — discover the chat_id needed to register.
 //  2. callback_query — an assignee tapped a status button (🔧 Mulai /
 //     ✅ Selesai) on their assignment/reminder DM: update the incident
@@ -17,6 +19,18 @@ import type { IncidentStatus } from '@/types'
 //  3. A text reply to one of the bot's incident messages — recorded as a
 //     progress note on that incident (the FIT- number in the quoted message
 //     identifies the case).
+//  4. /lapor — report a brand-new incident without opening the app. Two-step
+//     (describe → pick urgency) because a chat can only carry state across
+//     separate updates via telegram_report_drafts (no in-memory state on a
+//     serverless webhook). Deliberately minimal: no area/machine picker —
+//     factory comes from the reporter's own account, and if the description
+//     happens to contain a machine code (e.g. "[DIN-HMG-001]") it's matched
+//     automatically so repeat-failure detection still works.
+
+// Prompt prefix Telegram echoes back verbatim in reply_to_message.text — used
+// to tell "replying to a /lapor prompt" apart from "replying to an incident
+// message" (FIT- number match) without any extra state lookup.
+const NEW_REPORT_PROMPT_PREFIX = '📋 Laporan baru'
 
 // Forward-only status line, same as ProgressUpdate's. Buttons may only move a
 // case forward; waiting side-states resume at 'analyzing'.
@@ -48,7 +62,7 @@ async function resolveProfile(admin: ReturnType<typeof createAdminClient>, chatI
   if (!reg) return null
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, full_name')
+    .select('id, full_name, factory_id')
     .eq('id', reg.profile_id)
     .maybeSingle()
   return profile
@@ -265,6 +279,210 @@ async function handleReplyNote(admin: ReturnType<typeof createAdminClient>, mess
   }
 }
 
+// /lapor — start a new-incident report. Requires a single-factory account
+// (the quick-report has no factory picker); cross-factory/unregistered
+// accounts are told to use the app instead. Overwrites any stale draft for
+// this chat so a second /lapor is always a fresh start, never a stuck one.
+async function handleNewReportStart(admin: ReturnType<typeof createAdminClient>, chatId: number) {
+  const profile = await resolveProfile(admin, chatId)
+  if (!profile) {
+    await sendTelegramMessage(chatId, 'Chat ID Anda belum terdaftar di FAMMS — hubungi admin.')
+    return
+  }
+  if (!profile.factory_id) {
+    await sendTelegramMessage(chatId, 'Akun Anda tidak terikat ke satu pabrik — laporan cepat lewat Telegram butuh itu. Silakan lapor lewat aplikasi.')
+    return
+  }
+
+  await admin.from('telegram_report_drafts').delete().eq('chat_id', chatId)
+  await admin.from('telegram_report_drafts').insert({ chat_id: chatId, profile_id: profile.id })
+
+  await sendTelegramMessage(
+    chatId,
+    [
+      `${NEW_REPORT_PROMPT_PREFIX}`,
+      '',
+      'Jelaskan masalahnya (boleh sertakan foto). Kalau tahu kode mesinnya, sertakan juga — mis. "[DIN-HMG-001] bocor di pipa bawah".',
+    ].join('\n'),
+    { force_reply: true, input_field_placeholder: 'Jelaskan masalahnya…' }
+  )
+}
+
+// Reply to the /lapor prompt → save description/photo into the draft, then
+// ask for urgency. The photo itself is NOT downloaded yet — only its
+// file_id is kept — so an abandoned draft never uploads a stray file to
+// storage; the actual download happens once the incident is really created.
+async function handleNewReportDescription(admin: ReturnType<typeof createAdminClient>, message: {
+  chat?: { id?: number }
+  text?: string
+  caption?: string
+  photo?: { file_id: string }[]
+}) {
+  const chatId = message.chat?.id
+  const description = (message.text ?? message.caption ?? '').trim()
+  const photoFileId = Array.isArray(message.photo) && message.photo.length > 0
+    ? message.photo[message.photo.length - 1].file_id
+    : null
+  if (!chatId || (!description && !photoFileId)) return
+
+  const { data: draft } = await admin
+    .from('telegram_report_drafts')
+    .select('chat_id')
+    .eq('chat_id', chatId)
+    .maybeSingle()
+  if (!draft) {
+    await sendTelegramMessage(chatId, 'Sesi laporan sudah kedaluwarsa — ketik /lapor untuk mulai lagi.')
+    return
+  }
+
+  await admin.from('telegram_report_drafts')
+    .update({ description: description || null, photo_file_id: photoFileId })
+    .eq('chat_id', chatId)
+
+  await sendTelegramMessage(chatId, 'Seberapa mendesak?', newReportUrgencyButtons())
+}
+
+// Urgency tapped → actually create the incident: same incident_no scheme as
+// the app's report form (today's sequence, retried on collision), same
+// due-date calculation, same audit trail and factory notification. Runs as
+// service_role so it doesn't go through the incidents RLS field-guard
+// trigger — fine here since this whole path only ever writes fields a
+// technician is already allowed to set (never due_date after creation,
+// never status other than 'reported').
+async function handleNewReportUrgency(admin: ReturnType<typeof createAdminClient>, cq: {
+  id: string
+  from?: { id?: number }
+  message?: { chat?: { id?: number }; message_id?: number }
+  data?: string
+}) {
+  const chatId = cq.from?.id ?? cq.message?.chat?.id
+  const messageId = cq.message?.message_id
+  const impact = (cq.data ?? '').split('|')[1] as 'A' | 'C' | 'D' | undefined
+  if (!chatId || !impact) { await answerCallbackQuery(cq.id); return }
+
+  const profile = await resolveProfile(admin, chatId)
+  const { data: draft } = await admin
+    .from('telegram_report_drafts')
+    .select('*')
+    .eq('chat_id', chatId)
+    .maybeSingle()
+  if (!profile || !profile.factory_id || !draft || !draft.description) {
+    await answerCallbackQuery(cq.id, 'Sesi laporan sudah kedaluwarsa — ketik /lapor untuk mulai lagi.')
+    return
+  }
+
+  await answerCallbackQuery(cq.id, '⏳ Membuat laporan…')
+
+  // Best-effort machine-code match: a bracketed or bare token in the
+  // description compared against this factory's machine codes. No match is
+  // completely normal — the report just goes in without a machine link,
+  // same as leaving that field blank in the app form.
+  let machineId: string | null = null
+  const codeMatch = draft.description.match(/\[?([A-Z]{2,}-[A-Z0-9-]+)\]?/i)
+  if (codeMatch) {
+    const { data: machine } = await admin
+      .from('machines')
+      .select('id')
+      .eq('factory_id', profile.factory_id)
+      .ilike('machine_code', codeMatch[1])
+      .maybeSingle()
+    machineId = machine?.id ?? null
+  }
+
+  const now = new Date()
+  const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+  const { count } = await admin
+    .from('incidents')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString())
+
+  const title = draft.description.length > 60 ? `${draft.description.slice(0, 57)}...` : draft.description
+  const basePayload = {
+    factory_id: profile.factory_id,
+    machine_id: machineId,
+    incident_type: 'other',
+    title,
+    description: draft.description,
+    reporter_name: profile.full_name || null,
+    downtime_impact: impact,
+    due_date: deadlineFromUrgency(impact),
+    status: 'reported' as const,
+    reported_by_id: profile.id,
+  }
+
+  let incident: { id: string; incident_no: string } | null = null
+  let seq = (count ?? 0) + 1
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const incident_no = `FIT-${ym}-${String(seq).padStart(3, '0')}`
+    const { data, error } = await admin
+      .from('incidents')
+      .insert({ ...basePayload, incident_no })
+      .select('id, incident_no')
+      .single()
+    if (!error) { incident = data; break }
+    if (error.code === '23505') { seq++; continue }
+    break
+  }
+  if (!incident) {
+    await sendTelegramMessage(chatId, 'Gagal membuat laporan — coba lagi lewat /lapor, atau lewat aplikasi.')
+    return
+  }
+
+  // Photo, if the description reply included one — downloaded now for the
+  // first time (see handleNewReportDescription).
+  if (draft.photo_file_id) {
+    const file = await downloadTelegramFile(draft.photo_file_id)
+    if (file) {
+      const path = `${incident.id}/${Date.now()}-0.${file.ext}`
+      await admin.storage.from('incident-photos')
+        .upload(path, file.bytes, { contentType: `image/${file.ext === 'jpg' ? 'jpeg' : file.ext}` })
+        .catch(() => {})
+    }
+  }
+
+  await logAuditEvent(admin, {
+    userId: profile.id,
+    userName: profile.full_name || null,
+    actionType: 'create',
+    resourceType: 'incident',
+    resourceId: incident.id,
+    newValue: { incident_no: incident.incident_no, title, incident_type: 'other' },
+    changeSummary: `工單已建立：${incident.incident_no}（via Telegram）`,
+    factoryId: profile.factory_id,
+  })
+
+  await admin.from('telegram_report_drafts').delete().eq('chat_id', chatId)
+
+  if (messageId) {
+    await editMessageKeyboard(chatId, messageId, newReportUrgencyButtonsAfter(impact))
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  await sendTelegramMessage(chatId, [
+    `✅ <b>${esc(incident.incident_no)}</b> berhasil dibuat.`,
+    machineId ? '🔧 Mesin terdeteksi otomatis dari kode di deskripsi.' : '',
+    `<a href="${appUrl}/incidents/${incident.id}">Lihat kasus →</a>`,
+  ].filter(Boolean).join('\n'))
+
+  // Best-effort: notify the factory's Telegram groups/opted-in users, same
+  // as a report filed through the app.
+  await notifyFactory(admin, {
+    factoryId: profile.factory_id,
+    type: 'new_incident',
+    html: [
+      `🚨 <b>Laporan Baru</b> — ${esc(incident.incident_no)}`,
+      `📋 ${esc(title)}`,
+      `📉 Dampak: ${esc(URGENCY_LABEL_FULL[impact])}`,
+      profile.full_name ? `👤 ${esc(profile.full_name)}` : '',
+      `<a href="${appUrl}/incidents/${incident.id}">Lihat detail →</a>`,
+    ].filter(Boolean).join('\n'),
+  }).catch(() => {})
+}
+
+const URGENCY_LABEL_FULL: Record<string, string> = {
+  A: '🔴 Mendesak', C: '🟡 Sedang', D: '🟢 Biasa',
+}
+
 export async function POST(req: Request) {
   if (!isTelegramConfigured()) {
     return NextResponse.json({ ok: true }) // silently accept; bot not configured
@@ -288,6 +506,8 @@ export async function POST(req: Request) {
     const data: string = update.callback_query.data ?? ''
     if (data.startsWith('note|')) {
       await handleNoteButton(admin, update.callback_query)
+    } else if (data.startsWith('newrpt|')) {
+      await handleNewReportUrgency(admin, update.callback_query)
     } else {
       await handleStatusButton(admin, update.callback_query)
     }
@@ -317,6 +537,14 @@ export async function POST(req: Request) {
           'Berikan ID ini ke admin untuk mengaktifkan notifikasi insiden.',
         ].join('\n')
     await sendTelegramMessage(chatId, reply)
+    return NextResponse.json({ ok: true })
+  }
+
+  // /lapor — start a brand-new incident report (see the file-header comment
+  // for the two-step design).
+  if (!isGroup && (text.startsWith('/lapor') || text.startsWith('/report'))) {
+    const admin = createAdminClient()
+    await handleNewReportStart(admin, chatId)
     return NextResponse.json({ ok: true })
   }
 
@@ -352,10 +580,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
-  // Reply-to-bot note (private chats only — group replies would be ambiguous)
-  if (!isGroup && message?.reply_to_message) {
+  // Reply to a bot message (private chats only — group replies would be
+  // ambiguous): either continuing a /lapor draft, or a note/photo on an
+  // existing incident. Distinguished by the quoted prompt's own text, no
+  // extra lookup needed.
+  if (!isGroup && message?.reply_to_message?.from?.is_bot) {
     const admin = createAdminClient()
-    await handleReplyNote(admin, message)
+    const quotedText = message.reply_to_message.text ?? message.reply_to_message.caption ?? ''
+    if (quotedText.startsWith(NEW_REPORT_PROMPT_PREFIX)) {
+      await handleNewReportDescription(admin, message)
+    } else {
+      await handleReplyNote(admin, message)
+    }
   }
 
   return NextResponse.json({ ok: true })

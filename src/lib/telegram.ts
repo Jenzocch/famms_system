@@ -87,6 +87,27 @@ export function incidentActionButtons(incidentId: string): InlineKeyboard {
   }
 }
 
+// Urgency picker shown after a /lapor description is received. Plain
+// severity levels only, matching the app's report form (no production-impact
+// wording) — see URGENCY_FROM_IMPACT.
+export function newReportUrgencyButtons(): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: '🔴 Mendesak', callback_data: 'newrpt|A' },
+      { text: '🟡 Sedang', callback_data: 'newrpt|C' },
+      { text: '🟢 Biasa', callback_data: 'newrpt|D' },
+    ]],
+  }
+}
+
+const URGENCY_LABEL_ID: Record<string, string> = { A: '🔴 Mendesak', C: '🟡 Sedang', D: '🟢 Biasa' }
+
+// Checked, inert state after the urgency tap — same "visibly registered"
+// treatment as incidentActionButtonsAfter.
+export function newReportUrgencyButtonsAfter(picked: 'A' | 'C' | 'D'): InlineKeyboard {
+  return { inline_keyboard: [[{ text: `✅ ${URGENCY_LABEL_ID[picked]}`, callback_data: 'noop' }]] }
+}
+
 // Acknowledge a button tap (stops the client-side loading spinner). The text
 // shows as a small toast in Telegram.
 export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
