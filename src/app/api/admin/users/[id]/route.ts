@@ -25,6 +25,7 @@ export async function PATCH(
     is_active?: boolean
     password?: string
     telegram_chat_id?: string | number
+    is_shared_device?: boolean
   }
   try {
     body = await req.json()
@@ -70,6 +71,7 @@ export async function PATCH(
   // factory_id present (incl. null) = set it; null means cross-factory.
   if ('factory_id' in body) update.factory_id = body.factory_id || null
   if (body.is_active !== undefined) update.is_active = body.is_active
+  if (body.is_shared_device !== undefined) update.is_shared_device = body.is_shared_device
   // custom_role_key present (incl. explicit null = "revert to a base role")
   // wins over `role`: same look-up-don't-trust pattern as account creation —
   // the tier comes from the DB row, never straight from the client.

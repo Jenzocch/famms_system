@@ -13,6 +13,10 @@ export function useReporterAccounts() {
   const [accounts, setAccounts] = useState<ReporterAccount[]>([])
   const [reporterName, setReporterName] = useState('')
   const [reporterAccountId, setReporterAccountId] = useState('')
+  // Exposed so the form can make picking a reporter mandatory ONLY on a
+  // shared-device login — a personal login already gets it right for free
+  // via the auto-fill below, so it shouldn't be forced there too.
+  const [isSharedDevice, setIsSharedDevice] = useState(false)
 
   useEffect(() => {
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name')
@@ -22,14 +26,23 @@ export function useReporterAccounts() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const uid = session?.user.id
       if (!uid) return
-      supabase.from('profiles').select('id, full_name').eq('id', uid).single()
+      supabase.from('profiles').select('id, full_name, is_shared_device').eq('id', uid).single()
         .then(({ data }) => {
           if (!data) return
+          // A shared-device login (e.g. one tablet passed between several
+          // technicians) must NOT auto-fill from its own account — that would
+          // silently attribute every report to the tablet instead of
+          // whoever actually typed it. Leave both fields blank; the form
+          // makes picking the real reporter a required step instead.
+          if (data.is_shared_device) { setIsSharedDevice(true); return }
           setReporterAccountId(prev => prev || data.id)
           setReporterName(prev => prev || data.full_name || '')
         })
     })
   }, [])
 
-  return { accounts, reporterName, setReporterName, reporterAccountId, setReporterAccountId }
+  return {
+    accounts, reporterName, setReporterName, reporterAccountId, setReporterAccountId,
+    isSharedDevice,
+  }
 }

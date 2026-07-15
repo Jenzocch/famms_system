@@ -9,7 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Trash2, Plus, Pencil, CircleCheck, CircleX, KeyRound, Send } from 'lucide-react'
+import { Loader2, Trash2, Plus, Pencil, CircleCheck, CircleX, KeyRound, Send, Tablet } from 'lucide-react'
 import { ROLE_ZH } from '@/lib/incident-display'
 import type { UserRole } from '@/types'
 import type { CustomRole } from '@/lib/roles'
@@ -25,6 +25,7 @@ interface ManagedUser {
   custom_role_key: string | null
   factory_id: string | null
   is_active: boolean
+  is_shared_device: boolean
   created_at: string
   telegram_chat_id: number | null
 }
@@ -79,6 +80,9 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
   const [roleSelection, setRoleSelection] = useState<string>('technician')
   const [factoryId, setFactoryId] = useState('')
   const [telegramChatId, setTelegramChatId] = useState('')
+  // Shared device (e.g. a tablet passed between technicians) — the report
+  // form leaves 回報人 blank instead of auto-filling this account's name.
+  const [isSharedDevice, setIsSharedDevice] = useState(false)
 
   useEffect(() => {
     supabase.from('factories').select('id, name').order('name').then(({ data }) => {
@@ -125,6 +129,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
     setRoleSelection('technician')
     setFactoryId(factories[0]?.id ?? '')
     setTelegramChatId('')
+    setIsSharedDevice(false)
     setShowForm(true)
   }
 
@@ -138,6 +143,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
     setRoleSelection(u.custom_role_key ? `${CUSTOM_PREFIX}${u.custom_role_key}` : u.role)
     setFactoryId(u.factory_id ?? '')
     setTelegramChatId(u.telegram_chat_id != null ? String(u.telegram_chat_id) : '')
+    setIsSharedDevice(u.is_shared_device)
     setShowForm(true)
   }
 
@@ -148,6 +154,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
     setLoginName('')
     setPassword('')
     setTelegramChatId('')
+    setIsSharedDevice(false)
   }
 
   // Decode roleSelection into the payload fields the API expects.
@@ -177,6 +184,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
             ...roleFields(),
             factory_id: factoryId || null,
             telegram_chat_id: telegramChatId.trim() || undefined,
+            is_shared_device: isSharedDevice,
             ...(password ? { password } : {}),
           }),
         })
@@ -191,6 +199,7 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
           body: JSON.stringify({
             password, full_name: fullName, ...roleFields(), factory_id: factoryId || null,
             telegram_chat_id: telegramChatId.trim() || undefined,
+            is_shared_device: isSharedDevice,
           }),
         })
         const json = await res.json()
@@ -356,6 +365,23 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
             </p>
           </div>
 
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isSharedDevice}
+              onChange={e => setIsSharedDevice(e.target.checked)}
+              className="mt-0.5 w-4 h-4 shrink-0"
+            />
+            <span>
+              <span className="text-sm font-medium flex items-center gap-1">
+                <Tablet className="w-3.5 h-3.5" /> {t('settings.sharedDevice', '共用裝置帳號（例如平板）')}
+              </span>
+              <span className="text-xs text-gray-400 block mt-0.5">
+                {t('settings.sharedDeviceHint', '多人共用同一台裝置登入時勾選 — 回報問題時「回報人」欄位會留空，強制手動選擇實際回報的人，不會自動帶入這個帳號的名字。')}
+              </span>
+            </span>
+          </label>
+
           <div className="flex gap-2">
             <Button onClick={submit} disabled={submitting}>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -382,6 +408,11 @@ export default function UserManager({ currentUserId }: { currentUserId: string }
                   </span>
                   {!u.is_active && (
                     <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500">{t('settings.deactivated')}</span>
+                  )}
+                  {u.is_shared_device && (
+                    <span className="shrink-0 inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                      <Tablet className="w-3 h-3" /> {t('settings.sharedDeviceBadge', '共用裝置')}
+                    </span>
                   )}
                 </div>
                 <p className="text-xs text-gray-500 truncate mt-1">

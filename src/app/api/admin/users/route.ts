@@ -18,7 +18,7 @@ export async function GET() {
 
   const { data: profiles, error: profErr } = await admin
     .from('profiles')
-    .select('id, factory_id, full_name, role, custom_role_key, is_active, created_at')
+    .select('id, factory_id, full_name, role, custom_role_key, is_active, is_shared_device, created_at')
   if (profErr) return NextResponse.json({ error: profErr.message }, { status: 500 })
 
   // Best-effort email lookup. Never let a failure here break the whole list.
@@ -46,6 +46,7 @@ export async function GET() {
     custom_role_key: p.custom_role_key ?? null,
     factory_id: p.factory_id ?? null,
     is_active: p.is_active ?? true,
+    is_shared_device: p.is_shared_device ?? false,
     created_at: p.created_at,
     telegram_chat_id: telegramByProfileId.get(p.id) ?? null,
   }))
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
     custom_role_key?: string | null
     factory_id?: string
     telegram_chat_id?: string | number
+    is_shared_device?: boolean
   }
   try {
     body = await req.json()
@@ -140,6 +142,7 @@ export async function POST(req: Request) {
       role,
       custom_role_key: customRoleKey,
       is_active: true,
+      is_shared_device: !!body.is_shared_device,
     }, { onConflict: 'id' })
 
   if (upsertErr) {

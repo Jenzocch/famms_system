@@ -87,6 +87,10 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
       toast.error(t('report.fillRequired'))
       return
     }
+    if (reporter.isSharedDevice && !reporter.reporterName.trim()) {
+      toast.error(t('report.reporterRequired', '這是共用裝置，請選擇實際回報的人'))
+      return
+    }
     // For "other", use the problem title as the incident type label on the board.
     const incidentType = issueType === 'other' ? title.trim() : issueType
 
@@ -130,7 +134,8 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
   }
 
   const submitDisabled =
-    submitting || !location.factoryId || !title.trim() || !description.trim()
+    submitting || !location.factoryId || !title.trim() || !description.trim() ||
+    (reporter.isSharedDevice && !reporter.reporterName.trim())
 
   return (
     // Extra bottom padding on phone clears the fixed submit bar (which itself
@@ -151,7 +156,15 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
       <div className="space-y-5">
       {/* Reporter — compact, sits above the numbered sections */}
       <div>
-        <Label className="text-sm">{t('report.reporterName')}</Label>
+        <Label className="text-sm">
+          {t('report.reporterName')}
+          {reporter.isSharedDevice && <span className="text-red-500 ml-0.5">*</span>}
+        </Label>
+        {reporter.isSharedDevice && (
+          <p className="text-xs text-amber-600 mt-0.5">
+            {t('report.sharedDeviceHint', '這是共用裝置，請選擇或輸入實際回報的人')}
+          </p>
+        )}
         {reporter.accounts.length > 0 && (
           <Select
             value={reporter.reporterAccountId}
