@@ -276,6 +276,8 @@ export default async function IncidentDetailPage({
           userRole={user?.role}
           userName={user?.full_name}
           factoryId={incident.factory_id}
+          machineId={incident.machine_id}
+          locationNote={incident.location_note}
         />
       </CollapsibleSection>
     </div>

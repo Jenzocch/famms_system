@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useFactories } from '@/lib/useFactories'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -53,11 +54,13 @@ interface IncidentActionsProps {
   userRole?: UserRole
   userName?: string | null
   factoryId?: string | null
+  machineId?: string | null
+  locationNote?: string | null
 }
 
 export default function IncidentActions({
   incidentId, title, description, incidentType, impact, dueDate, userRole = 'technician',
-  userName, factoryId,
+  userName, factoryId, machineId, locationNote,
 }: IncidentActionsProps) {
   const canEdit = PERMISSIONS.editIncident(userRole)
   const canDelete = PERMISSIONS.deleteIncident(userRole)
@@ -75,6 +78,41 @@ export default function IncidentActions({
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  // Location (factory → area → machine) — editable, mirroring the report
+  // form's "where first, then what" order. Option lists load on demand;
+  // selections only reset when the USER changes a parent (in the onChange
+  // handlers), never in the loading effects, so the incident's current
+  // location survives the initial load.
+  const { factories } = useFactories()
+  const [fId, setFId] = useState(factoryId || '')
+  const [areaId, setAreaId] = useState('')
+  const [mId, setMId] = useState(machineId || '')
+  const [locNote, setLocNote] = useState(locationNote || '')
+  const [areas, setAreas] = useState<{ id: string; name: string }[]>([])
+  const [machines, setMachines] = useState<{ id: string; machine_name: string; machine_code: string | null }[]>([])
+
+  // Preselect the area from the current machine once, when editing opens.
+  useEffect(() => {
+    if (!editing || !machineId) return
+    supabase.from('machines').select('area_id').eq('id', machineId).maybeSingle()
+      .then(({ data }) => { if (data?.area_id) setAreaId(prev => prev || data.area_id) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing])
+
+  useEffect(() => {
+    if (!editing || !fId) { setAreas([]); return }
+    supabase.from('areas').select('id, name').eq('factory_id', fId).order('name')
+      .then(({ data }) => setAreas(data ?? []))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, fId])
+
+  useEffect(() => {
+    if (!editing || !areaId) { setMachines([]); return }
+    supabase.from('machines').select('id, machine_name, machine_code').eq('area_id', areaId).order('machine_name')
+      .then(({ data }) => setMachines(data ?? []))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, areaId])
+
   // Issue types from the shared cache; fall back to built-ins if empty.
   // Labels follow the active app language.
   const { types: cachedTypes } = useIncidentTypes()
@@ -91,6 +129,9 @@ export default function IncidentActions({
       const { error } = await supabase
         .from('incidents')
         .update({
+          factory_id: fId || null,
+          machine_id: mId || null,
+          location_note: locNote.trim() || null,
           title: t,
           description: d || null,
           incident_type: type,
@@ -107,10 +148,10 @@ export default function IncidentActions({
         actionType: 'update',
         resourceType: 'incident',
         resourceId: incidentId,
-        oldValue: { title, description, incident_type: incidentType, downtime_impact: impact, due_date: dueDate },
-        newValue: { title: t, description: d || null, incident_type: type, downtime_impact: urg, due_date: due || null },
+        oldValue: { factory_id: factoryId, machine_id: machineId, location_note: locationNote, title, description, incident_type: incidentType, downtime_impact: impact, due_date: dueDate },
+        newValue: { factory_id: fId || null, machine_id: mId || null, location_note: locNote.trim() || null, title: t, description: d || null, incident_type: type, downtime_impact: urg, due_date: due || null },
         changeSummary: '工單內容已更新',
-        factoryId: factoryId ?? undefined,
+        factoryId: fId || factoryId || undefined,
       })
 
       toast.success(tr('caseEdit.updated'))
@@ -206,6 +247,57 @@ export default function IncidentActions({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
       <h3 className="font-semibold text-gray-900">{tr('caseEdit.edit')}</h3>
+
+      {/* WHERE first, WHAT second — same reading order as the report form
+          (①在哪裡 ②什麼問題), so editing feels like re-walking the report. */}
+      {canEdit && (
+        <div>
+          <Label>{tr('report.location', '位置')}</Label>
+          <div className="mt-1 space-y-2">
+            <Select
+              value={fId}
+              onValueChange={(v) => { const nv = v ?? ''; if (nv !== fId) { setFId(nv); setAreaId(''); setMId('') } }}
+              items={Object.fromEntries(factories.map(f => [f.id, f.name]))}
+            >
+              <SelectTrigger><SelectValue placeholder={tr('report.selectFactory', '選擇工廠')} /></SelectTrigger>
+              <SelectContent>
+                {factories.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {areas.length > 0 && (
+              <Select
+                value={areaId}
+                onValueChange={(v) => { const nv = v ?? ''; if (nv !== areaId) { setAreaId(nv); setMId('') } }}
+                items={Object.fromEntries(areas.map(a => [a.id, a.name]))}
+              >
+                <SelectTrigger><SelectValue placeholder={tr('report.selectArea', '選擇區域（可選）')} /></SelectTrigger>
+                <SelectContent>
+                  {areas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            {machines.length > 0 && (
+              <Select
+                value={mId}
+                onValueChange={(v) => setMId(v ?? '')}
+                items={Object.fromEntries(machines.map(m => [m.id, `${m.machine_code ? `[${m.machine_code}] ` : ''}${m.machine_name}`]))}
+              >
+                <SelectTrigger><SelectValue placeholder={tr('report.selectMachine', '選擇機器/項目（可選）')} /></SelectTrigger>
+                <SelectContent>
+                  {machines.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.machine_code ? `[${m.machine_code}] ` : ''}{m.machine_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Input
+              value={locNote}
+              onChange={e => setLocNote(e.target.value)}
+              placeholder={tr('report.locationOther', '其他位置（自行填寫，選填）')}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Title/description are guarded by the same DB trigger as the fields
           below (migration_rls_5) — an editable input for a technician just
