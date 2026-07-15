@@ -166,14 +166,14 @@ export default async function IncidentDetailPage({
   // the DOM order below still matches the real mobile reading order.
 
   const headerCard = (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <div className="bg-white rounded-2xl shadow-sm p-4">
       <div className="flex items-center gap-2 flex-wrap">
         <StatusChip status={status} />
         <UrgencyChip impact={incident.downtime_impact} color={urgency.color} fallbackLabel={urgency.label} />
         <span className="text-sm text-gray-800 font-mono font-semibold ml-auto bg-gray-100 px-2 py-0.5 rounded">{incident.incident_no}</span>
       </div>
 
-      <h1 className="text-lg font-bold text-gray-900 mt-2">
+      <h1 className="text-2xl font-semibold text-gray-900 mt-2">
         {incident.title || <IncidentTypeText code={incident.incident_type} problemFallback />}
       </h1>
 
@@ -182,7 +182,7 @@ export default async function IncidentDetailPage({
           words wide, leaving most of the card's width empty and pushing
           everything else down an extra two rows for no reason. flex-wrap
           still breaks each row onto its own line if the content is long. */}
-      <div className="mt-2 space-y-1.5 text-sm text-gray-600">
+      <div className="mt-2 space-y-1.5 text-[13px] text-gray-500">
         <p className="flex items-center gap-1.5 flex-wrap">
           <IncidentTypeText code={incident.incident_type} />
           <span className="text-gray-300">·</span>
@@ -196,7 +196,7 @@ export default async function IncidentDetailPage({
           {incident.reporter_name && (
             <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {incident.reporter_name}</span>
           )}
-          <span className="flex items-center gap-1 text-gray-400">
+          <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" /> {format(new Date(incident.reported_at), 'yyyy-MM-dd HH:mm')}
           </span>
         </p>
