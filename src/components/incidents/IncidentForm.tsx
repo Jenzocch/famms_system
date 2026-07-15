@@ -138,7 +138,7 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
     // where submit is inline.
     <div className="space-y-5 lg:space-y-6 pb-24 lg:pb-0">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('report.title')}</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">{t('report.title')}</h1>
         <p className="text-base text-gray-500 mt-1">{t('report.subtitle')}</p>
       </div>
 

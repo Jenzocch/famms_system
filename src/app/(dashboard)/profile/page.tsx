@@ -79,7 +79,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <h1 className="text-xl font-bold text-gray-900 mb-6">{t('profile.title', '個人資料')}</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-6">{t('profile.title', '個人資料')}</h1>
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <div className="flex items-center gap-4 mb-2">
           <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
