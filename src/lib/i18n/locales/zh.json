@@ -273,7 +273,7 @@
     "pending": "待處理",
     "frequency": "频率",
     "lastMaintained": "上次保養",
-    "nextDue": "下次预定",
+    "nextDue": "下次預定",
     "performedBy": "执行者",
     "notes": "備註",
     "findings": "發現",
@@ -438,11 +438,11 @@
     "failureCount": "故障數",
     "downtime": "總停機時間",
     "area": "區域",
-    "factory": "工厂",
+    "factory": "工廠",
     "details": "機器詳情",
     "history": "歷史",
-    "selectFactory": "選擇工厂",
-    "allFactories": "全部工厂（跨厂）",
+    "selectFactory": "選擇工廠",
+    "allFactories": "全部工廠（跨廠）",
     "selectArea": "選擇區域",
     "selectMachine": "選擇機器",
     "issueType": "問題類型",
@@ -465,7 +465,7 @@
     "failureDistribution": "故障分布",
     "byMachine": "按機器",
     "byFailureCode": "按故障代碼",
-    "weeklyComparison": "周对比"
+    "weeklyComparison": "週對比"
   },
   "healthScore": {
     "excellent": "優秀",
@@ -694,7 +694,7 @@
     "selectOption": "選擇選項",
     "addMore": "添加",
     "removeItem": "刪除",
-    "upload": "上传",
+    "upload": "上傳",
     "downloadFile": "下載檔案"
   },
   "errors": {
@@ -702,7 +702,7 @@
     "saveFailed": "保存失敗",
     "deleteFailed": "刪除失敗",
     "requiredField": "此字段為必填項",
-    "invalidInput": "输入無效",
+    "invalidInput": "輸入無效",
     "networkError": "網路錯誤"
   },
   "issueTypes": {
