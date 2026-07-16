@@ -47,6 +47,16 @@ export async function POST(
     return NextResponse.json({ error: 'Kasus ini sudah ditutup' }, { status: 400 })
   }
 
+  // completion_type (temporary_fix / permanent_fix) was only required by the
+  // client form — calling this route directly skipped it entirely, silently
+  // corrupting the First-Fix-Rate / repeat-failure KPIs that depend on it.
+  if (completion_type !== 'temporary_fix' && completion_type !== 'permanent_fix') {
+    return NextResponse.json(
+      { error: '結案前請選擇修復類型（臨時 / 永久）' },
+      { status: 400 }
+    )
+  }
+
   // RCA gate — only applies to machine incidents that carry a failure_code.
   // Facility / simplified incidents have no failure_code_id, so skip the check.
   if (incident.failure_code_id) {

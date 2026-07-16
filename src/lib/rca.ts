@@ -36,10 +36,15 @@ export async function checkRCARequirement(
 
   let satisfied = true
   if (required) {
+    // Scoped by factory: rca_records has no incident/factory link on old rows
+    // (the field didn't exist until this fix), so an RCA filed by one factory
+    // must never satisfy the mandatory-RCA gate for a DIFFERENT factory's
+    // incidents on the same failure_code — that was silently happening before.
     const { data: existing } = await supabase
       .from('rca_records')
       .select('id')
       .eq('failure_code_id', failureCodeId)
+      .eq('factory_id', factoryId)
       .limit(1)
       .maybeSingle()
     satisfied = !!existing

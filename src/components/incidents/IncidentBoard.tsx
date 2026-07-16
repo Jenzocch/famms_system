@@ -312,12 +312,13 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
             )
           })}
 
-          {/* The server query caps at 200 rows — tell the user older cases
-              exist but are only reachable via search, instead of silently
-              truncating. */}
-          {rows.length >= 200 && (
+          {/* Open cases are fetched uncapped (well, up to 1000 — see
+              incidents/page.tsx) so a stuck-open case can never silently
+              vanish; only CLOSED history is capped at 200 recent rows, since
+              older closed cases are just history, reachable via search. */}
+          {rows.filter(r => r.status === 'closed').length >= 200 && (
             <p className="col-span-full text-center text-xs text-gray-400 py-2">
-              {t('board.limitNote', '僅顯示最近 200 筆工單，較舊工單請使用搜尋')}
+              {t('board.limitNote', '已結案工單僅顯示最近 200 筆，較舊工單請使用搜尋')}
             </p>
           )}
         </div>

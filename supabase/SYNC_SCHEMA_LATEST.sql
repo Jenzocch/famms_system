@@ -50,6 +50,30 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS estimated_completion_date DATE;
 -- existed (their photos still show on the detail page as always).
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS photo_count INT NOT NULL DEFAULT 0;
 
+-- Which factory an RCA record was filed for. Without this, the mandatory-RCA
+-- close gate (checkRCARequirement in src/lib/rca.ts) could not tell "an RCA
+-- exists for this failure_code" apart from "an RCA exists for this failure_code
+-- AT THIS FACTORY" — so one factory filing an RCA silently satisfied the gate
+-- for every OTHER factory hitting the same failure_code, even though they
+-- never investigated their own root cause. NULL only for rows created before
+-- this fix (can't be safely backfilled without the incident that triggered
+-- them); the app's own satisfied-check now scopes by factory_id, so those
+-- legacy rows just won't match any factory going forward.
+ALTER TABLE rca_records ADD COLUMN IF NOT EXISTS factory_id UUID REFERENCES factories(id);
+
+-- ---------------------------------------------------------------------------
+-- STORAGE — lock down the public incident-photos bucket
+-- ---------------------------------------------------------------------------
+-- Previously enforced ONLY client-side — any authenticated user could call
+-- the Storage REST API directly and upload an arbitrarily large or
+-- arbitrarily-typed file into this PUBLIC, publicly-readable bucket. Matches
+-- src/lib/constants.ts's ACCEPTED_IMAGE_TYPES / MAX_FILE_SIZE_MB. No-op if
+-- the bucket doesn't exist yet (storage_setup.sql creates it).
+UPDATE storage.buckets
+SET file_size_limit = 10485760, -- 10 MB
+    allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp']
+WHERE id = 'incident-photos';
+
 -- Marks a login as a SHARED DEVICE account (e.g. one tablet logged in
 -- permanently and handed between several technicians) rather than one
 -- person's own login. The report form auto-fills "回報人" from whoever is

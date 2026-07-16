@@ -72,6 +72,16 @@ export const STATUS_ZH: Record<IncidentStatus, string> = {
 // shows one color on the board and a different one on the machine pages.
 export { INCIDENT_STATUS_COLORS as STATUS_ZH_COLOR } from '@/types'
 
+// Every non-closed status. Shared so the board's row cap and the dashboard's
+// counts can't drift apart on what "open" means (see OPEN_STATUSES usage in
+// both — the board previously capped its query by recency alone, which could
+// drop a genuinely-open, long-stuck case once 200 newer rows of ANY status
+// had accumulated).
+export const OPEN_STATUSES: IncidentStatus[] = [
+  'reported', 'accepted', 'analyzing', 'waiting_parts', 'waiting_approval',
+  'waiting_vendor', 'waiting_shutdown', 'repairing', 'testing', 'observation',
+]
+
 // Filter tabs for the board (groups several underlying statuses)
 export const BOARD_FILTERS: { key: string; label: string; statuses: IncidentStatus[] | null }[] = [
   { key: 'all', label: '全部', statuses: null },

@@ -2,17 +2,13 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
 import { addDays, addWeeks, addMonths } from 'date-fns'
-import { IncidentStatus } from '@/types'
+import type { IncidentStatus } from '@/types'
 import DashboardView, { DashboardRow } from '@/components/dashboard/DashboardView'
+import { OPEN_STATUSES } from '@/lib/incident-display'
 
 export const metadata = { title: 'Dashboard | FAMMS' }
 
 const UNSPECIFIED = '__unspecified__'
-
-const OPEN_STATUSES: IncidentStatus[] = [
-  'reported', 'accepted', 'analyzing', 'waiting_parts', 'waiting_approval',
-  'waiting_vendor', 'waiting_shutdown', 'repairing', 'testing', 'observation',
-]
 
 function getNextDueDate(lastMaintained: string | null, pmType: string, intervalDays?: number | null): Date {
   const base = lastMaintained ? new Date(lastMaintained) : new Date()

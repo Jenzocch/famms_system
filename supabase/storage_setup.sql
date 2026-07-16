@@ -15,6 +15,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('attachments', 'attachments', false)
 ON CONFLICT (id) DO NOTHING;
 
+-- File-type/size limits were previously enforced ONLY client-side (the
+-- compression helpers) — any authenticated user could call the Storage REST
+-- API directly and upload an arbitrarily large or arbitrarily-typed file
+-- (including HTML with an embedded script, served back with an
+-- attacker-chosen Content-Type) into this PUBLIC, publicly-READABLE bucket.
+-- These match src/lib/constants.ts's ACCEPTED_IMAGE_TYPES/MAX_FILE_SIZE_MB.
+UPDATE storage.buckets
+SET file_size_limit = 10485760, -- 10 MB
+    allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp']
+WHERE id = 'incident-photos';
+
 -- ----------------------------------------------------------------------------
 -- Policies for incident-photos (public read, authenticated write/manage)
 -- ----------------------------------------------------------------------------
