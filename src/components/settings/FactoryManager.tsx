@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Loader2, Trash2, Edit2, Plus, ChevronDown, ChevronRight, MapPin, Camera } from 'lucide-react'
+import { Loader2, Trash2, Edit2, Plus, ChevronDown, ChevronRight, MapPin, Camera, Images } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { invalidateFactories } from '@/lib/useFactories'
 
@@ -413,17 +413,32 @@ export default function FactoryManager() {
                       </div>
                       <div>
                         <Label>{t('settings.areaPhoto', '參考照片（選填，方便回報時辨識位置）')}</Label>
-                        <div className="mt-1 flex items-center gap-3">
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
                           {areaForm.photo_url && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={areaForm.photo_url} alt="" className="w-14 h-14 rounded-lg object-cover" />
                           )}
+                          {/* Two explicit buttons instead of one merged
+                              picker: a single <input accept="image/*"> without
+                              `capture` leaves the chooser's contents up to the
+                              OS, which is unreliable across Android devices —
+                              sometimes camera is missing, sometimes gallery
+                              is. Dedicated inputs guarantee both always work. */}
                           <label className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50">
                             {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                            {t('settings.areaPhotoCamera', '拍照')}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              disabled={uploadingPhoto}
+                              onChange={e => { const f = e.target.files?.[0]; if (f) uploadAreaPhoto(f); e.target.value = '' }}
+                            />
+                          </label>
+                          <label className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50">
+                            {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Images className="w-4 h-4" />}
                             {areaForm.photo_url ? t('settings.areaPhotoReplace', '更換照片') : t('settings.areaPhotoAdd', '新增照片')}
-                            {/* No `capture`: it forces the camera on Android,
-                                blocking gallery uploads — the OS chooser
-                                offers both without it. */}
                             <input
                               type="file"
                               accept="image/*"

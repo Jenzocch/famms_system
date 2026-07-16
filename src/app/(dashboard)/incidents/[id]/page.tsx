@@ -304,6 +304,7 @@ export default async function IncidentDetailPage({
           factoryId={incident.factory_id}
           machineId={incident.machine_id}
           locationNote={incident.location_note}
+          photoCount={incident.photo_count}
         />
       </CollapsibleSection>
     </div>

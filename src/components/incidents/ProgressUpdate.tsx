@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Camera, X, ZoomIn } from 'lucide-react'
+import { Loader2, Camera, Images, X, ZoomIn } from 'lucide-react'
 import type { IncidentStatus, UserRole } from '@/types'
 import { STATUS_ZH } from '@/lib/incident-display'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -409,24 +409,46 @@ export default function ProgressUpdate({
             </div>
           )}
           {photos.length < 5 && (
-            <label className={`flex items-center gap-2 border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
-              compressing ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
-            }`}>
-              <Camera className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-500">
-                {compressing ? t('progressUpdate.compressing') : t('progressUpdate.addPhoto')}
-              </span>
-              {/* No `capture`: it forces the camera on Android, blocking
-                  gallery uploads — the OS chooser offers both without it. */}
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={e => addPhotos(Array.from(e.target.files ?? []))}
-                disabled={compressing}
-                className="hidden"
-              />
-            </label>
+            // Two explicit buttons instead of one merged picker: a single
+            // <input type="file" accept="image/*"> without `capture` leaves it
+            // up to the OS/browser which options appear in the chooser, and
+            // that's unreliable across Android devices — sometimes camera is
+            // missing, sometimes gallery is. Dedicated inputs (one with
+            // `capture`, one without) guarantee both always work.
+            <div className="flex gap-2">
+              <label className={`flex-1 flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
+                compressing ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+              }`}>
+                <Camera className="w-5 h-5 text-gray-400" />
+                <span className="text-sm text-gray-500">
+                  {compressing ? t('progressUpdate.compressing') : t('progressUpdate.takePhoto', '拍照')}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={e => addPhotos(Array.from(e.target.files ?? []))}
+                  disabled={compressing}
+                  className="hidden"
+                />
+              </label>
+              <label className={`flex-1 flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
+                compressing ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+              }`}>
+                <Images className="w-5 h-5 text-gray-400" />
+                <span className="text-sm text-gray-500">
+                  {compressing ? t('progressUpdate.compressing') : t('progressUpdate.addPhoto')}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={e => addPhotos(Array.from(e.target.files ?? []))}
+                  disabled={compressing}
+                  className="hidden"
+                />
+              </label>
+            </div>
           )}
           {photos.length > 0 && (
             <p className="text-xs text-gray-400">

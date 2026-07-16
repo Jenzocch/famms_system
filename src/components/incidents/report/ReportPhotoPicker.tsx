@@ -1,7 +1,7 @@
 'use client'
 
 import { Label } from '@/components/ui/label'
-import { Camera, X, ZoomIn } from 'lucide-react'
+import { Camera, Images, X, ZoomIn } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 // Photo gallery + capture button for the incident report form. Purely
@@ -50,28 +50,47 @@ export default function ReportPhotoPicker({
           </div>
         )}
         {photos.length < maxPhotos && (
-          // Large, unmistakable tap target — this is usually tapped one-handed
-          // while standing at the fault location, so it needs to be big and
-          // obvious rather than a small inline row.
-          <label className={`flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-xl w-full h-28 cursor-pointer transition-colors ${
-            compressing ? 'border-blue-300 bg-blue-50' : 'border-blue-300 bg-blue-50/60 active:bg-blue-100 hover:border-blue-400'
-          }`}>
-            <Camera className="w-8 h-8 text-blue-500" />
-            <span className="text-sm font-semibold text-blue-700">
-              {compressing ? t('report.compressing') : t('report.takePhoto')}
-            </span>
-            {/* No `capture` attribute: on Android it forces the camera open
-                directly, making gallery uploads impossible. Without it the OS
-                shows its chooser — take a photo OR pick from the album. */}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={e => onAddPhotos(Array.from(e.target.files ?? []))}
-              disabled={compressing}
-              className="hidden"
-            />
-          </label>
+          // Two explicit buttons instead of one merged picker: on some Android
+          // builds, a single <input type="file" accept="image/*"> without
+          // `capture` still opens a chooser that's missing a gallery/album
+          // entry (the merged "let the OS decide" chooser is unreliable across
+          // devices) — a dedicated gallery-only input always works regardless.
+          // Large, unmistakable tap targets — usually tapped one-handed while
+          // standing at the fault location.
+          <div className="flex gap-2">
+            <label className={`flex-1 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-xl h-28 cursor-pointer transition-colors ${
+              compressing ? 'border-blue-300 bg-blue-50' : 'border-blue-300 bg-blue-50/60 active:bg-blue-100 hover:border-blue-400'
+            }`}>
+              <Camera className="w-7 h-7 text-blue-500" />
+              <span className="text-sm font-semibold text-blue-700">
+                {compressing ? t('report.compressing') : t('report.takePhoto')}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={e => onAddPhotos(Array.from(e.target.files ?? []))}
+                disabled={compressing}
+                className="hidden"
+              />
+            </label>
+            <label className={`flex-1 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-xl h-28 cursor-pointer transition-colors ${
+              compressing ? 'border-blue-300 bg-blue-50' : 'border-blue-300 bg-blue-50/60 active:bg-blue-100 hover:border-blue-400'
+            }`}>
+              <Images className="w-7 h-7 text-blue-500" />
+              <span className="text-sm font-semibold text-blue-700">
+                {compressing ? t('report.compressing') : t('report.chooseFromGallery', '選擇相簿')}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={e => onAddPhotos(Array.from(e.target.files ?? []))}
+                disabled={compressing}
+                className="hidden"
+              />
+            </label>
+          </div>
         )}
         {photos.length > 0 && (
           <p className="text-xs text-gray-400 mt-2">

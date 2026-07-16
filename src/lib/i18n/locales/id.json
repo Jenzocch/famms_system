@@ -79,6 +79,7 @@
     "descPlaceholder": "Detail: di mana, apa, kapan mulai...",
     "photos": "Foto lokasi (maks 5, auto-kompres)",
     "takePhoto": "Ambil atau pilih foto",
+    "chooseFromGallery": "Pilih dari galeri",
     "compressing": "Mengompres...",
     "submit": "Kirim Laporan",
     "fillRequired": "Harap isi pabrik, judul dan deskripsi",
@@ -220,6 +221,7 @@
     "photos": "Foto hasil kerja (opsional)",
     "compressing": "Mengompres...",
     "addPhoto": "Tambah foto",
+    "takePhoto": "Ambil foto",
     "submit": "Kirim pembaruan",
     "photoCount": "{count} foto ({mb} MB)",
     "compressedToast": "{count} foto dikompres",
@@ -521,6 +523,7 @@
     "areaDescPlaceholder": "Deskripsi area...",
     "areaPhoto": "Foto referensi (opsional — memudahkan identifikasi area saat melapor)",
     "areaPhotoAdd": "Tambah foto",
+    "areaPhotoCamera": "Ambil foto",
     "areaPhotoReplace": "Ganti foto",
     "addAsset": "Tambah Mesin / Item",
     "editAsset": "Ubah Mesin / Item",
@@ -809,6 +812,7 @@
     "save": "Simpan",
     "cancel": "Batal",
     "updated": "Kasus diperbarui",
+    "photoUploadFailed": "Kasus diperbarui, tapi foto gagal diunggah",
     "updateFailed": "Gagal memperbarui"
   },
   "login": {

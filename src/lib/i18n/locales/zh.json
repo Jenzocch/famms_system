@@ -79,6 +79,7 @@
     "descPlaceholder": "詳細描述：問題發生位置、狀況、何時開始...",
     "photos": "現場照片（最多 5 張，自動壓縮）",
     "takePhoto": "拍照或選擇照片",
+    "chooseFromGallery": "選擇相簿",
     "compressing": "壓縮中...",
     "submit": "送出回報",
     "fillRequired": "請填寫工廠、標題和問題描述",
@@ -220,6 +221,7 @@
     "photos": "工作照片（選填）",
     "compressing": "壓縮中...",
     "addPhoto": "新增照片",
+    "takePhoto": "拍照",
     "submit": "送出更新",
     "photoCount": "共 {count} 張（{mb} MB）",
     "compressedToast": "壓縮 {count} 張圖片完成",
@@ -521,6 +523,7 @@
     "areaDescPlaceholder": "區域描述...",
     "areaPhoto": "參考照片（選填，方便回報時辨識位置）",
     "areaPhotoAdd": "新增照片",
+    "areaPhotoCamera": "拍照",
     "areaPhotoReplace": "更換照片",
     "addAsset": "新增機器/項目",
     "editAsset": "編輯機器/項目",
@@ -809,6 +812,7 @@
     "save": "儲存",
     "cancel": "取消",
     "updated": "工單已更新",
+    "photoUploadFailed": "工單已更新，但照片上傳失敗",
     "updateFailed": "更新失敗"
   },
   "login": {

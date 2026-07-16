@@ -79,6 +79,7 @@
     "descPlaceholder": "Details: where, what, when it started...",
     "photos": "Site photos (max 5, auto-compressed)",
     "takePhoto": "Take or choose photos",
+    "chooseFromGallery": "Choose from gallery",
     "compressing": "Compressing...",
     "submit": "Submit Report",
     "fillRequired": "Please fill in factory, title and description",
@@ -220,6 +221,7 @@
     "photos": "Photos of the work (optional)",
     "compressing": "Compressing...",
     "addPhoto": "Add photo",
+    "takePhoto": "Take photo",
     "submit": "Submit update",
     "photoCount": "{count} photos ({mb} MB)",
     "compressedToast": "Compressed {count} photo(s)",
@@ -521,6 +523,7 @@
     "areaDescPlaceholder": "Area description...",
     "areaPhoto": "Reference photo (optional — helps identify the area when reporting)",
     "areaPhotoAdd": "Add photo",
+    "areaPhotoCamera": "Take photo",
     "areaPhotoReplace": "Replace photo",
     "addAsset": "Add Machine / Item",
     "editAsset": "Edit Machine / Item",
@@ -809,6 +812,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "updated": "Case updated",
+    "photoUploadFailed": "Case updated, but photo upload failed",
     "updateFailed": "Update failed"
   },
   "login": {

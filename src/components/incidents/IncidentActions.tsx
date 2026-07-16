@@ -23,6 +23,8 @@ import { deadlineFromUrgency } from '@/lib/incident-display'
 import { useIncidentTypes } from '@/lib/useIncidentTypes'
 import { useIncidentTypeLabel } from '@/lib/incident-type-label'
 import { useI18n } from '@/lib/i18n'
+import { usePhotoCapture } from '@/lib/hooks/usePhotoCapture'
+import ReportPhotoPicker from '@/components/incidents/report/ReportPhotoPicker'
 
 // Fallback types used if the incident_types table is empty
 const FALLBACK_ISSUE_TYPES = [
@@ -56,11 +58,12 @@ interface IncidentActionsProps {
   factoryId?: string | null
   machineId?: string | null
   locationNote?: string | null
+  photoCount?: number | null
 }
 
 export default function IncidentActions({
   incidentId, title, description, incidentType, impact, dueDate, userRole = 'technician',
-  userName, factoryId, machineId, locationNote,
+  userName, factoryId, machineId, locationNote, photoCount,
 }: IncidentActionsProps) {
   const canEdit = PERMISSIONS.editIncident(userRole)
   const canDelete = PERMISSIONS.deleteIncident(userRole)
@@ -90,6 +93,13 @@ export default function IncidentActions({
   const [locNote, setLocNote] = useState(locationNote || '')
   const [areas, setAreas] = useState<{ id: string; name: string }[]>([])
   const [machines, setMachines] = useState<{ id: string; machine_name: string; machine_code: string | null }[]>([])
+
+  // Photos added while editing land in the same top-level incident-photos/{id}/
+  // folder as the original report's photos (no DB row needed — the detail
+  // page already lists that folder), so they just show up alongside them.
+  // Capped at 5 per edit, same as the report form; not cumulative across
+  // separate edits since the picker resets after each save.
+  const photoCapture = usePhotoCapture(5)
 
   // Preselect the area from the current machine once, when editing opens.
   useEffect(() => {
@@ -153,6 +163,31 @@ export default function IncidentActions({
         changeSummary: '工單內容已更新',
         factoryId: fId || factoryId || undefined,
       })
+
+      // Photos, if any were added — best-effort: the text edit is already
+      // saved, so a storage hiccup here must not surface as a failed save.
+      // Uploaded straight into the folder the detail page already lists for
+      // the original report's photos, so they appear there with no new
+      // column/table needed.
+      if (photoCapture.photos.length > 0) {
+        let uploaded = 0
+        try {
+          for (const [i, photo] of photoCapture.photos.entries()) {
+            const ext = photo.name.split('.').pop()
+            const path = `${incidentId}/${Date.now()}-${i}.${ext}`
+            const { error: upErr } = await supabase.storage.from('incident-photos').upload(path, photo)
+            if (upErr) throw upErr
+            uploaded++
+          }
+        } catch (photoErr) {
+          console.error('Photo upload failed:', photoErr)
+          toast.warning(tr('caseEdit.photoUploadFailed', '工單已更新，但照片上傳失敗'))
+        }
+        if (uploaded > 0) {
+          await supabase.from('incidents').update({ photo_count: (photoCount ?? 0) + uploaded }).eq('id', incidentId)
+        }
+        photoCapture.resetPhotos()
+      }
 
       toast.success(tr('caseEdit.updated'))
       setEditing(false)
@@ -364,6 +399,17 @@ export default function IncidentActions({
         )}
       </div>
 
+      {canEdit && (
+        <ReportPhotoPicker
+          photos={photoCapture.photos}
+          photoPreviews={photoCapture.photoPreviews}
+          compressing={photoCapture.compressing}
+          maxPhotos={5}
+          onAddPhotos={photoCapture.addPhotos}
+          onRemovePhoto={photoCapture.removePhoto}
+        />
+      )}
+
       <div className="flex gap-2">
         {canEdit && (
           <Button
@@ -375,7 +421,7 @@ export default function IncidentActions({
             {tr('caseEdit.save')}
           </Button>
         )}
-        <Button variant="outline" onClick={() => setEditing(false)}>{tr('caseEdit.cancel')}</Button>
+        <Button variant="outline" onClick={() => { photoCapture.resetPhotos(); setEditing(false) }}>{tr('caseEdit.cancel')}</Button>
       </div>
     </div>
   )
