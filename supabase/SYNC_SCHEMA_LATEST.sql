@@ -50,6 +50,63 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS estimated_completion_date DATE;
 -- existed (their photos still show on the detail page as always).
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS photo_count INT NOT NULL DEFAULT 0;
 
+-- Which factory an RCA record was filed for. Without this, the mandatory-RCA
+-- close gate (checkRCARequirement in src/lib/rca.ts) could not tell "an RCA
+-- exists for this failure_code" apart from "an RCA exists for this failure_code
+-- AT THIS FACTORY" — so one factory filing an RCA silently satisfied the gate
+-- for every OTHER factory hitting the same failure_code, even though they
+-- never investigated their own root cause. NULL only for rows created before
+-- this fix (can't be safely backfilled without the incident that triggered
+-- them); the app's own satisfied-check now scopes by factory_id, so those
+-- legacy rows just won't match any factory going forward.
+ALTER TABLE rca_records ADD COLUMN IF NOT EXISTS factory_id UUID REFERENCES factories(id);
+
+-- ---------------------------------------------------------------------------
+-- STORAGE — lock down the public incident-photos bucket
+-- ---------------------------------------------------------------------------
+-- Previously enforced ONLY client-side — any authenticated user could call
+-- the Storage REST API directly and upload an arbitrarily large or
+-- arbitrarily-typed file into this PUBLIC, publicly-readable bucket. Matches
+-- src/lib/constants.ts's ACCEPTED_IMAGE_TYPES / MAX_FILE_SIZE_MB. No-op if
+-- the bucket doesn't exist yet (storage_setup.sql creates it).
+UPDATE storage.buckets
+SET file_size_limit = 10485760, -- 10 MB
+    allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp']
+WHERE id = 'incident-photos';
+
+-- ---------------------------------------------------------------------------
+-- INCIDENTS — machine must belong to the incident's own factory
+-- ---------------------------------------------------------------------------
+-- RLS's incidents_ins/upd policies only check factory_id is one you can
+-- access — nothing enforced that machine_id actually BELONGS to that
+-- factory_id. Every app write path (report form, edit form, Telegram /lapor)
+-- happened to only ever offer factory-matched machines through their own UI,
+-- but nothing stopped a direct API/devtools call from pointing factory_id at
+-- one factory and machine_id at another factory's machine — polluting that
+-- machine's fault history, health score, and KPIs with fabricated incidents.
+-- One trigger closes the gap for every write path at once, present and
+-- future, instead of patching each call site individually.
+CREATE OR REPLACE FUNCTION enforce_incident_machine_factory()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.machine_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM machines WHERE id = NEW.machine_id AND factory_id = NEW.factory_id
+    ) THEN
+      RAISE EXCEPTION 'machine_id % does not belong to factory_id %', NEW.machine_id, NEW.factory_id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS incidents_machine_factory_guard ON incidents;
+CREATE TRIGGER incidents_machine_factory_guard
+  BEFORE INSERT OR UPDATE OF machine_id, factory_id ON incidents
+  FOR EACH ROW EXECUTE FUNCTION enforce_incident_machine_factory();
+
 -- Marks a login as a SHARED DEVICE account (e.g. one tablet logged in
 -- permanently and handed between several technicians) rather than one
 -- person's own login. The report form auto-fills "回報人" from whoever is

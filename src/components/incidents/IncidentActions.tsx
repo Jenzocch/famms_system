@@ -58,7 +58,6 @@ interface IncidentActionsProps {
   factoryId?: string | null
   machineId?: string | null
   locationNote?: string | null
-  photoCount?: number | null
   // Existing report photos (storage paths) — shown in the edit form so a
   // supervisor can remove a wrong/blurry one.
   reportPhotos?: string[]
@@ -70,7 +69,7 @@ interface IncidentActionsProps {
 
 export default function IncidentActions({
   incidentId, title, description, incidentType, impact, dueDate, userRole = 'technician',
-  userName, factoryId, machineId, locationNote, photoCount,
+  userName, factoryId, machineId, locationNote,
   reportPhotos = [], supabaseUrl = '', isReporter = false,
 }: IncidentActionsProps) {
   const canEdit = PERMISSIONS.editIncident(userRole)
@@ -220,7 +219,16 @@ export default function IncidentActions({
           toast.warning(tr('caseEdit.photoUploadFailed', '工單已更新，但照片上傳失敗'))
         }
         if (uploaded > 0) {
-          await supabase.from('incidents').update({ photo_count: (photoCount ?? 0) + uploaded }).eq('id', incidentId)
+          // Recount from storage rather than "stale prop + uploaded" — two
+          // people adding photos to the same incident near-simultaneously
+          // would otherwise both compute the same stale total and the
+          // second save silently undercounts (matches the delete route's
+          // same recount-not-decrement reasoning).
+          try {
+            const { data: files } = await supabase.storage.from('incident-photos').list(incidentId, { limit: 100 })
+            const count = (files ?? []).filter(f => f.id && !f.name.startsWith('.')).length
+            await supabase.from('incidents').update({ photo_count: count }).eq('id', incidentId)
+          } catch { /* count is cosmetic (board badge) — never fail the save over it */ }
         }
         photoCapture.resetPhotos()
       }

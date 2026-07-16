@@ -501,6 +501,7 @@
     "create": "Tambah",
     "cancel": "Batal",
     "selectFactory": "Pilih pabrik",
+    "allFactories": "Semua pabrik (lintas pabrik)",
     "selectArea": "Pilih area",
     "nameCodeRequired": "Nama dan kode wajib diisi",
     "operationFailed": "Operasi gagal",
@@ -884,6 +885,8 @@
     "selectFactory": "Pilih pabrik",
     "role": "Peran",
     "contactAdmin": "Hubungi admin untuk ubah role",
+    "noFactory": "Belum ditugaskan",
+    "contactAdminFactory": "Hubungi admin untuk mengubah pabrik",
     "save": "Simpan",
     "saved": "Profil berhasil disimpan"
   },

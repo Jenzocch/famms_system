@@ -32,6 +32,21 @@ export async function DELETE(
   }
 
   const admin = createAdminClient()
+
+  // This route runs on the admin client (storage delete needs it), which
+  // bypasses RLS entirely — so factory scoping has to happen here, in code,
+  // same as the board/dashboard queries do. A factory-scoped supervisor must
+  // not be able to delete evidence on another factory's incident just by
+  // knowing its id. Admins (and any account with no single factory_id, i.e.
+  // cross-factory manager/director) are unrestricted, matching every other
+  // cross-factory view in the app.
+  if (user.role !== 'admin' && user.factory_id) {
+    const { data: incident } = await admin.from('incidents').select('factory_id').eq('id', id).maybeSingle()
+    if (!incident) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (incident.factory_id !== user.factory_id) {
+      return NextResponse.json({ error: '無權限操作其他工廠的工單' }, { status: 403 })
+    }
+  }
   const { error: rmErr } = await admin.storage.from('incident-photos').remove([path])
   if (rmErr) return NextResponse.json({ error: rmErr.message }, { status: 500 })
 

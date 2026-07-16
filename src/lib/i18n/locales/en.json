@@ -501,6 +501,7 @@
     "create": "Add",
     "cancel": "Cancel",
     "selectFactory": "Select factory",
+    "allFactories": "All factories (cross-factory)",
     "selectArea": "Select area",
     "nameCodeRequired": "Name and code are required",
     "operationFailed": "Operation failed",
@@ -884,6 +885,8 @@
     "selectFactory": "Select factory",
     "role": "Role",
     "contactAdmin": "Contact an admin to change your role",
+    "noFactory": "Not assigned",
+    "contactAdminFactory": "Contact an admin to change your factory",
     "save": "Save",
     "saved": "Profile saved"
   },

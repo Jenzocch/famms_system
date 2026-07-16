@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const body = await req.json()
   const {
     failure_code_id,
+    factory_id,
     root_cause,
     corrective_action,
     preventive_action,
@@ -24,17 +25,26 @@ export async function POST(req: Request) {
     due_date,
   } = body
 
-  if (!failure_code_id || !root_cause || !corrective_action || !preventive_action || !responsible_person_id || !due_date) {
+  if (!failure_code_id || !factory_id || !root_cause || !corrective_action || !preventive_action || !responsible_person_id || !due_date) {
     return NextResponse.json(
-      { error: 'Semua field RCA wajib diisi (root cause, corrective, preventive, PIC, due date)' },
+      { error: 'Semua field RCA wajib diisi (kode kegagalan, pabrik, root cause, corrective, preventive, PIC, due date)' },
       { status: 400 }
     )
+  }
+  // A factory-scoped submitter (has their own factory_id) can only file an
+  // RCA under their own factory — otherwise they could satisfy another
+  // factory's mandatory-RCA gate without that factory ever investigating.
+  // Cross-factory accounts (manager/director/admin with no single factory_id)
+  // may file for any factory.
+  if (currentUser.factory_id && factory_id !== currentUser.factory_id) {
+    return NextResponse.json({ error: '只能為自己的工廠建立 RCA' }, { status: 403 })
   }
 
   const { data: rca, error } = await supabase
     .from('rca_records')
     .insert({
       failure_code_id,
+      factory_id,
       root_cause,
       corrective_action,
       preventive_action,

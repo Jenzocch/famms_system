@@ -31,6 +31,19 @@ export async function submitIncidentReport(
 ): Promise<{ id: string; incident_no: string; photoUploadFailed: boolean }> {
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Shared-device backstop: the "must pick a real reporter" rule was only
+  // enforced client-side (IncidentForm.tsx / useReporterAccounts.ts) — a
+  // caller that skips that UI (or a future call site of this function) could
+  // silently create an incident attributed to nobody from a shared-tablet
+  // login. Re-check here, at the one place every report actually gets
+  // written, regardless of who's calling it.
+  if (user?.id && !input.reporterName.trim()) {
+    const { data: profile } = await supabase.from('profiles').select('is_shared_device').eq('id', user.id).maybeSingle()
+    if (profile?.is_shared_device) {
+      throw new Error('這是共用裝置，請選擇實際回報的人 / This is a shared device — pick the actual reporter')
+    }
+  }
+
   // Idempotency short-circuit: on a flaky-signal retry (same clientRequestId,
   // e.g. the user hit submit again after an ambiguous timeout), a matching
   // row means the FIRST attempt actually went through — return it as-is

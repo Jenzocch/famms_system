@@ -501,6 +501,7 @@
     "create": "新增",
     "cancel": "取消",
     "selectFactory": "選擇工廠",
+    "allFactories": "全部工廠（跨廠）",
     "selectArea": "選擇區域",
     "nameCodeRequired": "名稱和代碼必填",
     "operationFailed": "操作失敗",
@@ -884,6 +885,8 @@
     "selectFactory": "選擇工廠",
     "role": "角色",
     "contactAdmin": "請聯繫管理員修改角色",
+    "noFactory": "未指派",
+    "contactAdminFactory": "請聯繫管理員修改工廠",
     "save": "儲存",
     "saved": "個人資料已儲存"
   },

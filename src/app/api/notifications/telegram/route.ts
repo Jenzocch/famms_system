@@ -8,6 +8,7 @@ import {
 } from '@/lib/telegram'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
+import { timingSafeEqualString } from '@/lib/timing-safe-equal'
 import type { IncidentStatus } from '@/types'
 
 // POST /api/notifications/telegram — Telegram bot webhook.
@@ -559,7 +560,8 @@ export async function POST(req: Request) {
   // not accept, or anyone can POST forged updates and make the bot message
   // arbitrary chat_ids on the company's behalf.
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (!secret || req.headers.get('x-telegram-bot-api-secret-token') !== secret) {
+  const incomingSecret = req.headers.get('x-telegram-bot-api-secret-token')
+  if (!secret || !incomingSecret || !timingSafeEqualString(incomingSecret, secret)) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
 

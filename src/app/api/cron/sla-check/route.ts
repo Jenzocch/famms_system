@@ -4,6 +4,7 @@ import {
   isTelegramConfigured, notifyFactory, formatDailySummary, esc,
 } from '@/lib/telegram'
 import { SLA_MINUTES } from '@/lib/constants'
+import { timingSafeEqualString } from '@/lib/timing-safe-equal'
 import type { DowntimeImpact } from '@/types'
 
 // GET /api/cron/sla-check — scheduled escalation sweep (vercel.json cron).
@@ -19,7 +20,7 @@ import type { DowntimeImpact } from '@/types'
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization')
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!secret || !auth || !timingSafeEqualString(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!isTelegramConfigured()) {

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { wibTodayStr } from '@/lib/pm'
+import { timingSafeEqualString } from '@/lib/timing-safe-equal'
 
 // GET /api/external/machine-status?factory_code=DIN&machine_code=HMG-001
 //
@@ -13,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function GET(req: Request) {
   const secret = process.env.QC_API_SECRET
   const auth = req.headers.get('authorization')
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!secret || !auth || !timingSafeEqualString(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -45,8 +47,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'machine not found' }, { status: 404 })
   }
 
-  // PM overdue: pending records whose scheduled_date has passed.
-  const today = new Date().toISOString().split('T')[0]
+  // PM overdue: pending records whose scheduled_date has passed. Factory-local
+  // (WIB, UTC+7) date, not toISOString()'s UTC date — otherwise "today" lags
+  // by one day between WIB 00:00-07:00, letting ok_to_run/maintenance_ok
+  // report "up to date" for up to 7 hours after a PM is genuinely overdue.
+  const today = wibTodayStr()
   const { data: schedules } = await supabase
     .from('pm_schedules')
     .select('id')

@@ -5,6 +5,7 @@ import { Loader2, Search, CalendarClock, CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 import { toast } from 'sonner'
+import { wibTodayStr } from '@/lib/pm'
 
 interface PMDueListProps {
   factoryId: string
@@ -38,8 +39,11 @@ const PM_TYPE_KEYS: Record<string, string> = {
 // Only these statuses are "things a technician still needs to do".
 const ACTIONABLE = new Set(['overdue', 'pending', 'scheduled'])
 
+// Factory-local (WIB, UTC+7) date, not toISOString()'s UTC date — otherwise
+// "today" lags by one day between WIB 00:00-07:00, showing a genuinely
+// overdue task as merely "due today" and undercounting the overdue badge.
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return wibTodayStr()
 }
 
 function daysBetween(from: string, to: string): number {
