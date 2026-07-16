@@ -37,7 +37,7 @@ export const URGENCY_FROM_IMPACT: Record<string, { label: string; color: string 
 // SLA: how many days until a case is due, based on its urgency (downtime_impact).
 // The deadline is the single benchmark technicians sort by; urgency just decides
 // how tight it is. Admins/supervisors can still override the date manually.
-export const URGENCY_SLA_DAYS: Record<string, number> = { A: 0, B: 1, C: 3, D: 7 }
+export const URGENCY_SLA_DAYS: Record<string, number> = { A: 0, B: 1, C: 7, D: 30 }
 
 // Returns a YYYY-MM-DD due date computed from urgency, counting from `base`.
 // Formatted from LOCAL date parts, never toISOString(): that converts to UTC
@@ -45,7 +45,7 @@ export const URGENCY_SLA_DAYS: Record<string, number> = { A: 0, B: 1, C: 3, D: 7
 // still "yesterday" — night-shift urgent reports were getting a due date one
 // day early and showing as overdue the moment they were created.
 export function deadlineFromUrgency(impact: string, base: Date = new Date()): string {
-  const days = URGENCY_SLA_DAYS[impact] ?? 7
+  const days = URGENCY_SLA_DAYS[impact] ?? 30
   const d = new Date(base)
   d.setDate(d.getDate() + days)
   const pad = (n: number) => String(n).padStart(2, '0')
