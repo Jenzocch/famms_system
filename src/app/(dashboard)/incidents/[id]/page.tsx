@@ -305,6 +305,9 @@ export default async function IncidentDetailPage({
           machineId={incident.machine_id}
           locationNote={incident.location_note}
           photoCount={incident.photo_count}
+          reportPhotos={reportPhotos}
+          supabaseUrl={supabaseUrl}
+          isReporter={!!user && incident.reported_by_id === user.id}
         />
       </CollapsibleSection>
     </div>

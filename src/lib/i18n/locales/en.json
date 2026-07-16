@@ -4,6 +4,7 @@
     "overview": "Work orders & maintenance overview",
     "open": "Open cases",
     "urgent": "Urgent cases",
+    "stale": "Stale cases",
     "cases": "{count} cases",
     "openByFactory": "Open cases by factory",
     "noOpen": "No open cases",
@@ -815,6 +816,11 @@
     "cancel": "Cancel",
     "updated": "Case updated",
     "photoUploadFailed": "Case updated, but photo upload failed",
+    "existingPhotos": "Uploaded photos",
+    "deletePhoto": "Delete photo",
+    "confirmDeletePhoto": "Delete this photo?",
+    "photoDeleted": "Photo deleted",
+    "deletePhotoFailed": "Failed to delete photo",
     "updateFailed": "Update failed"
   },
   "login": {

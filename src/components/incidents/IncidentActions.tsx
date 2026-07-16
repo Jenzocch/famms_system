@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Loader2, Pencil, Trash2, Lock } from 'lucide-react'
+import { Loader2, Pencil, Trash2, Lock, X } from 'lucide-react'
 import type { UserRole } from '@/types'
 import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
@@ -59,14 +59,23 @@ interface IncidentActionsProps {
   machineId?: string | null
   locationNote?: string | null
   photoCount?: number | null
+  // Existing report photos (storage paths) — shown in the edit form so a
+  // supervisor can remove a wrong/blurry one.
+  reportPhotos?: string[]
+  supabaseUrl?: string
+  // The original reporter may ADD photos (retake a blurry shot) even without
+  // edit permission; deleting stays supervisor+ (photos are field evidence).
+  isReporter?: boolean
 }
 
 export default function IncidentActions({
   incidentId, title, description, incidentType, impact, dueDate, userRole = 'technician',
   userName, factoryId, machineId, locationNote, photoCount,
+  reportPhotos = [], supabaseUrl = '', isReporter = false,
 }: IncidentActionsProps) {
   const canEdit = PERMISSIONS.editIncident(userRole)
   const canDelete = PERMISSIONS.deleteIncident(userRole)
+  const canAddPhotos = canEdit || isReporter
   const router = useRouter()
   const supabase = createClient()
   const { t: tr } = useI18n()
@@ -100,6 +109,27 @@ export default function IncidentActions({
   // Capped at 5 per edit, same as the report form; not cumulative across
   // separate edits since the picker resets after each save.
   const photoCapture = usePhotoCapture(5)
+  const [deletingPhoto, setDeletingPhoto] = useState<string | null>(null)
+
+  async function deletePhoto(path: string) {
+    if (!confirm(tr('caseEdit.confirmDeletePhoto', '確定刪除這張照片？'))) return
+    setDeletingPhoto(path)
+    try {
+      const res = await fetch(`/api/incidents/${incidentId}/photos`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || tr('caseEdit.deletePhotoFailed', '刪除照片失敗'))
+      toast.success(tr('caseEdit.photoDeleted', '照片已刪除'))
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : tr('caseEdit.deletePhotoFailed', '刪除照片失敗'))
+    } finally {
+      setDeletingPhoto(null)
+    }
+  }
 
   // Preselect the area from the current machine once, when editing opens.
   useEffect(() => {
@@ -132,37 +162,43 @@ export default function IncidentActions({
     : FALLBACK_ISSUE_TYPES
 
   async function saveEdit() {
-    if (!t.trim()) { toast.error(tr('caseEdit.titleRequired')); return }
+    if (canEdit && !t.trim()) { toast.error(tr('caseEdit.titleRequired')); return }
     setSubmitting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase
-        .from('incidents')
-        .update({
-          factory_id: fId || null,
-          machine_id: mId || null,
-          location_note: locNote.trim() || null,
-          title: t,
-          description: d || null,
-          incident_type: type,
-          downtime_impact: urg,
-          due_date: due || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', incidentId)
-      if (error) throw error
+      // Text/field changes are supervisor+ only. A reporter without edit
+      // permission reaches this save purely to attach photos — skipping the
+      // update also avoids a guaranteed rejection from the DB field-guard
+      // trigger (migration_rls_5).
+      if (canEdit) {
+        const { error } = await supabase
+          .from('incidents')
+          .update({
+            factory_id: fId || null,
+            machine_id: mId || null,
+            location_note: locNote.trim() || null,
+            title: t,
+            description: d || null,
+            incident_type: type,
+            downtime_impact: urg,
+            due_date: due || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', incidentId)
+        if (error) throw error
 
-      await logAuditEvent(supabase, {
-        userId: user?.id ?? null,
-        userName: userName || null,
-        actionType: 'update',
-        resourceType: 'incident',
-        resourceId: incidentId,
-        oldValue: { factory_id: factoryId, machine_id: machineId, location_note: locationNote, title, description, incident_type: incidentType, downtime_impact: impact, due_date: dueDate },
-        newValue: { factory_id: fId || null, machine_id: mId || null, location_note: locNote.trim() || null, title: t, description: d || null, incident_type: type, downtime_impact: urg, due_date: due || null },
-        changeSummary: '工單內容已更新',
-        factoryId: fId || factoryId || undefined,
-      })
+        await logAuditEvent(supabase, {
+          userId: user?.id ?? null,
+          userName: userName || null,
+          actionType: 'update',
+          resourceType: 'incident',
+          resourceId: incidentId,
+          oldValue: { factory_id: factoryId, machine_id: machineId, location_note: locationNote, title, description, incident_type: incidentType, downtime_impact: impact, due_date: dueDate },
+          newValue: { factory_id: fId || null, machine_id: mId || null, location_note: locNote.trim() || null, title: t, description: d || null, incident_type: type, downtime_impact: urg, due_date: due || null },
+          changeSummary: '工單內容已更新',
+          factoryId: fId || factoryId || undefined,
+        })
+      }
 
       // Photos, if any were added — best-effort: the text edit is already
       // saved, so a storage hiccup here must not surface as a failed save.
@@ -399,7 +435,43 @@ export default function IncidentActions({
         )}
       </div>
 
-      {canEdit && (
+      {/* Existing report photos — supervisor+ can remove a wrong/blurry one
+          (audit-logged, via API); everyone else just sees them for context. */}
+      {reportPhotos.length > 0 && (
+        <div>
+          <Label>{tr('caseEdit.existingPhotos', '已上傳的照片')}</Label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {reportPhotos.map(path => (
+              <div key={path} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${supabaseUrl}/storage/v1/object/public/incident-photos/${path}`}
+                  alt=""
+                  className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                />
+                {canEdit && (
+                  <button
+                    type="button"
+                    aria-label={tr('caseEdit.deletePhoto', '刪除照片')}
+                    onClick={() => deletePhoto(path)}
+                    disabled={deletingPhoto === path}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-red-600 disabled:opacity-50"
+                  >
+                    {deletingPhoto === path
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <X className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Adding photos is open to the original reporter too — a blurry or
+          wrong shot gets FIXED by adding a clearer one, not by deletion
+          (which stays supervisor-only above). */}
+      {canAddPhotos && (
         <ReportPhotoPicker
           photos={photoCapture.photos}
           photoPreviews={photoCapture.photoPreviews}
@@ -411,10 +483,12 @@ export default function IncidentActions({
       )}
 
       <div className="flex gap-2">
-        {canEdit && (
+        {canAddPhotos && (
           <Button
             onClick={saveEdit}
-            disabled={submitting}
+            // A photo-only editor (the reporter) has nothing to save until
+            // they've actually picked a photo.
+            disabled={submitting || (!canEdit && photoCapture.photos.length === 0)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

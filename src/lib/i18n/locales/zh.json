@@ -4,6 +4,7 @@
     "overview": "工單與保養總覽",
     "open": "未結案工單",
     "urgent": "緊急工單",
+    "stale": "停滯工單",
     "cases": "{count} 件",
     "openByFactory": "各廠未結案工單",
     "noOpen": "目前沒有處理中工單",
@@ -815,6 +816,11 @@
     "cancel": "取消",
     "updated": "工單已更新",
     "photoUploadFailed": "工單已更新，但照片上傳失敗",
+    "existingPhotos": "已上傳的照片",
+    "deletePhoto": "刪除照片",
+    "confirmDeletePhoto": "確定刪除這張照片？",
+    "photoDeleted": "照片已刪除",
+    "deletePhotoFailed": "刪除照片失敗",
     "updateFailed": "更新失敗"
   },
   "login": {

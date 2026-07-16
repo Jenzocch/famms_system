@@ -4,6 +4,7 @@
     "overview": "Ikhtisar insiden & perawatan",
     "open": "Kasus aktif",
     "urgent": "Kasus mendesak",
+    "stale": "Kasus mandek",
     "cases": "{count} kasus",
     "openByFactory": "Kasus aktif per pabrik",
     "noOpen": "Tidak ada kasus aktif",
@@ -815,6 +816,11 @@
     "cancel": "Batal",
     "updated": "Kasus diperbarui",
     "photoUploadFailed": "Kasus diperbarui, tapi foto gagal diunggah",
+    "existingPhotos": "Foto yang sudah diunggah",
+    "deletePhoto": "Hapus foto",
+    "confirmDeletePhoto": "Hapus foto ini?",
+    "photoDeleted": "Foto dihapus",
+    "deletePhotoFailed": "Gagal menghapus foto",
     "updateFailed": "Gagal memperbarui"
   },
   "login": {
