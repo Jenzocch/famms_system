@@ -224,18 +224,14 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
                 href={`/incidents/${inc.id}`}
                 className="block p-4 md:p-5 xl:p-6 rounded-2xl active:bg-gray-50 active:scale-[0.98] transition-transform duration-150"
               >
-                {/* Where — factory leads, machine second. Topmost line: which
-                    plant to head to is the first thing to register. */}
-                <p className="flex items-center gap-1 text-[13px] font-medium text-gray-500 truncate">
-                  <Factory className="w-3.5 h-3.5 shrink-0" />
-                  {inc.factory ? inc.factory.name : t('board.noFactory', '未設定工廠')}
-                  {inc.machine ? ` · ${inc.machine.machine_name}` : ''}
-                </p>
-
-                {/* Status pill + (at most) one attention badge, plus the
-                    chevron. Urgency reads from the card's left edge bar
-                    instead of a third pill, so triage stays a glance. */}
-                <div className="flex items-center gap-2 flex-wrap mt-2">
+                {/* Row 1 — factory leads, status pill right beside it (+ one
+                    attention badge, + chevron). First thing to register:
+                    which plant, and does it need attention. */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1 text-[13px] font-medium text-gray-500 truncate">
+                    <Factory className="w-3.5 h-3.5 shrink-0" />
+                    {inc.factory ? inc.factory.name : t('board.noFactory', '未設定工廠')}
+                  </span>
                   <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${STATUS_ZH_COLOR[inc.status]}`}>
                     {t(`boardStatus.${inc.status}`)}
                   </span>
@@ -253,10 +249,27 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
                   <ChevronRight className="w-5 h-5 text-gray-400 shrink-0 ml-auto" />
                 </div>
 
-                {/* Title — the biggest thing on the card */}
+                {/* Row 2 — machine, own line */}
+                {inc.machine && (
+                  <p className="text-[13px] font-medium text-gray-500 truncate mt-1">
+                    {inc.machine.machine_name}
+                  </p>
+                )}
+
+                {/* Row 3 — title, the biggest thing on the card */}
                 <p className="font-bold text-lg xl:text-xl text-gray-900 mt-2.5 leading-snug line-clamp-2">
                   {inc.title || typeLabel(inc.incident_type, t('board.problem')) }
                 </p>
+
+                {/* Photo indicator — right under the title */}
+                {(inc.photo_count ?? 0) > 0 && (
+                  <p
+                    className="flex items-center gap-1 mt-1.5 text-[13px] text-gray-500"
+                    aria-label={`${inc.photo_count} ${t('board.photos', '張照片')}`}
+                  >
+                    <Camera className="w-3.5 h-3.5" /> {inc.photo_count}
+                  </p>
+                )}
 
                 {/* Next-step nudge: what this case needs next, at a glance */}
                 {inc.status !== 'closed' && (
@@ -282,16 +295,6 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
                     )
                   )}
                 </div>
-
-                {/* Photo indicator — last, bottom-most line on the card. */}
-                {(inc.photo_count ?? 0) > 0 && (
-                  <p
-                    className="flex items-center gap-1 mt-1.5 text-[13px] text-gray-500"
-                    aria-label={`${inc.photo_count} ${t('board.photos', '張照片')}`}
-                  >
-                    <Camera className="w-3.5 h-3.5" /> {inc.photo_count}
-                  </p>
-                )}
               </Link>
 
               {/* Nudge for progress — supervisors+ only, open cases only.
