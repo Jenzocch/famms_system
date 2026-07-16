@@ -136,7 +136,7 @@ export default async function IncidentDetailPage({
   const machine = incident.machine as { machine_code: string | null; machine_name: string } | null
   const factory = incident.factory as { name: string; code: string | null } | null
   const status = incident.status as IncidentStatus
-  const urgency = URGENCY_FROM_IMPACT[incident.downtime_impact as 'A' | 'B' | 'C' | 'D']
+  const urgency = URGENCY_FROM_IMPACT[incident.downtime_impact as 'A' | 'C' | 'D'] ?? URGENCY_FROM_IMPACT.A
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const updateRows = (updates ?? []) as UpdateRow[]
   const isClosed = status === 'closed'

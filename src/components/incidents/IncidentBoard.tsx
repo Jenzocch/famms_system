@@ -22,7 +22,6 @@ import NextStepHint from '@/components/incidents/NextStepHint'
 // the calm default.
 const URGENCY_BAR_COLOR: Record<string, string> = {
   A: 'border-l-red-500',
-  B: 'border-l-red-400',
   C: 'border-l-amber-400',
   D: 'border-l-green-500',
 }
@@ -31,7 +30,7 @@ export interface BoardRow {
   id: string
   incident_no: string
   status: IncidentStatus
-  downtime_impact: 'A' | 'B' | 'C' | 'D'
+  downtime_impact: 'A' | 'C' | 'D'
   incident_type: string
   title: string | null
   reporter_name: string | null
@@ -89,7 +88,7 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
   // to tackle next at a glance.
   const today = new Date(new Date().toDateString())
   const todayStr = format(today, 'yyyy-MM-dd')
-  const URGENCY_RANK: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 }
+  const URGENCY_RANK: Record<string, number> = { A: 0, C: 2, D: 3 }
   const isOverdue = (r: BoardRow) =>
     !!r.due_date && r.status !== 'closed' && new Date(r.due_date) < today
   const isObsDue = (r: BoardRow) =>
@@ -210,7 +209,7 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
         // columns read worse than fewer columns.
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-5 xl:gap-6 items-start">
           {sorted.map(inc => {
-            const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact]
+            const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact] ?? URGENCY_FROM_IMPACT.A
             const overdue = isOverdue(inc)
             return (
               // Card chrome lives on the wrapper div; the Link only covers the

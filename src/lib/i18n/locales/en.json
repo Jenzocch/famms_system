@@ -8,7 +8,7 @@
     "cases": "{count} cases",
     "openByFactory": "Open cases by factory",
     "noOpen": "No open cases",
-    "urgentCases": "Urgent cases (A/B)",
+    "urgentCases": "Urgent cases",
     "noUrgent": "No urgent cases",
     "staleCases": "Stale cases (no update in 3+ days)",
     "noStale": "No stale cases",
@@ -67,7 +67,7 @@
     "urgencyLow": "🟢 Normal",
     "urgencyLowDesc": "No rush, within a month",
     "dueDate": "Due date",
-    "dueDateHint": "Leave empty to auto-calculate from urgency (Critical=today, High=1d, Medium=7d, Normal=30d)",
+    "dueDateHint": "Leave empty to auto-calculate from urgency (Critical=today, Medium=7d, Normal=30d)",
     "location": "Location",
     "selectFactory": "Select factory",
     "selectArea": "Select area (optional)",
@@ -192,7 +192,6 @@
   },
   "impactLevels": {
     "A": "Urgent",
-    "B": "High",
     "C": "Medium",
     "D": "Normal"
   },
@@ -717,7 +716,6 @@
   },
   "urgency": {
     "A": "🔴 Urgent",
-    "B": "🟠 High",
     "C": "🟡 Medium",
     "D": "🟢 Normal"
   },

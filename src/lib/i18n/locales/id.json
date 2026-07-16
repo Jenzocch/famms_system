@@ -8,7 +8,7 @@
     "cases": "{count} kasus",
     "openByFactory": "Kasus aktif per pabrik",
     "noOpen": "Tidak ada kasus aktif",
-    "urgentCases": "Kasus mendesak (A/B)",
+    "urgentCases": "Kasus mendesak",
     "noUrgent": "Tidak ada kasus mendesak",
     "staleCases": "Kasus tertunda (tidak diperbarui 3+ hari)",
     "noStale": "Tidak ada kasus tertunda",
@@ -67,7 +67,7 @@
     "urgencyLow": "🟢 Biasa",
     "urgencyLowDesc": "Tidak mendesak, dalam sebulan",
     "dueDate": "Tenggat waktu",
-    "dueDateHint": "Kosongkan untuk dihitung otomatis dari urgensi (Kritis=hari ini, Tinggi=1 hari, Sedang=7 hari, Biasa=30 hari)",
+    "dueDateHint": "Kosongkan untuk dihitung otomatis dari urgensi (Kritis=hari ini, Sedang=7 hari, Biasa=30 hari)",
     "location": "Lokasi",
     "selectFactory": "Pilih pabrik",
     "selectArea": "Pilih area (opsional)",
@@ -192,7 +192,6 @@
   },
   "impactLevels": {
     "A": "Mendesak",
-    "B": "Tinggi",
     "C": "Sedang",
     "D": "Biasa"
   },
@@ -717,7 +716,6 @@
   },
   "urgency": {
     "A": "🔴 Mendesak",
-    "B": "🟠 Tinggi",
     "C": "🟡 Sedang",
     "D": "🟢 Biasa"
   },

@@ -37,14 +37,14 @@ const FALLBACK_ISSUE_TYPES = [
   { value: 'other', label: '其他' },
 ]
 
-// Three urgency levels (A / C / D). Legacy "B" (High) is added back only when
-// editing a case that already carries it, so it still displays and saves.
+// Three urgency levels (A / C / D). Legacy "B" (橘色「高」) is retired: a case
+// that still carries it opens the edit form showing 緊急 (see the B→A mapping
+// on the state init below) and normalizes to A on save.
 const URGENCY = [
   { value: 'A', label: '🔴 緊急' },
   { value: 'C', label: '🟡 中' },
   { value: 'D', label: '🟢 一般' },
 ]
-const URGENCY_LEGACY = { value: 'B', label: '🟠 高' }
 
 interface IncidentActionsProps {
   incidentId: string
@@ -85,7 +85,7 @@ export default function IncidentActions({
   const [t, setT] = useState(title || '')
   const [d, setD] = useState(description || '')
   const [type, setType] = useState(incidentType)
-  const [urg, setUrg] = useState(impact)
+  const [urg, setUrg] = useState(impact === 'B' ? 'A' : impact)
   const [due, setDue] = useState(dueDate || '')
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -396,17 +396,12 @@ export default function IncidentActions({
             </div>
             <div>
               <Label>{tr('caseEdit.urgency')}</Label>
-              {(() => {
-                const choices = URGENCY.some(u => u.value === urg) ? URGENCY : [...URGENCY, URGENCY_LEGACY]
-                return (
-                  <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(choices.map(u => [u.value, tr(`urgency.${u.value}`, u.label)]))}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {choices.map(u => <SelectItem key={u.value} value={u.value}>{tr(`urgency.${u.value}`, u.label)}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )
-              })()}
+              <Select value={urg} onValueChange={(v) => setUrg(v ?? urg)} items={Object.fromEntries(URGENCY.map(u => [u.value, tr(`urgency.${u.value}`, u.label)]))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {URGENCY.map(u => <SelectItem key={u.value} value={u.value}>{tr(`urgency.${u.value}`, u.label)}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

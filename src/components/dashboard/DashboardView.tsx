@@ -15,7 +15,6 @@ import NextStepHint from '@/components/incidents/NextStepHint'
 // the app instead of a redundant pill.
 const URGENCY_BAR_COLOR: Record<string, string> = {
   A: 'border-l-red-500',
-  B: 'border-l-red-400',
   C: 'border-l-amber-400',
   D: 'border-l-green-500',
 }
@@ -24,7 +23,7 @@ export interface DashboardRow {
   id: string
   incident_no: string
   status: IncidentStatus
-  downtime_impact: 'A' | 'B' | 'C' | 'D'
+  downtime_impact: 'A' | 'C' | 'D'
   incident_type: string
   title: string | null
   reported_at: string
@@ -274,7 +273,7 @@ function CaseList({
     // of a redundant pill, used consistently for both urgent and stale lists.
     <div className="bg-white rounded-2xl shadow-sm divide-y divide-gray-100">
       {rows.map(r => {
-        const urgency = URGENCY_FROM_IMPACT[r.downtime_impact]
+        const urgency = URGENCY_FROM_IMPACT[r.downtime_impact] ?? URGENCY_FROM_IMPACT.A
         return (
           <Link
             key={r.id}

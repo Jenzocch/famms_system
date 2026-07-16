@@ -27,9 +27,11 @@ export const ISSUE_TYPE_LABELS: Record<string, string> = {
 // Plain severity levels only — no production-impact wording (全廠停工 /
 // 產能下降 etc. confused reporters into diagnosing impact instead of just
 // saying how urgent it feels).
+// B (橘色「高」) was retired and its DB rows normalized to 'A' — only these
+// three tiers exist. Indexers should fall back for safety (any stray legacy
+// value reads as 緊急 via `?? URGENCY_FROM_IMPACT.A` at the call sites).
 export const URGENCY_FROM_IMPACT: Record<string, { label: string; color: string }> = {
   A: { label: '🔴 緊急', color: 'bg-red-100 text-red-700' },
-  B: { label: '🟠 高', color: 'bg-orange-100 text-orange-700' },
   C: { label: '🟡 中', color: 'bg-yellow-100 text-yellow-700' },
   D: { label: '🟢 一般', color: 'bg-green-100 text-green-700' },
 }
@@ -37,7 +39,7 @@ export const URGENCY_FROM_IMPACT: Record<string, { label: string; color: string 
 // SLA: how many days until a case is due, based on its urgency (downtime_impact).
 // The deadline is the single benchmark technicians sort by; urgency just decides
 // how tight it is. Admins/supervisors can still override the date manually.
-export const URGENCY_SLA_DAYS: Record<string, number> = { A: 0, B: 1, C: 7, D: 30 }
+export const URGENCY_SLA_DAYS: Record<string, number> = { A: 0, C: 7, D: 30 }
 
 // Returns a YYYY-MM-DD due date computed from urgency, counting from `base`.
 // Formatted from LOCAL date parts, never toISOString(): that converts to UTC

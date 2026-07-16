@@ -89,7 +89,7 @@ export default async function ReportsPage({
 
   // ---- Aggregations (server-side so the client stays a dumb renderer) ----
   const closed = incidents.filter(i => i.status === 'closed')
-  const urgent = incidents.filter(i => i.downtime_impact === 'A' || i.downtime_impact === 'B')
+  const urgent = incidents.filter(i => i.downtime_impact === 'A')
 
   const avg = (nums: number[]) =>
     nums.length === 0 ? null : nums.reduce((a, b) => a + b, 0) / nums.length

@@ -116,7 +116,9 @@ export type IncidentStatus =
   | 'observation'
   | 'closed';
 
-export type DowntimeImpact = 'A' | 'B' | 'C' | 'D';
+// B (orange "High / Line Berhenti") was retired — legacy DB rows were
+// normalized to 'A'. Only three tiers exist now.
+export type DowntimeImpact = 'A' | 'C' | 'D';
 // A = Factory Stop
 // B = Production Line Stop
 // C = Reduced Capacity
@@ -534,7 +536,6 @@ export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, string> = {
 
 export const DOWNTIME_IMPACT_LABELS: Record<DowntimeImpact, string> = {
   A: 'Pabrik Berhenti',      // Factory Stop
-  B: 'Line Berhenti',        // Production Line Stop
   C: 'Kapasitas Turun',      // Reduced Capacity
   D: 'Tidak Berpengaruh',    // No Impact
 };

@@ -32,7 +32,7 @@ interface IncidentRow {
   id: string
   incident_no: string
   status: string
-  downtime_impact: 'A' | 'B' | 'C' | 'D'
+  downtime_impact: 'A' | 'C' | 'D'
   incident_type: string
   title: string | null
   reporter_name: string | null

@@ -15,7 +15,7 @@ const ISSUE_TYPE_LABELS: Record<string, string> = {
 }
 
 const URGENCY_LABELS: Record<string, string> = {
-  A: '🔴 Kritis', B: '🟠 Tinggi', C: '🟡 Sedang', D: '🟢 Rendah',
+  A: '🔴 Kritis', C: '🟡 Sedang', D: '🟢 Rendah',
 }
 
 // POST /api/incidents/notify — send Telegram alert for a new report

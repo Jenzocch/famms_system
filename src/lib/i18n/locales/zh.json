@@ -8,7 +8,7 @@
     "cases": "{count} 件",
     "openByFactory": "各廠未結案工單",
     "noOpen": "目前沒有處理中工單",
-    "urgentCases": "緊急工單（A/B 級）",
+    "urgentCases": "緊急工單",
     "noUrgent": "沒有緊急工單",
     "staleCases": "停滯工單（逾 3 天未更新）",
     "noStale": "沒有停滯工單",
@@ -67,7 +67,7 @@
     "urgencyLow": "🟢 一般",
     "urgencyLowDesc": "不急，一個月內",
     "dueDate": "截止日",
-    "dueDateHint": "留空則依緊急程度自動計算（緊急=當天、高=1天、中=7天、一般=30天）",
+    "dueDateHint": "留空則依緊急程度自動計算（緊急=當天、中=7天、一般=30天）",
     "location": "位置",
     "selectFactory": "選擇工廠",
     "selectArea": "選擇區域（可選）",
@@ -192,7 +192,6 @@
   },
   "impactLevels": {
     "A": "緊急",
-    "B": "高",
     "C": "中",
     "D": "一般"
   },
@@ -717,7 +716,6 @@
   },
   "urgency": {
     "A": "🔴 緊急",
-    "B": "🟠 高",
     "C": "🟡 中",
     "D": "🟢 一般"
   },

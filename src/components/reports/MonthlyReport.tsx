@@ -16,7 +16,7 @@ export interface ReportIncidentRow {
   title: string | null
   incident_type: string
   status: string
-  downtime_impact: 'A' | 'B' | 'C' | 'D'
+  downtime_impact: 'A' | 'C' | 'D'
   reported_at: string
   accepted_at: string | null
   closed_at: string | null

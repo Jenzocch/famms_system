@@ -5,14 +5,12 @@ import type { DowntimeImpact } from '@/types'
 // SLA response time targets (minutes) by downtime impact
 export const SLA_MINUTES: Record<DowntimeImpact, number> = {
   A: 15,   // Factory Stop — Critical
-  B: 30,   // Production Line Stop — High
   C: 120,  // Reduced Capacity — Medium
   D: 1440, // No Impact — Low
 }
 
 export const SLA_LABELS: Record<DowntimeImpact, string> = {
   A: 'Critical (15 menit)',
-  B: 'High (30 menit)',
   C: 'Medium (2 jam)',
   D: 'Low (24 jam)',
 }
