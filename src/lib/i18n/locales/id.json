@@ -250,7 +250,12 @@
     "saveToKb": "Simpan ke knowledge base (bisa dicari lain kali)",
     "repairMethod": "Cara perbaikan (opsional; jika kosong pakai catatan di bawah)",
     "repairMethodPh": "mis. ganti bearing 6205, kalibrasi ulang posisi sensor…",
-    "sectionHint": "Catat apa yang sudah dikerjakan dan apa yang ditemukan, boleh lampirkan foto"
+    "sectionHint": "Catat apa yang sudah dikerjakan dan apa yang ditemukan, boleh lampirkan foto",
+    "hygieneHeading": "Konfirmasi higiene sebelum produksi ulang",
+    "hygieneTools": "Semua alat sudah dihitung, tidak ada yang tertinggal",
+    "hygieneLubricant": "Pelumas/kimia food-grade atau sudah dibersihkan",
+    "hygieneCleanArea": "Area sudah dibersihkan, tanpa serpihan logam/benda asing",
+    "hygieneRequired": "Mohon centang ketiga konfirmasi higiene sebelum menutup kasus"
   },
   "pm": {
     "manageTitle": "Manajemen PM",

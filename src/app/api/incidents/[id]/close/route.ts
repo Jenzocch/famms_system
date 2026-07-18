@@ -25,13 +25,14 @@ export async function POST(
 
   const { id } = await params
   const body = await req.json().catch(() => ({}))
-  const { root_cause, completion_type, labor_cost, parts_cost, save_to_kb, repair_method } = body as {
+  const { root_cause, completion_type, labor_cost, parts_cost, save_to_kb, repair_method, hygiene_confirmed } = body as {
     root_cause?: string
     completion_type?: string
     labor_cost?: number
     parts_cost?: number
     save_to_kb?: boolean
     repair_method?: string
+    hygiene_confirmed?: boolean
   }
 
   const { data: incident, error: loadErr } = await supabase
@@ -53,6 +54,19 @@ export async function POST(
   if (completion_type !== 'temporary_fix' && completion_type !== 'permanent_fix') {
     return NextResponse.json(
       { error: '結案前請選擇修復類型（臨時 / 永久）' },
+      { status: 400 }
+    )
+  }
+
+  // Hygiene sign-off — food-safety gate for MACHINE incidents only. Maintenance
+  // work is itself a contamination source (leftover tools, metal shavings,
+  // non-food-grade lubricant), so a machine can't go back into production
+  // without an explicit "the area was left clean" confirmation. Non-machine
+  // incidents (facility/electrical/etc., no machine_id) never touch food
+  // product, so this doesn't apply to them.
+  if (incident.machine_id && hygiene_confirmed !== true) {
+    return NextResponse.json(
+      { error: '結案前請完成復產衛生確認 / Konfirmasi higiene sebelum menutup kasus' },
       { status: 400 }
     )
   }
@@ -88,13 +102,32 @@ export async function POST(
     patch.accepted_at = now
     patch.accepted_by_id = user.id
   }
+  // Only machine incidents go through the gate above, so this is only ever
+  // set when hygiene_confirmed === true.
+  if (incident.machine_id) {
+    patch.hygiene_confirmed_at = now
+  }
 
-  const { data: updated, error: updateErr } = await supabase
+  let { data: updated, error: updateErr } = await supabase
     .from('incidents')
     .update(patch)
     .eq('id', id)
     .select('*')
     .single()
+
+  // DB without the hygiene_confirmed_at column yet (SYNC_SCHEMA_LATEST not
+  // run): drop just that field and retry, so a schema-drift DB can't block
+  // closing entirely. Postgres says 42703; PostgREST's schema cache says
+  // PGRST204 — see submitIncidentReport.ts for the same pattern.
+  if (updateErr && (updateErr.code === '42703' || updateErr.code === 'PGRST204') && 'hygiene_confirmed_at' in patch) {
+    delete patch.hygiene_confirmed_at
+    ;({ data: updated, error: updateErr } = await supabase
+      .from('incidents')
+      .update(patch)
+      .eq('id', id)
+      .select('*')
+      .single())
+  }
 
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 })

@@ -250,7 +250,12 @@
     "saveToKb": "存入知識庫（下次同樣問題可查到怎麼修）",
     "repairMethod": "修理方法（選填，未填則使用下方備註）",
     "repairMethodPh": "例如：更換 bearing 6205、重新校正 sensor 位置…",
-    "sectionHint": "記錄目前做了什麼、發現什麼問題，可附照片"
+    "sectionHint": "記錄目前做了什麼、發現什麼問題，可附照片",
+    "hygieneHeading": "復產衛生確認",
+    "hygieneTools": "工具清點無缺，無遺留現場",
+    "hygieneLubricant": "潤滑油/化學品為食品級或已徹底清除",
+    "hygieneCleanArea": "現場清潔完成，無金屬屑/異物殘留",
+    "hygieneRequired": "請完成復產衛生確認的三項勾選"
   },
   "pm": {
     "manageTitle": "保養管理",

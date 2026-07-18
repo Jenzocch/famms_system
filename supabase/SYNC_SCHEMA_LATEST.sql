@@ -50,6 +50,14 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS estimated_completion_date DATE;
 -- existed (their photos still show on the detail page as always).
 ALTER TABLE incidents ADD COLUMN IF NOT EXISTS photo_count INT NOT NULL DEFAULT 0;
 
+-- Food-safety hygiene sign-off at close: maintenance work on a MACHINE is
+-- itself a contamination risk (leftover tools, metal shavings, non-food-grade
+-- lubricant), so closing a machine incident requires an explicit confirmation
+-- that the area was left clean before production resumes. NULL = not yet
+-- confirmed (and for every row closed before this existed); the close route
+-- refuses to close a machine incident without stamping this first.
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS hygiene_confirmed_at TIMESTAMP;
+
 -- Which factory an RCA record was filed for. Without this, the mandatory-RCA
 -- close gate (checkRCARequirement in src/lib/rca.ts) could not tell "an RCA
 -- exists for this failure_code" apart from "an RCA exists for this failure_code
@@ -403,4 +411,7 @@ UNION ALL SELECT 'incident-photos bucket locked down (file_size_limit set)',
        EXISTS (SELECT 1 FROM storage.buckets
                WHERE id='incident-photos' AND file_size_limit IS NOT NULL)
 UNION ALL SELECT 'incidents_machine_factory_guard trigger',
-       EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='incidents_machine_factory_guard');
+       EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='incidents_machine_factory_guard')
+UNION ALL SELECT 'incidents.hygiene_confirmed_at',
+       EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name='incidents' AND column_name='hygiene_confirmed_at');

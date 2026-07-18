@@ -250,7 +250,12 @@
     "saveToKb": "Save to knowledge base (searchable next time)",
     "repairMethod": "Repair method (optional; falls back to the note below)",
     "repairMethodPh": "e.g. replaced bearing 6205, recalibrated sensor position…",
-    "sectionHint": "Log what you've done so far and any findings — photos welcome"
+    "sectionHint": "Log what you've done so far and any findings — photos welcome",
+    "hygieneHeading": "Post-maintenance hygiene sign-off",
+    "hygieneTools": "All tools accounted for, none left on site",
+    "hygieneLubricant": "Lubricants/chemicals are food-grade or fully cleaned up",
+    "hygieneCleanArea": "Area cleaned, no metal shavings/foreign debris left behind",
+    "hygieneRequired": "Please check all three hygiene confirmations before closing"
   },
   "pm": {
     "manageTitle": "PM Management",

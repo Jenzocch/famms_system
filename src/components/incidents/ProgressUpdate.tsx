@@ -61,13 +61,18 @@ function allowedStatuses(currentStatus: IncidentStatus, allowRollback: boolean =
 }
 
 export default function ProgressUpdate({
-  incidentId, currentStatus, userRole = 'technician', userName, estimatedCompletionDate,
+  incidentId, currentStatus, userRole = 'technician', userName, estimatedCompletionDate, hasMachine = false,
 }: {
   incidentId: string
   currentStatus: IncidentStatus
   userRole?: UserRole
   userName?: string | null
   estimatedCompletionDate?: string | null
+  // Whether this incident is attached to a machine — drives the food-safety
+  // hygiene sign-off at close (maintenance work on equipment is itself a
+  // contamination risk; facility/electrical incidents with no machine_id
+  // never touch food product, so they skip it).
+  hasMachine?: boolean
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -85,6 +90,12 @@ export default function ProgressUpdate({
   const { photos, photoPreviews, compressing, addPhotos, removePhoto, resetPhotos } = usePhotoCapture(5)
   const [allowRollback, setAllowRollback] = useState(false)
   const [completionType, setCompletionType] = useState<'temporary_fix' | 'permanent_fix' | ''>('')
+  // Post-maintenance hygiene sign-off (food-safety) — required to close a
+  // MACHINE incident. All three must be ticked before the close can proceed.
+  const [hygieneTools, setHygieneTools] = useState(false)
+  const [hygieneLubricant, setHygieneLubricant] = useState(false)
+  const [hygieneCleanArea, setHygieneCleanArea] = useState(false)
+  const hygieneConfirmed = hygieneTools && hygieneLubricant && hygieneCleanArea
   // Optional close-time costs — the cheapest possible cost tracking: two
   // numbers at the moment the work is freshest in memory.
   const [laborCost, setLaborCost] = useState('')
@@ -118,6 +129,10 @@ export default function ProgressUpdate({
       toast.error(t('progressUpdate.completionRequired', '結案前請選擇修復類型（臨時 / 永久）'))
       return
     }
+    if (newStatus === 'closed' && hasMachine && !hygieneConfirmed) {
+      toast.error(t('progressUpdate.hygieneRequired', '請完成復產衛生確認的三項勾選'))
+      return
+    }
     setSubmitting(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -144,6 +159,10 @@ export default function ProgressUpdate({
             parts_cost: partsCost ? parseFloat(partsCost) : undefined,
             save_to_kb: saveToKb,
             repair_method: repairMethod || undefined,
+            // Only sent when actually confirmed — the server independently
+            // re-checks this for machine incidents, so this is not the only
+            // gate, just the client-side UX for it.
+            hygiene_confirmed: hasMachine && hygieneConfirmed ? true : undefined,
           }),
         })
         const json = await res.json().catch(() => ({}))
@@ -311,6 +330,52 @@ export default function ProgressUpdate({
               <span className="text-xs text-gray-500 block mt-0.5">{t('progressUpdate.temporaryFixDesc', '需觀察 30 天，根本原因未解決')}</span>
             </button>
           </div>
+
+          {/* Post-maintenance hygiene sign-off — food-safety gate for MACHINE
+              incidents. Maintenance is itself a contamination source (tools
+              left behind, metal shavings, non-food-grade lubricant), so the
+              case can't close until whoever worked on it confirms the area
+              was left clean. Non-machine incidents never render this. */}
+          {hasMachine && (
+            <div className="mt-3 rounded-lg border border-gray-200 p-3 space-y-2">
+              <Label className="text-sm">
+                {t('progressUpdate.hygieneHeading', '復產衛生確認')} <span className="text-red-500">*</span>
+              </Label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hygieneTools}
+                  onChange={e => setHygieneTools(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-blue-600 shrink-0"
+                />
+                <span className="text-sm text-gray-700">
+                  {t('progressUpdate.hygieneTools', '工具清點無缺，無遺留現場')}
+                </span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hygieneLubricant}
+                  onChange={e => setHygieneLubricant(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-blue-600 shrink-0"
+                />
+                <span className="text-sm text-gray-700">
+                  {t('progressUpdate.hygieneLubricant', '潤滑油/化學品為食品級或已徹底清除')}
+                </span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hygieneCleanArea}
+                  onChange={e => setHygieneCleanArea(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-blue-600 shrink-0"
+                />
+                <span className="text-sm text-gray-700">
+                  {t('progressUpdate.hygieneCleanArea', '現場清潔完成，無金屬屑/異物殘留')}
+                </span>
+              </label>
+            </div>
+          )}
 
           {/* Optional costs — feed the monthly report; skippable so closing
               never gets blocked on missing numbers. */}
