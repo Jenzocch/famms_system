@@ -299,6 +299,7 @@
     "addSchedule": "Add PM Schedule",
     "editSchedule": "Edit PM Schedule",
     "noSchedules": "No PM schedules yet",
+    "neverCompleted": "Never completed",
     "notesOptional": "Notes (Optional)",
     "confirmDeactivate": "Deactivate this PM schedule?",
     "deactivated": "Deactivated",
@@ -467,7 +468,8 @@
     "failuresValue": "{n}",
     "mtbfLabel": "MTBF (avg. days between failures)",
     "mtbfValue": "{n} days",
-    "totalCostLabel": "Total maintenance cost"
+    "totalCostLabel": "Total maintenance cost",
+    "pmStatusTitle": "PM Status"
   },
   "dashboard": {
     "title": "Dashboard",

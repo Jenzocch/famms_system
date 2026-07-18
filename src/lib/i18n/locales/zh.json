@@ -299,6 +299,7 @@
     "addSchedule": "新增保養計畫",
     "editSchedule": "編輯保養計畫",
     "noSchedules": "尚無保養計畫",
+    "neverCompleted": "從未完成",
     "notesOptional": "備註（可選）",
     "confirmDeactivate": "確認停用此保養計畫？",
     "deactivated": "已停用",
@@ -467,7 +468,8 @@
     "failuresValue": "{n} 次",
     "mtbfLabel": "MTBF（平均故障間隔天數）",
     "mtbfValue": "{n} 天",
-    "totalCostLabel": "累計維修成本"
+    "totalCostLabel": "累計維修成本",
+    "pmStatusTitle": "保養狀態"
   },
   "dashboard": {
     "title": "仪表板",

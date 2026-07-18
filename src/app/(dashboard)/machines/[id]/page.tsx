@@ -7,8 +7,10 @@ import { ArrowLeft, Edit2, QrCode } from 'lucide-react'
 import StatusBadge from '@/components/shared/StatusBadge'
 import HealthScoreBadge from '@/components/shared/HealthScoreBadge'
 import MachineStatsStrip from '@/components/machines/MachineStatsStrip'
+import MachinePmStatus, { PmScheduleStatus } from '@/components/machines/MachinePmStatus'
 import { formatDistance } from 'date-fns'
 import { id } from 'date-fns/locale'
+import { wibTodayStr, nextOccurrenceAfter, toDateStr } from '@/lib/pm'
 
 export const metadata = { title: 'Machine | FAMMS' }
 
@@ -25,7 +27,10 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
 
   // All reads are keyed on params.id directly (not on each other's result),
   // so fetch them in one round trip instead of several sequential ones.
-  const [{ data: machine }, { data: incidents }, { data: health }, { data: incidents365 }, { data: costs }] = await Promise.all([
+  const [
+    { data: machine }, { data: incidents }, { data: health }, { data: incidents365 }, { data: costs },
+    { data: pmSchedules }, { data: pmRecords },
+  ] = await Promise.all([
     supabase
       .from('machines')
       .select('*, area:areas(name), owner:profiles(full_name), factory:factories(name)')
@@ -58,6 +63,21 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
       .from('maintenance_costs')
       .select('amount')
       .eq('machine_id', params.id),
+    // Active PM schedules for this machine — the "next due" list below.
+    supabase
+      .from('pm_schedules')
+      .select('id, pm_type, interval_days, created_at')
+      .eq('machine_id', params.id)
+      .eq('is_active', true),
+    // All PM records for this machine's schedules (active or not — a
+    // deactivated schedule's completion still counts as "last maintained").
+    // Filtered via the pm_schedules join since pm_records has no machine_id
+    // column of its own; `!inner` makes the joined-table .eq() filter apply.
+    supabase
+      .from('pm_records')
+      .select('pm_schedule_id, scheduled_date, status, completed_at, schedule:pm_schedules!inner(machine_id)')
+      .eq('schedule.machine_id', params.id)
+      .order('scheduled_date', { ascending: true }),
   ])
 
   if (!machine) redirect('/machines')
@@ -73,6 +93,36 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
     mtbfDays = Math.round((last - first) / (incidents365.length - 1) / (1000 * 60 * 60 * 24))
   }
   const totalMaintenanceCost = (costs ?? []).reduce((sum, c) => sum + (c.amount ?? 0), 0)
+
+  // Next-due date per active schedule, using the SAME anchor + nextOccurrenceAfter
+  // math the PM API routes already use (records/[id]/route.ts) — anchored to
+  // each schedule's EARLIEST known record so month-length clamping never
+  // drifts the cadence (see lib/pm.ts's rule 1). Falls back to created_at
+  // when a schedule has no records yet.
+  const recordsBySchedule: Record<string, { scheduled_date: string; status: string; completed_at: string | null }[]> = {}
+  for (const r of pmRecords ?? []) {
+    (recordsBySchedule[r.pm_schedule_id] ??= []).push(r)
+  }
+  const today = wibTodayStr()
+  const pmScheduleStatuses: PmScheduleStatus[] = (pmSchedules ?? []).map(s => {
+    const records = recordsBySchedule[s.id] ?? [] // already sorted ascending by the query
+    const anchor = records[0]?.scheduled_date ?? toDateStr(new Date(s.created_at))
+    const lastCompleted = [...records].reverse().find(r => r.status === 'completed')?.scheduled_date
+    // No completed record yet → search from the day before the anchor so the
+    // anchor's own first occurrence (n=0) is still a valid "next due" result.
+    const dayBeforeAnchor = toDateStr(new Date(new Date(anchor + 'T00:00:00Z').getTime() - 86400000))
+    const searchAfter = lastCompleted ?? dayBeforeAnchor
+    const nextDueDate = nextOccurrenceAfter(anchor, searchAfter, s.pm_type, s.interval_days)
+    return { id: s.id, pm_type: s.pm_type, next_due_date: nextDueDate }
+  })
+
+  // Last completed PM overall for this machine — across all schedules
+  // (active or not), most recent scheduled_date among completed records.
+  const completedDates = (pmRecords ?? [])
+    .filter(r => r.status === 'completed')
+    .map(r => r.scheduled_date)
+    .sort()
+  const lastCompletedDate = completedDates.length > 0 ? completedDates[completedDates.length - 1] : null
 
   return (
     <div className="space-y-6">
@@ -216,6 +266,12 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
         failureCount12mo={failureCount12mo}
         mtbfDays={mtbfDays}
         totalCost={totalMaintenanceCost}
+      />
+
+      <MachinePmStatus
+        todayStr={today}
+        schedules={pmScheduleStatuses}
+        lastCompletedDate={lastCompletedDate}
       />
 
       {incidents && incidents.length > 0 && (

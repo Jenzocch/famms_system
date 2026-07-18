@@ -299,6 +299,7 @@
     "addSchedule": "Tambah Jadwal PM",
     "editSchedule": "Edit Jadwal PM",
     "noSchedules": "Belum ada jadwal PM",
+    "neverCompleted": "Belum pernah selesai",
     "notesOptional": "Catatan (Opsional)",
     "confirmDeactivate": "Nonaktifkan jadwal PM ini?",
     "deactivated": "Dinonaktifkan",
@@ -467,7 +468,8 @@
     "failuresValue": "{n}",
     "mtbfLabel": "MTBF (rata-rata hari antar kegagalan)",
     "mtbfValue": "{n} hari",
-    "totalCostLabel": "Total biaya perawatan"
+    "totalCostLabel": "Total biaya perawatan",
+    "pmStatusTitle": "Status Perawatan"
   },
   "dashboard": {
     "title": "Dashboard",
