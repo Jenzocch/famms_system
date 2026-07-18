@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, PERMISSIONS } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
-// POST /api/rca — create a Root Cause Analysis record for a failure_code.
+// POST /api/rca — create a Root Cause Analysis record for a machine_id +
+// incident_type pair (see src/lib/rca.ts for why this key was chosen over
+// failure_code_id, which no report path ever populates).
 export async function POST(req: Request) {
   const currentUser = await getCurrentUser()
   if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -16,7 +18,8 @@ export async function POST(req: Request) {
 
   const body = await req.json()
   const {
-    failure_code_id,
+    machine_id,
+    incident_type,
     factory_id,
     root_cause,
     corrective_action,
@@ -25,9 +28,9 @@ export async function POST(req: Request) {
     due_date,
   } = body
 
-  if (!failure_code_id || !factory_id || !root_cause || !corrective_action || !preventive_action || !responsible_person_id || !due_date) {
+  if (!machine_id || !incident_type || !factory_id || !root_cause || !corrective_action || !preventive_action || !responsible_person_id || !due_date) {
     return NextResponse.json(
-      { error: 'Semua field RCA wajib diisi (kode kegagalan, pabrik, root cause, corrective, preventive, PIC, due date)' },
+      { error: 'Semua field RCA wajib diisi (mesin, jenis kejadian, pabrik, root cause, corrective, preventive, PIC, due date)' },
       { status: 400 }
     )
   }
@@ -43,7 +46,8 @@ export async function POST(req: Request) {
   const { data: rca, error } = await supabase
     .from('rca_records')
     .insert({
-      failure_code_id,
+      machine_id,
+      incident_type,
       factory_id,
       root_cause,
       corrective_action,

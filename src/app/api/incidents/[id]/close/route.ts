@@ -71,10 +71,11 @@ export async function POST(
     )
   }
 
-  // RCA gate — only applies to machine incidents that carry a failure_code.
-  // Facility / simplified incidents have no failure_code_id, so skip the check.
-  if (incident.failure_code_id) {
-    const rca = await checkRCARequirement(supabase, incident.failure_code_id, incident.factory_id)
+  // RCA gate — only applies to machine incidents (same machine_id +
+  // incident_type occurring >= 3x in 90 days). Facility / simplified
+  // incidents have no machine_id, so skip the check — see checkRCARequirement.
+  if (incident.machine_id) {
+    const rca = await checkRCARequirement(supabase, incident.machine_id, incident.incident_type, incident.factory_id)
     if (rca.required && !rca.satisfied) {
       return NextResponse.json(
         {

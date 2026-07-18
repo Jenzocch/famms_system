@@ -69,6 +69,21 @@ ALTER TABLE incidents ADD COLUMN IF NOT EXISTS hygiene_confirmed_at TIMESTAMP;
 -- legacy rows just won't match any factory going forward.
 ALTER TABLE rca_records ADD COLUMN IF NOT EXISTS factory_id UUID REFERENCES factories(id);
 
+-- The fault-tree code (failure_code_id) is never written by any report path
+-- in the app — the report form only ever captures the coarse incident_type
+-- category (machine/pipe/electrical/facility/safety/cleanliness/other), so
+-- keying the mandatory-RCA trigger and repeat-failure detection off
+-- failure_code_id meant they could never fire. Both now key off this
+-- machine_id + incident_type pair instead (checkRCARequirement in
+-- src/lib/rca.ts, POST /api/rca). failure_code_id is left in place (no
+-- destructive migrations) but nothing reads it for this purpose anymore.
+-- NULL only for rows created before this fix (can't be safely backfilled
+-- without the incident that triggered them); the app's own
+-- required/satisfied checks now key off machine_id + incident_type, so those
+-- legacy rows just won't match any pair going forward.
+ALTER TABLE rca_records ADD COLUMN IF NOT EXISTS machine_id UUID REFERENCES machines(id);
+ALTER TABLE rca_records ADD COLUMN IF NOT EXISTS incident_type TEXT;
+
 -- ---------------------------------------------------------------------------
 -- STORAGE — lock down the public incident-photos bucket
 -- ---------------------------------------------------------------------------
@@ -414,4 +429,10 @@ UNION ALL SELECT 'incidents_machine_factory_guard trigger',
        EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='incidents_machine_factory_guard')
 UNION ALL SELECT 'incidents.hygiene_confirmed_at',
        EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_name='incidents' AND column_name='hygiene_confirmed_at');
+               WHERE table_name='incidents' AND column_name='hygiene_confirmed_at')
+UNION ALL SELECT 'rca_records.machine_id',
+       EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name='rca_records' AND column_name='machine_id')
+UNION ALL SELECT 'rca_records.incident_type',
+       EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name='rca_records' AND column_name='incident_type');
