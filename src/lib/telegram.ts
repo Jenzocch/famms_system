@@ -119,6 +119,28 @@ export function newReportFactoryButtonAfter(name: string): InlineKeyboard {
   return { inline_keyboard: [[{ text: `✅ ${name}`, callback_data: 'noop' }]] }
 }
 
+// Repeat-failure confirm prompt sent to a factory's supervisors when /lapor
+// detects a candidate (same machine + incident_type, prior incident closed
+// as a temporary fix or with no root cause, within 30 days — see
+// src/lib/repeat-failure.ts). Both IDs travel in callback_data since a
+// serverless webhook has no other state to recover them from.
+export function repeatFailureButtons(newIncidentId: string, priorIncidentId: string): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: '✅ Ya, sama', callback_data: `reprpt|${newIncidentId}|${priorIncidentId}|yes` },
+      { text: '❌ Bukan', callback_data: `reprpt|${newIncidentId}|${priorIncidentId}|no` },
+    ]],
+  }
+}
+
+export function repeatFailureButtonsAfter(confirmed: boolean): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: confirmed ? '✅ Dikonfirmasi sama' : '❌ Ditandai berbeda', callback_data: 'noop' },
+    ]],
+  }
+}
+
 // Acknowledge a button tap (stops the client-side loading spinner). The text
 // shows as a small toast in Telegram.
 export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {

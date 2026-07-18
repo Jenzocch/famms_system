@@ -4,12 +4,15 @@ import {
   sendTelegramMessage, answerCallbackQuery, editMessageKeyboard, downloadTelegramFile,
   incidentActionButtons, incidentActionButtonsAfter, newReportUrgencyButtons,
   newReportUrgencyButtonsAfter, newReportFactoryButtons, newReportFactoryButtonAfter,
-  notifyFactory, isTelegramConfigured, esc,
+  repeatFailureButtons, repeatFailureButtonsAfter,
+  notifyFactory, notifyAssignees, isTelegramConfigured, esc,
 } from '@/lib/telegram'
 import { logAuditEvent } from '@/lib/audit'
 import { deadlineFromUrgency } from '@/lib/incident-display'
 import { timingSafeEqualString } from '@/lib/timing-safe-equal'
-import type { IncidentStatus } from '@/types'
+import { checkPotentialRepeatFailure } from '@/lib/repeat-failure'
+import { PERMISSIONS } from '@/lib/permissions'
+import type { IncidentStatus, UserRole } from '@/types'
 
 // POST /api/notifications/telegram — Telegram bot webhook.
 //
@@ -66,7 +69,7 @@ async function resolveProfile(admin: ReturnType<typeof createAdminClient>, chatI
   if (!reg) return null
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, full_name, factory_id')
+    .select('id, full_name, factory_id, role')
     .eq('id', reg.profile_id)
     .maybeSingle()
   return profile
@@ -543,6 +546,107 @@ async function handleNewReportUrgency(admin: ReturnType<typeof createAdminClient
       `<a href="${appUrl}/incidents/${incident.id}">Lihat detail →</a>`,
     ].filter(Boolean).join('\n'),
   }).catch(() => {})
+
+  // Best-effort repeat-failure candidate check — same rule as the web report
+  // form (see src/lib/repeat-failure.ts). Telegram /lapor reports always use
+  // incident_type 'other' (basePayload above), same value used to match.
+  // Never blocks the report itself: any failure here is swallowed.
+  try {
+    const potentialRepeat = machineId
+      ? await checkPotentialRepeatFailure(admin, {
+          machineId, incidentType: 'other', excludeIncidentId: incident.id,
+        })
+      : null
+    if (potentialRepeat) {
+      await sendTelegramMessage(chatId, [
+        `⚠️ Mirip dengan laporan sebelumnya: <b>${esc(potentialRepeat.incident_no)}</b> — ${esc(potentialRepeat.title)}`,
+      ].join('\n'))
+
+      // Notify the factory's supervisors+ with a confirm/reject prompt —
+      // best-effort, mirrors the app's own repeat-failure confirm dialog.
+      const { data: supervisors } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('factory_id', draft.factory_id)
+        .in('role', ['supervisor', 'manager', 'director', 'admin'])
+      const supervisorIds = (supervisors ?? []).map(s => s.id)
+      if (supervisorIds.length > 0) {
+        await notifyAssignees(admin, {
+          profileIds: supervisorIds,
+          type: 'new_incident',
+          html: [
+            `⚠️ <b>Kemungkinan Kerusakan Berulang</b>`,
+            `Laporan baru: <b>${esc(incident.incident_no)}</b>`,
+            `Mirip: <b>${esc(potentialRepeat.incident_no)}</b> — ${esc(potentialRepeat.title)}`,
+            `Apakah ini masalah yang sama?`,
+          ].join('\n'),
+          replyMarkup: repeatFailureButtons(incident.id, potentialRepeat.id),
+        }).catch(() => {})
+      }
+    }
+  } catch (err) {
+    console.error('Repeat-failure check failed (Telegram):', err)
+  }
+}
+
+// Supervisor tapped Ya/Bukan on the repeat-failure confirm prompt sent
+// alongside a /lapor report. Same underlying action as the web confirm
+// dialog (POST /api/incidents/[id]/relations) — insert into
+// incident_relations — done directly here since this already runs with the
+// admin client server-side and there's no clean way to share a route handler
+// between a browser fetch and this webhook's own request shape.
+async function handleRepeatFailureConfirm(admin: ReturnType<typeof createAdminClient>, cq: {
+  id: string
+  from?: { id?: number }
+  message?: { chat?: { id?: number }; message_id?: number }
+  data?: string
+}) {
+  const chatId = cq.from?.id ?? cq.message?.chat?.id
+  const messageId = cq.message?.message_id
+  const [, newIncidentId, priorIncidentId, decision] = (cq.data ?? '').split('|')
+  if (!chatId || !newIncidentId || !priorIncidentId || (decision !== 'yes' && decision !== 'no')) {
+    await answerCallbackQuery(cq.id)
+    return
+  }
+
+  const profile = await resolveProfile(admin, chatId)
+  if (!profile) {
+    await answerCallbackQuery(cq.id, 'Chat ID Anda belum terdaftar di FAMMS.')
+    return
+  }
+  // Same tier as the web confirm route — a technician tapping this DM
+  // (e.g. forwarded to them) must not be able to self-certify a repeat.
+  if (!PERMISSIONS.remindProgress((profile.role ?? 'technician') as UserRole)) {
+    await answerCallbackQuery(cq.id, 'Hanya supervisor yang bisa mengonfirmasi.')
+    return
+  }
+
+  await answerCallbackQuery(cq.id, decision === 'yes' ? '⏳ Mengonfirmasi…' : 'Oke, ditandai berbeda')
+
+  if (decision === 'yes') {
+    const [{ data: newIncident }, { data: prior }] = await Promise.all([
+      admin.from('incidents').select('id, factory_id, machine_id').eq('id', newIncidentId).maybeSingle(),
+      admin.from('incidents').select('id, factory_id, machine_id').eq('id', priorIncidentId).maybeSingle(),
+    ])
+    // Same factory + machine guard as POST /api/incidents/[id]/relations.
+    if (newIncident && prior && newIncident.factory_id === prior.factory_id
+        && newIncident.machine_id && newIncident.machine_id === prior.machine_id) {
+      const { error } = await admin.from('incident_relations').insert({
+        incident_id: newIncident.id,
+        related_incident_id: prior.id,
+        relation_type: 'repeat_failure',
+        confirmed_by_id: profile.id,
+        confirmed_at: new Date().toISOString(),
+      })
+      if (error && error.code !== '23505') {
+        console.error('Failed to insert incident_relations from Telegram:', error)
+      }
+    }
+  }
+
+  if (messageId) {
+    await editMessageKeyboard(chatId, messageId, repeatFailureButtonsAfter(decision === 'yes'))
+  }
 }
 
 const URGENCY_LABEL_FULL: Record<string, string> = {
@@ -577,6 +681,8 @@ export async function POST(req: Request) {
       await handleNewReportFactoryPick(admin, update.callback_query)
     } else if (data.startsWith('newrpt|')) {
       await handleNewReportUrgency(admin, update.callback_query)
+    } else if (data.startsWith('reprpt|')) {
+      await handleRepeatFailureConfirm(admin, update.callback_query)
     } else {
       await handleStatusButton(admin, update.callback_query)
     }
