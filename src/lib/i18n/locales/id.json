@@ -459,7 +459,12 @@
     "addBtn": "Tambah Mesin",
     "empty": "Belum ada mesin terdaftar",
     "confirmDelete": "Hapus mesin ini?",
-    "hasHistoryCannotDelete": "Mesin ini punya {n} catatan perbaikan dan tidak bisa dihapus. Ubah statusnya menjadi \"Scrapped\" agar riwayat tetap tersimpan."
+    "hasHistoryCannotDelete": "Mesin ini punya {n} catatan perbaikan dan tidak bisa dihapus. Ubah statusnya menjadi \"Scrapped\" agar riwayat tetap tersimpan.",
+    "failures12moLabel": "Kegagalan (12bln)",
+    "failuresValue": "{n}",
+    "mtbfLabel": "MTBF (rata-rata hari antar kegagalan)",
+    "mtbfValue": "{n} hari",
+    "totalCostLabel": "Total biaya perawatan"
   },
   "dashboard": {
     "title": "Dashboard",

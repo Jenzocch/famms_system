@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Edit2, QrCode } from 'lucide-react'
 import StatusBadge from '@/components/shared/StatusBadge'
 import HealthScoreBadge from '@/components/shared/HealthScoreBadge'
+import MachineStatsStrip from '@/components/machines/MachineStatsStrip'
 import { formatDistance } from 'date-fns'
 import { id } from 'date-fns/locale'
 
@@ -17,9 +18,14 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
   if (!user.capabilities.viewMachines) redirect('/incidents')
   const supabase = await createClient()
 
-  // All three reads are keyed on params.id directly (not on each other's
-  // result), so fetch them in one round trip instead of three sequential ones.
-  const [{ data: machine }, { data: incidents }, { data: health }] = await Promise.all([
+  // 365 days ago, for the MTBF tile below — computed once so both the query
+  // and the eventual "how many days" math agree on the same cutoff instant.
+  const oneYearAgo = new Date()
+  oneYearAgo.setDate(oneYearAgo.getDate() - 365)
+
+  // All reads are keyed on params.id directly (not on each other's result),
+  // so fetch them in one round trip instead of several sequential ones.
+  const [{ data: machine }, { data: incidents }, { data: health }, { data: incidents365 }, { data: costs }] = await Promise.all([
     supabase
       .from('machines')
       .select('*, area:areas(name), owner:profiles(full_name), factory:factories(name)')
@@ -38,9 +44,35 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
       .order('last_updated', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // MTBF input — every incident in the last 365 days, oldest first. Row
+    // count per machine is small, so no need for a head-only count query.
+    supabase
+      .from('incidents')
+      .select('reported_at')
+      .eq('machine_id', params.id)
+      .gte('reported_at', oneYearAgo.toISOString())
+      .order('reported_at'),
+    // Cumulative maintenance cost — summed in JS below, no .rpc needed for
+    // a per-machine total this small.
+    supabase
+      .from('maintenance_costs')
+      .select('amount')
+      .eq('machine_id', params.id),
   ])
 
   if (!machine) redirect('/machines')
+
+  const failureCount12mo = incidents365?.length ?? 0
+  // MTBF = time span across the failures divided by the GAPS between them
+  // (count - 1), not the count itself — needs at least 2 incidents to have
+  // a gap to measure at all.
+  let mtbfDays: number | null = null
+  if (incidents365 && incidents365.length >= 2) {
+    const first = new Date(incidents365[0].reported_at).getTime()
+    const last = new Date(incidents365[incidents365.length - 1].reported_at).getTime()
+    mtbfDays = Math.round((last - first) / (incidents365.length - 1) / (1000 * 60 * 60 * 24))
+  }
+  const totalMaintenanceCost = (costs ?? []).reduce((sum, c) => sum + (c.amount ?? 0), 0)
 
   return (
     <div className="space-y-6">
@@ -179,6 +211,12 @@ export default async function MachineDetailPage({ params }: { params: { id: stri
           </Link>
         </div>
       </div>
+
+      <MachineStatsStrip
+        failureCount12mo={failureCount12mo}
+        mtbfDays={mtbfDays}
+        totalCost={totalMaintenanceCost}
+      />
 
       {incidents && incidents.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">

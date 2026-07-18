@@ -459,7 +459,12 @@
     "addBtn": "Add Machine",
     "empty": "No machines registered yet",
     "confirmDelete": "Delete this machine?",
-    "hasHistoryCannotDelete": "This machine has {n} repair records and cannot be deleted. Set its status to \"Scrapped\" instead to keep the history."
+    "hasHistoryCannotDelete": "This machine has {n} repair records and cannot be deleted. Set its status to \"Scrapped\" instead to keep the history.",
+    "failures12moLabel": "Failures (12mo)",
+    "failuresValue": "{n}",
+    "mtbfLabel": "MTBF (avg. days between failures)",
+    "mtbfValue": "{n} days",
+    "totalCostLabel": "Total maintenance cost"
   },
   "dashboard": {
     "title": "Dashboard",

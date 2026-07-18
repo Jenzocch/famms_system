@@ -459,7 +459,12 @@
     "addBtn": "新增機器",
     "empty": "尚未登錄任何機器",
     "confirmDelete": "確定要刪除這台機器嗎？",
-    "hasHistoryCannotDelete": "此機器有 {n} 筆維修紀錄，無法刪除。請改將狀態設為「報廢」以保留歷史。"
+    "hasHistoryCannotDelete": "此機器有 {n} 筆維修紀錄，無法刪除。請改將狀態設為「報廢」以保留歷史。",
+    "failures12moLabel": "近12個月故障次數",
+    "failuresValue": "{n} 次",
+    "mtbfLabel": "MTBF（平均故障間隔天數）",
+    "mtbfValue": "{n} 天",
+    "totalCostLabel": "累計維修成本"
   },
   "dashboard": {
     "title": "仪表板",
