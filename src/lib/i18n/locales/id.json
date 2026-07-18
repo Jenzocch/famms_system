@@ -1,4 +1,9 @@
 {
+  "voice": {
+    "speak": "🎤 Bicara",
+    "stop": "Berhenti",
+    "listening": "Mendengarkan…"
+  },
   "dash": {
     "title": "Pelacakan Supervisor",
     "overview": "Ikhtisar insiden & perawatan",

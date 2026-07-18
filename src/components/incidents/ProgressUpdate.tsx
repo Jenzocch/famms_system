@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePhotoCapture } from '@/lib/hooks/usePhotoCapture'
+import SpeechMicButton from '@/components/shared/SpeechMicButton'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -368,7 +369,13 @@ export default function ProgressUpdate({
       )}
 
       <div>
-        <Label>{t('progressUpdate.note')}</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label>{t('progressUpdate.note')}</Label>
+          {/* Dictation shortcut — technicians with dirty/gloved hands speak
+              instead of typing; text lands in the editable field for review,
+              never auto-submitted. Hidden when the browser can't do it. */}
+          <SpeechMicButton onText={txt => setNote(prev => (prev ? prev + ' ' : '') + txt)} />
+        </div>
         <Textarea
           value={note}
           onChange={e => setNote(e.target.value)}

@@ -1,4 +1,9 @@
 {
+  "voice": {
+    "speak": "🎤 用說的",
+    "stop": "停止",
+    "listening": "聆聽中…"
+  },
   "dash": {
     "title": "主管追蹤",
     "overview": "工單與保養總覽",

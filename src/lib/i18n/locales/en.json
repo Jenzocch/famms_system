@@ -1,4 +1,9 @@
 {
+  "voice": {
+    "speak": "🎤 Speak",
+    "stop": "Stop",
+    "listening": "Listening…"
+  },
   "dash": {
     "title": "Supervisor Tracking",
     "overview": "Work orders & maintenance overview",

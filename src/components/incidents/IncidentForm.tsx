@@ -24,6 +24,7 @@ import { submitIncidentReport } from '@/lib/incidents/submitIncidentReport'
 import ReportLocationFields from './report/ReportLocationFields'
 import ReportPhotoPicker from './report/ReportPhotoPicker'
 import PastRecordsPanel from './report/PastRecordsPanel'
+import SpeechMicButton from '@/components/shared/SpeechMicButton'
 
 interface IssueType { value: string; label: string }
 
@@ -254,7 +255,13 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
         </div>
 
         <div>
-          <Label className="text-base">{t('report.problemDesc')} <span className="text-red-500">*</span></Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-base">{t('report.problemDesc')} <span className="text-red-500">*</span></Label>
+            {/* Dictation shortcut — appends into the SAME editable textarea,
+                so mis-recognitions from factory noise get fixed before
+                submitting, never auto-sent. Hidden when unsupported. */}
+            <SpeechMicButton onText={txt => setDescription(prev => (prev ? prev + ' ' : '') + txt)} />
+          </div>
           <Textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
