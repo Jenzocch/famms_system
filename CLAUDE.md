@@ -131,7 +131,7 @@ Key benefit: Machines like DIN-HMG-001 with "axle bearing fault" + "sensor fault
 - **notification_logs**: Audit trail of all notifications sent
 
 ### 11. RCA (Root Cause Analysis)
-- **rca_records**: Triggered when same failure_code ≥3 times in 90 days
+- **rca_records**: Triggered when same machine + incident_type ≥3 times in 90 days (see RCA Trigger section below for why this isn't keyed on failure_code)
 - Mandatory fields: root cause, corrective action, preventive action, responsible person, due date
 
 ---
@@ -165,7 +165,7 @@ Create Knowledge Base Entry
 
 **Temporary Fix** (high risk):
 - Reposition bearing, re-torque bolts, temporary weld, bypass mode
-- System will auto-detect repeat failure if same failure_code within 30 days
+- System will flag a repeat-failure candidate if the same machine + incident_type recurs within 30 days (see Repeat Failure Detection below)
 - Must set observation_period
 
 **Permanent Fix** (low risk):
@@ -177,32 +177,47 @@ Create Knowledge Base Entry
 
 ## Repeat Failure Detection (No False Positives)
 
+> **Note**: the 100+-code fault tree (`failure_code_id`) was never wired up
+> by any report path — the report form only ever captures the coarse
+> `incident_type` category (machine/pipe/electrical/facility/safety/
+> cleanliness/other). This detection is keyed off `(machine_id, incident_type)`
+> instead of the fault-tree code, trading some precision for actually firing.
+> See `src/lib/repeat-failure.ts`.
+
 System detects **potential repeat failures** ONLY when:
 
-1. **Same Machine** (e.g., DIN-HMG-001)
-2. **Same Failure Code** (e.g., BEARING_001)
-3. **Within 30 days**
-4. **Previous action was Temporary Fix** OR **Root cause unresolved**
+1. **Same Machine** (e.g., DIN-HMG-001) — `machine_id` must be non-null and match
+2. **Same Incident Type** (e.g., `machine`, `electrical`) — the coarse category, not a fault-tree code
+3. **Within 30 days** of the prior incident being reported
+4. **Previous incident was closed as a Temporary Fix** OR **has no root cause on record** (root cause unresolved)
 
-When detected:
-- System highlights: "⚠️ Potential Repeat Failure"
+When detected (at report time — right after the new incident is created):
+- The new incident's own detail page shows: "⚠️ Potential Repeat Failure" (only to a supervisor+ viewer)
 - **Supervisor must confirm**: "Is this the same issue?" (yes/no)
-  - If YES → linked as `incident_relation` type 'repeat_failure'
-  - If NO → create new incident
+  - If YES → `POST /api/incidents/[id]/relations` links it as `incident_relations` type 'repeat_failure' (`confirmed_by_id` / `confirmed_at` stamped)
+  - If NO → nothing is written; the new incident stands on its own
+- The same detection runs in the Telegram `/lapor` flow, notifying the factory's supervisors with a Ya/Bukan inline-button prompt
 
-This avoids the false positive of DIN-HMG-001 with bearing + sensor failures being marked as "repeat."
+This avoids the false positive of DIN-HMG-001 with a `machine`-type failure and a `safety`-type report being marked as "repeat" — they're different `incident_type`s even on the same machine. It does NOT distinguish, say, a bearing fault from a sensor fault if both were logged as `incident_type: machine` — that finer-grained distinction would need the fault tree, which the app deliberately doesn't surface to reporters (see the UX rationale in "Why Fault Tree" below — reporting speed won over classification precision).
 
 ---
 
 ## RCA Trigger & Mandatory Flow
 
+> **Note**: same caveat as above — keyed off `(machine_id, incident_type)`, not
+> `failure_code_id`. See `checkRCARequirement()` in `src/lib/rca.ts`.
+
 Automatic trigger:
 ```
-Same failure_code (e.g., BEARING_001)
+Same machine_id + incident_type (e.g., DIN-HMG-001 + "machine")
 Occurs ≥3 times
 Within 90 days
 → System forces: Fill RCA or cannot close incident
 ```
+
+Only applies when the incident has a `machine_id` — facility/electrical/etc.
+incidents with no machine attached never trigger this (nothing to compare
+across incidents against).
 
 Mandatory RCA fields:
 - Root cause (why?)
