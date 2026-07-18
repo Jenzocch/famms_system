@@ -76,11 +76,20 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
     initialFactory && factoriesPresent.some(f => f.id === initialFactory) ? initialFactory : 'all'
   )
 
+  // Urgency is now a THIRD filter dimension alongside status and factory (see
+  // the chip row below). 'A'/'C'/'D' only — the retired 'B' tier no longer
+  // exists in URGENCY_FROM_IMPACT and must not be reintroduced here.
+  const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'A' | 'C' | 'D'>('all')
+
   const activeFilter = BOARD_FILTERS.find(f => f.key === filter)!
-  const factoryScoped = factoryFilter === 'all' ? rows : rows.filter(r => r.factory?.id === factoryFilter)
-  const filtered = activeFilter.statuses
-    ? factoryScoped.filter(r => activeFilter.statuses!.includes(r.status))
-    : factoryScoped
+  // Per-dimension predicates (each one deliberately ignoring its OWN
+  // dimension) so `filtered` and every countFor* below can be built from the
+  // same three building blocks instead of drifting apart.
+  const byStatus = (r: BoardRow) => !activeFilter.statuses || activeFilter.statuses.includes(r.status)
+  const byFactory = (r: BoardRow) => factoryFilter === 'all' || r.factory?.id === factoryFilter
+  const byUrgency = (r: BoardRow) => urgencyFilter === 'all' || r.downtime_impact === urgencyFilter
+  const factoryScoped = rows.filter(r => byFactory(r) && byUrgency(r))
+  const filtered = rows.filter(r => byStatus(r) && byFactory(r) && byUrgency(r))
 
   // Surface the most pressing work first: overdue cases, then observation
   // periods that have ended (ready for close review), then by urgency
@@ -103,20 +112,24 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
     return new Date(b.reported_at).getTime() - new Date(a.reported_at).getTime()
   })
 
-  // Each filter's count reflects the OTHER dimension's current selection —
-  // status tab counts narrow to the selected factory, factory tab counts
-  // narrow to the selected status — so neither number lies about what
-  // tapping it will actually show.
+  // Each filter's count reflects the OTHER TWO dimensions' current
+  // selections — status tab counts narrow to the selected factory + urgency,
+  // factory tab counts narrow to the selected status + urgency, and urgency
+  // tab counts narrow to the selected status + factory — so no number ever
+  // lies about what tapping it will actually show.
   function countFor(statuses: IncidentStatus[] | null) {
     if (!statuses) return factoryScoped.length
     return factoryScoped.filter(r => statuses.includes(r.status)).length
   }
-  const statusScoped = activeFilter.statuses
-    ? rows.filter(r => activeFilter.statuses!.includes(r.status))
-    : rows
+  const statusScoped = rows.filter(r => byStatus(r) && byUrgency(r))
   function countForFactory(factoryId: string | null) {
     if (!factoryId) return statusScoped.length
     return statusScoped.filter(r => r.factory?.id === factoryId).length
+  }
+  const statusAndFactoryScoped = rows.filter(r => byStatus(r) && byFactory(r))
+  function countForUrgency(code: 'A' | 'C' | 'D' | null) {
+    if (!code) return statusAndFactoryScoped.length
+    return statusAndFactoryScoped.filter(r => r.downtime_impact === code).length
   }
 
   return (
@@ -179,11 +192,45 @@ export default function IncidentBoard({ rows, userRole = 'technician', initialFi
         </div>
       )}
 
+      {/* Urgency chips — unlike the factory row this is always shown (useful
+          even for a single-factory board), except when there are simply no
+          rows at all to filter. */}
+      {rows.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <button
+            onClick={() => setUrgencyFilter('all')}
+            aria-pressed={urgencyFilter === 'all'}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              urgencyFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600'
+            }`}
+          >
+            {t('boardFilters.all', '全部')}
+            <span className={urgencyFilter === 'all' ? 'text-gray-300' : 'text-gray-400'}> {countForUrgency(null)}</span>
+          </button>
+          {(['A', 'C', 'D'] as const).map(code => {
+            const active = urgencyFilter === code
+            return (
+              <button
+                key={code}
+                onClick={() => setUrgencyFilter(code)}
+                aria-pressed={active}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  active ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600'
+                }`}
+              >
+                {t(`urgency.${code}`, URGENCY_FROM_IMPACT[code].label)}
+                <span className={`ml-1 ${active ? 'text-gray-300' : 'text-gray-400'}`}>{countForUrgency(code)}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Cards */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          {filter !== 'all' || factoryFilter !== 'all' ? (
+          {filter !== 'all' || factoryFilter !== 'all' || urgencyFilter !== 'all' ? (
             // A specific tab is empty — the other tabs may still have cases.
             <p className="text-sm">{t('board.noInFilter', '此分類目前沒有工單')}</p>
           ) : (
