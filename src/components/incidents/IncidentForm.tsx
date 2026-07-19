@@ -70,7 +70,6 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
   const [issueType, setIssueType] = useState('machine')
   const [urgency, setUrgency] = useState('medium')
   const [dueDate, setDueDate] = useState('')
-  const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   // Generated ONCE per form instance (not per submit attempt) so that a retry
@@ -81,10 +80,10 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
 
   // Past incidents on the picked machine + KB entries matching the typed
   // problem — surfaced live in the form so last time's fix is one tap away.
-  const { pastIncidents, kbEntries } = usePastRecords(location.assetId, title)
+  const { pastIncidents, kbEntries } = usePastRecords(location.assetId, description)
 
   async function submit() {
-    if (!location.factoryId || !title.trim() || !description.trim()) {
+    if (!location.factoryId || !description.trim()) {
       toast.error(t('report.fillRequired'))
       return
     }
@@ -92,8 +91,13 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
       toast.error(t('report.reporterRequired', '這是共用裝置，請選擇實際回報的人'))
       return
     }
+    // Title is auto-derived from the description (same truncation rule as
+    // the Telegram /lapor flow — see handleNewReportUrgency) so the reporter
+    // only ever fills in one field.
+    const trimmedDesc = description.trim()
+    const title = trimmedDesc.length > 60 ? `${trimmedDesc.slice(0, 57)}...` : trimmedDesc
     // For "other", use the problem title as the incident type label on the board.
-    const incidentType = issueType === 'other' ? title.trim() : issueType
+    const incidentType = issueType === 'other' ? title : issueType
 
     // Deadline = manual pick if given, else auto-derived from urgency (SLA).
     const impactCode = urgency === 'critical' ? 'A' : urgency === 'medium' ? 'C' : 'D'
@@ -139,7 +143,7 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
   }
 
   const submitDisabled =
-    submitting || !location.factoryId || !title.trim() || !description.trim() ||
+    submitting || !location.factoryId || !description.trim() ||
     (reporter.isSharedDevice && !reporter.reporterName.trim())
 
   return (
@@ -246,16 +250,6 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
               </button>
             ))}
           </div>
-        </div>
-
-        <div>
-          <Label className="text-base">{t('report.problemTitle')} <span className="text-red-500">*</span></Label>
-          <Input
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder={t('report.titlePlaceholder')}
-            className="mt-1"
-          />
         </div>
 
         <div>
