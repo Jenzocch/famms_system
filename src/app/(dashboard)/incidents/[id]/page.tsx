@@ -295,6 +295,9 @@ export default async function IncidentDetailPage({
           userName={user?.full_name}
           estimatedCompletionDate={incident.estimated_completion_date}
           hasMachine={!!incident.machine_id}
+          machineId={incident.machine_id}
+          incidentType={incident.incident_type}
+          factoryId={incident.factory_id}
         />
       ) : (
         <ClosedBanner closedAt={incident.closed_at} />

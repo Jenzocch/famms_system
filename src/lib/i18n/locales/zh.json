@@ -255,6 +255,20 @@
     "hygieneCleanArea": "現場清潔完成，無金屬屑/異物殘留",
     "hygieneRequired": "請完成復產衛生確認的三項勾選"
   },
+  "rca": {
+    "gateHeading": "需先完成根本原因分析（RCA）",
+    "gateHint": "同一台機器的同類問題在 90 天內已發生 {count} 次，請完成以下分析後才能結案",
+    "rootCause": "根本原因（為什麼會發生？）",
+    "correctiveAction": "矯正措施（如何修好？）",
+    "preventiveAction": "預防措施（如何避免再發生？）",
+    "responsiblePerson": "負責人",
+    "selectPerson": "選擇負責人",
+    "dueDate": "完成期限",
+    "submitAndClose": "送出 RCA 並繼續關閉",
+    "fillRequired": "請完整填寫 RCA 所有欄位",
+    "saved": "RCA 已儲存，正在繼續關閉工單…",
+    "saveFailed": "RCA 儲存失敗"
+  },
   "pm": {
     "manageTitle": "保養管理",
     "manageSubtitle": "追蹤機器保養頻率與計畫",

@@ -255,6 +255,20 @@
     "hygieneCleanArea": "Area cleaned, no metal shavings/foreign debris left behind",
     "hygieneRequired": "Please check all three hygiene confirmations before closing"
   },
+  "rca": {
+    "gateHeading": "Root Cause Analysis (RCA) required before closing",
+    "gateHint": "The same issue on this machine occurred {count} times in the last 90 days. Complete this analysis to continue.",
+    "rootCause": "Root cause (why did it happen?)",
+    "correctiveAction": "Corrective action (how was it fixed?)",
+    "preventiveAction": "Preventive action (how will it be prevented?)",
+    "responsiblePerson": "Responsible person",
+    "selectPerson": "Select responsible person",
+    "dueDate": "Due date",
+    "submitAndClose": "Save RCA and continue closing",
+    "fillRequired": "Please fill in all RCA fields",
+    "saved": "RCA saved — continuing to close the case…",
+    "saveFailed": "Failed to save RCA"
+  },
   "pm": {
     "manageTitle": "PM Management",
     "manageSubtitle": "Track machine maintenance frequency & plans",

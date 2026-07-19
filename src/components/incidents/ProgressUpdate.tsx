@@ -19,6 +19,7 @@ import { STATUS_ZH } from '@/lib/incident-display'
 import { PERMISSIONS } from '@/lib/permissions'
 import { logAuditEvent } from '@/lib/audit'
 import { useI18n } from '@/lib/i18n'
+import RCAForm from './RCAForm'
 
 // Statuses a maintenance person can move an incident to (simplified set).
 // All four waiting-states must be here so a blocked case can be unblocked.
@@ -62,6 +63,7 @@ function allowedStatuses(currentStatus: IncidentStatus, allowRollback: boolean =
 
 export default function ProgressUpdate({
   incidentId, currentStatus, userRole = 'technician', userName, estimatedCompletionDate, hasMachine = false,
+  machineId, incidentType, factoryId,
 }: {
   incidentId: string
   currentStatus: IncidentStatus
@@ -73,6 +75,11 @@ export default function ProgressUpdate({
   // contamination risk; facility/electrical incidents with no machine_id
   // never touch food product, so they skip it).
   hasMachine?: boolean
+  // Only needed to render the inline RCA form if the close attempt is
+  // rejected with rca_required — see checkRCARequirement in src/lib/rca.ts.
+  machineId?: string | null
+  incidentType?: string
+  factoryId?: string
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -104,6 +111,10 @@ export default function ProgressUpdate({
   const [saveToKb, setSaveToKb] = useState(true)
   const [repairMethod, setRepairMethod] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Set when a close attempt is rejected with rca_required — renders the
+  // inline RCA form in place of the generic error. Filing the RCA there
+  // re-triggers this same submit(), which retries the close.
+  const [rcaGate, setRcaGate] = useState<{ occurrenceCount: number } | null>(null)
 
   // Status options based on rollback setting. Only supervisors+ may move a case to "closed".
   const availableStatuses = allowedStatuses(currentStatus, allowRollback)
@@ -137,6 +148,10 @@ export default function ProgressUpdate({
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
+      // A retry after filing the RCA below should re-check the gate fresh
+      // rather than assume it's now satisfied.
+      setRcaGate(null)
+
       // Upload photos
       const paths: string[] = []
       for (const photo of photos) {
@@ -168,7 +183,11 @@ export default function ProgressUpdate({
         const json = await res.json().catch(() => ({}))
         if (!res.ok) {
           if (json?.rca_required) {
-            throw new Error(t('progressUpdate.rcaRequired').replace('{count}', String(json.occurrence_count ?? '≥3')))
+            // Not a dead end: show the inline RCA form right here instead of
+            // just an error toast. Filing it there retries this same close.
+            toast.error(t('progressUpdate.rcaRequired').replace('{count}', String(json.occurrence_count ?? '≥3')))
+            setRcaGate({ occurrenceCount: json.occurrence_count ?? 3 })
+            return
           }
           throw new Error(json?.error || t('progressUpdate.closeFailed'))
         }
@@ -431,6 +450,19 @@ export default function ProgressUpdate({
             </div>
           )}
         </div>
+      )}
+
+      {/* RCA gate — only ever set after a close attempt was rejected with
+          rca_required (see submit() above). Filing it here retries the same
+          close instead of leaving the case permanently stuck. */}
+      {newStatus === 'closed' && rcaGate && machineId && incidentType && factoryId && (
+        <RCAForm
+          machineId={machineId}
+          incidentType={incidentType}
+          factoryId={factoryId}
+          occurrenceCount={rcaGate.occurrenceCount}
+          onSaved={() => submit()}
+        />
       )}
 
       <div>
