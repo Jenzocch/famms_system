@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { Button } from '@/components/ui/button'
 import { Download, Copy } from 'lucide-react'
@@ -13,7 +13,6 @@ interface Props {
 }
 
 export default function QRDisplay({ machineCode, machineId, appUrl = 'http://localhost:3000' }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
@@ -78,6 +77,8 @@ export default function QRDisplay({ machineCode, machineId, appUrl = 'http://loc
       ) : qrDataUrl ? (
         <div className="flex flex-col items-center gap-4">
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+            {/* eslint-disable-next-line @next/next/no-img-element -- generated
+                data: URL, not a static or remote asset next/image can optimize */}
             <img src={qrDataUrl} alt={`QR-${machineCode}`} className="w-80 h-80" />
           </div>
           <div className="flex gap-2">

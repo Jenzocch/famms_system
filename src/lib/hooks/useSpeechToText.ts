@@ -49,9 +49,11 @@ export function useSpeechToText(onText: (text: string) => void) {
   const recRef = useRef<SpeechRecognitionLike | null>(null)
   // Keep the latest callback without re-creating the recognizer mid-session.
   const onTextRef = useRef(onText)
-  onTextRef.current = onText
+  useEffect(() => { onTextRef.current = onText }, [onText])
 
-  // Detected in an effect (not render) — SSR has no window.
+  // Detected in an effect (not render) — SSR has no window. One-time
+  // capability check on mount, not an external-data sync.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSupported(!!getRecognizer()) }, [])
 
   function stop() {

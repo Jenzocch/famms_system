@@ -358,7 +358,7 @@ export async function notifyFactory(
       telegram_message_id: r.messageId ?? null,
       status: r.ok ? 'sent' : 'failed',
     })
-    r.ok ? sent++ : failed++
+    if (r.ok) sent++; else failed++
   }
 
   // Individually opted-in users (shared NULL-factory registrations always
@@ -381,7 +381,7 @@ export async function notifyFactory(
       telegram_message_id: r.messageId ?? null,
       status: r.ok ? 'sent' : 'failed',
     })
-    r.ok ? sent++ : failed++
+    if (r.ok) sent++; else failed++
   }
 
   return { sent, failed }
@@ -424,7 +424,7 @@ export async function notifyAssignees(
       telegram_message_id: r.messageId ?? null,
       status: r.ok ? 'sent' : 'failed',
     })
-    r.ok ? sent++ : failed++
+    if (r.ok) sent++; else failed++
   }
 
   const registered = new Set((users ?? []).map(u => u.profile_id))

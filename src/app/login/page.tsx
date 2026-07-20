@@ -74,7 +74,7 @@ export default function LoginPage() {
                 autoCorrect="off"
                 autoComplete="username"
                 required
-                className="mt-1"
+                className="mt-1 h-12 text-base"
               />
             </div>
             <div>
@@ -88,7 +88,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
-                  className="pr-10"
+                  className="h-12 pr-10 text-base"
                 />
                 <button
                   type="button"
@@ -102,7 +102,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {t('login.submit')}
             </Button>

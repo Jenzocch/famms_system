@@ -50,6 +50,10 @@ export default function RoleManager() {
   const [baseRole, setBaseRole] = useState<UserRole>('technician')
   const [caps, setCaps] = useState<CapMap>({ dashboard: false, boardFull: false, viewMachines: true, manageUsers: false })
 
+  // Mount-only load. `load` is intentionally omitted: it's a fresh function
+  // reference every render (closes over the unstable `supabase` client), so
+  // adding it would re-run this effect on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [])
 
   async function load() {

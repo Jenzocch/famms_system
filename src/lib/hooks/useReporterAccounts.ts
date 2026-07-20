@@ -39,6 +39,10 @@ export function useReporterAccounts() {
           setReporterName(prev => prev || data.full_name || '')
         })
     })
+    // Mount-only load. `supabase` is intentionally omitted: createClient()
+    // returns a new client instance every call (not memoized), so adding it
+    // here would re-run this effect on every render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return {

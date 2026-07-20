@@ -79,12 +79,24 @@ export function useReportLocation(presetMachineId?: string) {
       const saved = JSON.parse(localStorage.getItem(LAST_LOCATION_KEY) ?? 'null')
       if (saved?.factoryId) {
         restoredAreaRef.current = typeof saved.areaId === 'string' ? saved.areaId : null
+        // One-time mount restore from localStorage, not an external-data sync.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFactoryId(saved.factoryId)
       }
     } catch { /* corrupt storage — start blank */ }
+    // Mount-only: `presetMachineId` is treated as fixed for this hook's
+    // lifetime (the caller reads it once, e.g. from a URL param), and
+    // `supabase` is intentionally omitted since createClient() returns a new
+    // client instance every call (not memoized) — adding either would re-run
+    // this on every render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale option list
+    // synchronously so the dropdown doesn't show the previous factory's
+    // areas while the new factory's areas are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!factoryId) { setAreas([]); setAreaId(''); return }
     supabase.from('areas').select('*').eq('factory_id', factoryId).order('name')
       .then(({ data }) => {
@@ -96,9 +108,16 @@ export function useReportLocation(presetMachineId?: string) {
       })
     setAreaId('')
     setAssetId('')
+    // `supabase` is intentionally omitted: createClient() returns a new
+    // client instance every call (not memoized), so adding it here would
+    // re-run this effect on every render instead of only when factoryId
+    // changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [factoryId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch (see areas effect above).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!areaId || areaId === '__other__') { setAssets([]); setAssetId(''); return }
     supabase.from('machines').select('id, area_id, machine_name, machine_code')
       .eq('area_id', areaId).neq('status', 'scrapped').order('machine_name')
@@ -110,6 +129,7 @@ export function useReportLocation(presetMachineId?: string) {
         if (pending && (data ?? []).some(m => m.id === pending)) setAssetId(pending)
       })
     setAssetId('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areaId])
 
   // Remember this location for the next report from this browser.

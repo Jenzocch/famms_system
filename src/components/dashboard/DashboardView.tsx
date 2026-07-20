@@ -28,6 +28,7 @@ export interface DashboardRow {
   title: string | null
   reported_at: string
   updated_at: string
+  factory_id: string | null
   factory: { name: string } | null
 }
 

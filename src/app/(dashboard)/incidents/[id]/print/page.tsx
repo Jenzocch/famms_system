@@ -90,6 +90,10 @@ export default async function IncidentPrintPage({
   // 90 days (newest first), so a reviewer can spot a pattern at a glance.
   let relatedIncidents: RelatedIncidentRow[] = []
   if (incident.machine_id) {
+    // Server Component: runs once per request on the server, not on a client
+    // re-render, so Date.now() here isn't the hydration/purity hazard the
+    // rule is guarding against.
+    // eslint-disable-next-line react-hooks/purity
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
     const { data } = await supabase
       .from('incidents')

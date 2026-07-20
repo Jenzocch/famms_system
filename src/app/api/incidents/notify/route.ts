@@ -67,7 +67,10 @@ export async function POST(req: Request) {
     .select('*')
     .eq('code', incident.incident_type)
     .maybeSingle()
-  if (typeRow) typeLabel = (typeRow as any).label_id || (typeRow as any).label || typeLabel
+  if (typeRow) {
+    const row = typeRow as { label_id?: string | null; label?: string | null }
+    typeLabel = row.label_id || row.label || typeLabel
+  }
 
   // User-entered fields (title, names) must be escaped — a stray '<' would
   // otherwise make Telegram reject the whole message as bad HTML.

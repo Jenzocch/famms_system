@@ -25,6 +25,45 @@ function parseChecklist(raw: unknown): string[] {
   } catch { return [] }
 }
 
+// pm_schedules row as selected above. assigned_user_ids/assigned_to are
+// optional because the fallback select (scheduleSelect(BASE_COLS)) omits
+// them when migration_pm_assignee.sql hasn't run yet.
+interface ScheduleRow {
+  id: string
+  machine_id: string
+  pm_type: PMType
+  interval_days: number | null
+  description: string | null
+  checklist: unknown
+  created_at: string
+  assigned_user_ids?: string[] | null
+  assigned_to?: string | null
+}
+
+// One calendar cell's task — shape is a union of the three sources merged
+// below (stored pm_record, projected occurrence, ad-hoc maintenance_log),
+// so most fields beyond the common core are optional.
+interface PMTask {
+  record_id: string
+  schedule_id?: string
+  checklist?: string[]
+  projected: boolean
+  ad_hoc: boolean
+  machine_id: string
+  machine_name: string
+  machine_code: string | null
+  pm_type: PMType | null
+  description: string | null
+  scheduled_date: string
+  completed_at: string | null
+  status: string
+  cost: number | null
+  delay_reason: string | null
+  assigned_user_ids?: string[]
+  assigned_to?: string | null
+  performed_by?: string | null
+}
+
 export async function GET(req: Request) {
   const supabase = await createClient()
   // Local JWT check — this endpoint is hit on every PM calendar month change,
@@ -72,7 +111,7 @@ export async function GET(req: Request) {
     if (scheduleRes.error) {
       scheduleRes = await scheduleSelect(BASE_COLS)
     }
-    const scheduleList = (scheduleRes.data as any[]) || []
+    const scheduleList = ((scheduleRes.data as unknown as ScheduleRow[]) || [])
     const scheduleIds = scheduleList.map(s => s.id)
     const scheduleMap = Object.fromEntries(scheduleList.map(s => [s.id, s]))
 
@@ -84,12 +123,12 @@ export async function GET(req: Request) {
 
     const today = new Date().toISOString().split('T')[0]
 
-    const byDate: Record<string, any[]> = {}
+    const byDate: Record<string, PMTask[]> = {}
     // Track which (schedule, date) pairs already have a stored record so we
     // don't double-add a projected duplicate on top of a real one.
     const taken = new Set<string>()
 
-    function pushTask(date: string, task: any) {
+    function pushTask(date: string, task: PMTask) {
       if (!byDate[date]) byDate[date] = []
       byDate[date].push(task)
     }
@@ -158,7 +197,7 @@ export async function GET(req: Request) {
         const machine = machineMap[s.machine_id]
         if (!machine) continue
 
-        const dates = occurrencesInWindow(anchorMap[s.id], s.pm_type as PMType, monthStart, monthEnd, (s as any).interval_days)
+        const dates = occurrencesInWindow(anchorMap[s.id], s.pm_type, monthStart, monthEnd, s.interval_days)
         for (const date of dates) {
           if (taken.has(`${s.id}|${date}`)) continue // real record already shown
           taken.add(`${s.id}|${date}`)
@@ -169,7 +208,7 @@ export async function GET(req: Request) {
           pushTask(date, {
             record_id: `proj-${s.id}-${date}`,
             schedule_id: s.id,
-            checklist: parseChecklist((s as any).checklist),
+            checklist: parseChecklist(s.checklist),
             projected: true,
             ad_hoc: false,
             machine_id: s.machine_id,
@@ -182,8 +221,8 @@ export async function GET(req: Request) {
             status,
             cost: null,
             delay_reason: null,
-            assigned_user_ids: (s as any).assigned_user_ids ?? [],
-            assigned_to: (s as any).assigned_to ?? null,
+            assigned_user_ids: s.assigned_user_ids ?? [],
+            assigned_to: s.assigned_to ?? null,
           })
         }
       }

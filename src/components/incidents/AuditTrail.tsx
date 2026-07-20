@@ -51,27 +51,26 @@ export default function AuditTrail({ resourceId, resourceType, showHeading = tru
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadAuditLog()
+    // `supabase` is intentionally omitted from deps: createClient() returns
+    // a fresh instance every render (not memoized), so depending on it would
+    // re-run this on every render instead of only when the audited resource
+    // changes. The fetch is chained via .then()/.catch()/.finally() (rather
+    // than an awaited helper) so all state updates happen inside those
+    // callbacks, not synchronously in the effect body.
+    supabase
+      .from('audit_logs')
+      .select('id, user_name, action_type, change_summary, timestamp')
+      .eq('resource_id', resourceId)
+      .eq('resource_type', resourceType)
+      .order('timestamp', { ascending: false })
+      .limit(100)
+      .then(({ data, error }) => {
+        if (error) console.error('Failed to load audit trail:', error)
+        setLogs(data ?? [])
+        setLoading(false)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resourceId, resourceType])
-
-  async function loadAuditLog() {
-    try {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('id, user_name, action_type, change_summary, timestamp')
-        .eq('resource_id', resourceId)
-        .eq('resource_type', resourceType)
-        .order('timestamp', { ascending: false })
-        .limit(100)
-
-      if (error) throw error
-      setLogs(data ?? [])
-    } catch (err) {
-      console.error('Failed to load audit trail:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return <div className="text-sm text-gray-500 py-4">{t('audit.loading', '載入歷史記錄中...')}</div>

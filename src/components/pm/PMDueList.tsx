@@ -73,6 +73,10 @@ export default function PMDueList({ factoryId }: PMDueListProps) {
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale task list
+    // synchronously so the list doesn't show the previous factory's tasks
+    // while the new factory's tasks are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!factoryId) { setTasks([]); return }
     let cancelled = false
 

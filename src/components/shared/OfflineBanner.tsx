@@ -12,6 +12,10 @@ export default function OfflineBanner() {
   const [online, setOnline] = useState(true)
 
   useEffect(() => {
+    // One-time browser-API read on mount: `navigator` doesn't exist during
+    // SSR, so this can't be a lazy useState initializer — it must run after
+    // mount, on the client only.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOnline(navigator.onLine)
     const goOnline = () => setOnline(true)
     const goOffline = () => setOnline(false)

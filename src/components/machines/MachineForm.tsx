@@ -21,12 +21,6 @@ interface Area {
   name: string
 }
 
-interface Factory {
-  id: string
-  code: string
-  name: string
-}
-
 interface Profile {
   id: string
   full_name: string
@@ -58,7 +52,6 @@ export default function MachineForm({ machine }: Props) {
   const { t } = useI18n()
 
   const [areas, setAreas] = useState<Area[]>([])
-  const [factories, setFactories] = useState<Factory[]>([])
   const [owners, setOwners] = useState<Profile[]>([])
 
   const [areaId, setAreaId] = useState(machine?.area_id || '')
@@ -77,16 +70,18 @@ export default function MachineForm({ machine }: Props) {
 
   useEffect(() => {
     async function load() {
-      const [{ data: a }, { data: f }, { data: p }] = await Promise.all([
+      const [{ data: a }, { data: p }] = await Promise.all([
         supabase.from('areas').select('*, factory_id').order('name'),
-        supabase.from('factories').select('*').order('code'),
         supabase.from('profiles').select('*').eq('is_active', true).order('full_name'),
       ])
       setAreas(a ?? [])
-      setFactories(f ?? [])
       setOwners(p ?? [])
     }
     load()
+    // Mount-only load. `supabase` is intentionally omitted: createClient()
+    // returns a new client instance every call (not memoized), so adding it
+    // here would re-run this effect on every render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
 
