@@ -14,7 +14,7 @@ import { Download, Search, X, ChevronRight, AlertCircle } from 'lucide-react'
 import NudgeCardButton from '@/components/incidents/NudgeCardButton'
 import { formatDistanceToNow } from 'date-fns'
 import { useDateLocale } from '@/lib/date-locale'
-import * as XLSX from 'xlsx'
+import { toCsv, downloadCsv } from '@/lib/csv-export'
 import type { IncidentStatus, UserRole } from '@/types'
 import { ISSUE_TYPE_LABELS, URGENCY_FROM_IMPACT, STATUS_ZH_COLOR } from '@/lib/incident-display'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -192,7 +192,7 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
     }
   }
 
-  async function exportToExcel() {
+  function exportToCsv() {
     if (results.length === 0) {
       toast.error(t('board.noDataToExport'))
       return
@@ -220,26 +220,7 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
         }
       })
 
-      const ws = XLSX.utils.json_to_sheet(exportData)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, t('board.sheetName'))
-
-      // Auto-size columns
-      const columnWidths = [
-        { wch: 12 }, // 工單號
-        { wch: 20 }, // 標題
-        { wch: 15 }, // 類型
-        { wch: 12 }, // 狀態
-        { wch: 12 }, // 緊急度
-        { wch: 25 }, // 機器
-        { wch: 15 }, // 工廠
-        { wch: 15 }, // 回報者
-        { wch: 15 }, // 指派給
-        { wch: 20 }, // 回報時間
-      ]
-      ws['!cols'] = columnWidths
-
-      XLSX.writeFile(wb, `incident-report-${new Date().toISOString().split('T')[0]}.xlsx`)
+      downloadCsv(`incident-report-${new Date().toISOString().split('T')[0]}.csv`, toCsv(exportData))
       toast.success(t('board.excelExported'))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('board.exportFailed'))
@@ -413,7 +394,7 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
               )}
           </p>
           <Button
-            onClick={exportToExcel}
+            onClick={exportToCsv}
             variant="outline"
             size="sm"
             className="gap-2 text-green-600 border-green-300"

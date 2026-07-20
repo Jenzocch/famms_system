@@ -5,12 +5,16 @@
 -- WHY THIS IS URGENT
 -- The anon key is PUBLIC: it ships in the browser bundle as
 -- NEXT_PUBLIC_SUPABASE_ANON_KEY, so anyone who opens devtools can read it.
--- SETUP_RUN_ONCE.sql granted ALL on every public table to `anon` AND disabled
--- RLS, and schema.sql has no active policies. Net effect: anyone with that key
--- can read / modify / delete the ENTIRE database (all factories' incidents,
--- machines, profiles, telegram_chat_id, ...) WITHOUT logging in, by hitting
--- the Supabase REST API directly — completely bypassing the app, middleware
--- and PERMISSIONS.
+-- schema.sql / setup_all.sql never enable RLS (that happens later, in the
+-- staged migration_rls_* chain), and two now-deleted "quick fix" scripts
+-- (SETUP_RUN_ONCE.sql, fix_permissions_reset.sql) used to additionally GRANT
+-- ALL on every public table to `anon` on top of that. Net effect on any DB
+-- that ran either of them: anyone with that key can read / modify / delete
+-- the ENTIRE database (all factories' incidents, machines, profiles,
+-- telegram_chat_id, ...) WITHOUT logging in, by hitting the Supabase REST API
+-- directly — completely bypassing the app, middleware and PERMISSIONS. Run
+-- this migration regardless of whether you ever ran those scripts — it's the
+-- fix either way.
 --
 -- WHAT THIS DOES
 -- Revokes `anon`'s access to the application tables. Logged-in users use the

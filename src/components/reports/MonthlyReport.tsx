@@ -2,13 +2,13 @@
 
 import { useRouter } from 'next/navigation'
 import { Printer, FileSpreadsheet, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
-import * as XLSX from 'xlsx'
 import { Button } from '@/components/ui/button'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { useIncidentTypeLabel } from '@/lib/incident-type-label'
+import { toCsv, downloadCsv, csvRow } from '@/lib/csv-export'
 
 export interface ReportIncidentRow {
   id: string
@@ -81,25 +81,21 @@ export default function MonthlyReport({ data }: { data: ReportData }) {
     : data.factories.find(f => f.id === data.factoryId)?.name ?? ''
 
   function exportExcel() {
-    const wb = XLSX.utils.book_new()
-
-    const summary = [
-      [t('reports.title', '月報'), `${data.month}`, factoryName],
-      [],
-      [t('reports.total', '總件數'), totals.incidents],
-      [t('reports.closed', '已結案'), totals.closed],
-      [t('reports.stillOpen', '未結案'), totals.open],
-      [t('reports.urgent', '緊急件'), totals.urgent],
-      [t('reports.avgResponseMin', '平均回應（分鐘）'), totals.responseMinutes?.toFixed(0) ?? '-'],
-      [t('reports.avgResolutionHr', '平均結案（小時）'), totals.resolutionHours?.toFixed(1) ?? '-'],
-      [t('reports.pmScheduled', 'PM 排定'), totals.pmScheduled],
-      [t('reports.pmCompleted', 'PM 完成'), totals.pmCompleted],
-      [t('reports.pmCompliance', 'PM 完成率'), pmCompliance !== null ? `${pmCompliance}%` : '-'],
-      [t('reports.adhoc', '臨時維修'), totals.adhocJobs],
-      [t('reports.costTotal', '費用合計'), costTotal || '-'],
+    const summaryLines = [
+      csvRow([t('reports.title', '月報'), `${data.month}`, factoryName]),
+      '',
+      csvRow([t('reports.total', '總件數'), totals.incidents]),
+      csvRow([t('reports.closed', '已結案'), totals.closed]),
+      csvRow([t('reports.stillOpen', '未結案'), totals.open]),
+      csvRow([t('reports.urgent', '緊急件'), totals.urgent]),
+      csvRow([t('reports.avgResponseMin', '平均回應（分鐘）'), totals.responseMinutes?.toFixed(0) ?? '-']),
+      csvRow([t('reports.avgResolutionHr', '平均結案（小時）'), totals.resolutionHours?.toFixed(1) ?? '-']),
+      csvRow([t('reports.pmScheduled', 'PM 排定'), totals.pmScheduled]),
+      csvRow([t('reports.pmCompleted', 'PM 完成'), totals.pmCompleted]),
+      csvRow([t('reports.pmCompliance', 'PM 完成率'), pmCompliance !== null ? `${pmCompliance}%` : '-']),
+      csvRow([t('reports.adhoc', '臨時維修'), totals.adhocJobs]),
+      csvRow([t('reports.costTotal', '費用合計'), costTotal || '-']),
     ]
-    wb.SheetNames.push('Summary')
-    wb.Sheets['Summary'] = XLSX.utils.aoa_to_sheet(summary)
 
     const rows = data.incidents.map(i => ({
       No: i.incident_no,
@@ -114,10 +110,9 @@ export default function MonthlyReport({ data }: { data: ReportData }) {
       [t('reports.colReported', '回報時間')]: i.reported_at.slice(0, 16).replace('T', ' '),
       [t('reports.colClosed', '結案時間')]: i.closed_at ? i.closed_at.slice(0, 16).replace('T', ' ') : '',
     }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    XLSX.utils.book_append_sheet(wb, ws, 'Incidents')
 
-    XLSX.writeFile(wb, `FAMMS-report-${data.month}.xlsx`)
+    const csv = [...summaryLines, '', toCsv(rows)].join('\r\n')
+    downloadCsv(`FAMMS-report-${data.month}.csv`, csv)
   }
 
   return (
@@ -163,7 +158,7 @@ export default function MonthlyReport({ data }: { data: ReportData }) {
             <Printer className="w-4 h-4" /> {t('reports.print', '列印')}
           </Button>
           <Button size="sm" onClick={exportExcel} className="gap-1.5">
-            <FileSpreadsheet className="w-4 h-4" /> Excel
+            <FileSpreadsheet className="w-4 h-4" /> CSV
           </Button>
         </div>
       </div>
