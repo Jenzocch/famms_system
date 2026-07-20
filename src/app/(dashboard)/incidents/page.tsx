@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
-import IncidentBoard, { BoardRow } from '@/components/incidents/IncidentBoard'
+import type { BoardRow } from '@/components/incidents/IncidentBoard'
 import IncidentsBoardWithSearch from '@/components/incidents/IncidentsBoardWithSearch'
 import { OPEN_STATUSES } from '@/lib/incident-display'
 import { addDays, addWeeks, addMonths } from 'date-fns'

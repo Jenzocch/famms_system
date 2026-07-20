@@ -489,6 +489,9 @@ export default function ProgressUpdate({
             <div className="flex flex-wrap gap-2">
               {photos.map((p, i) => (
                 <div key={i} className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local
+                      blob: preview of a File the user just picked, not a static
+                      or remote asset next/image can optimize */}
                   <img
                     src={photoPreviews[i]}
                     alt={`${t('progressUpdate.photos')} ${i + 1}`}

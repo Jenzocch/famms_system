@@ -72,7 +72,6 @@ export default function WorkflowProgress({ status, userRole }: { status: Inciden
             ? true
             : !isWaiting && i < activeIndex
           const isActive = !isWaiting && i === activeIndex
-          const isFuture = isWaiting ? step !== 'reported' : i > activeIndex
 
           return (
             <div key={step} className="flex items-center flex-1 min-w-0">
