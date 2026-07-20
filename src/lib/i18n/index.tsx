@@ -13,7 +13,10 @@ export const LOCALES: { value: Locale; label: string }[] = [
   { value: 'id', label: 'Bahasa' },
 ]
 
-const DICTS: Record<Locale, any> = { zh, en, id }
+// Recursive shape of the locale JSON dictionaries (nested string leaves).
+type Dict = { [key: string]: string | Dict }
+
+const DICTS: Record<Locale, Dict> = { zh, en, id }
 const STORAGE_KEY = 'famms_lang'
 // Cookie mirror of the same choice. The cookie is what lets the SERVER render
 // the first paint in the right language — localStorage alone is invisible to
@@ -26,8 +29,12 @@ function isLocale(v: unknown): v is Locale {
 }
 
 // Resolve a dot-path ('navigation.pm') against a nested dictionary.
-function lookup(dict: any, key: string): string | undefined {
-  return key.split('.').reduce((acc, part) => (acc == null ? undefined : acc[part]), dict)
+function lookup(dict: Dict, key: string): string | undefined {
+  const result = key.split('.').reduce<string | Dict | undefined>(
+    (acc, part) => (acc == null || typeof acc === 'string' ? undefined : acc[part]),
+    dict,
+  )
+  return typeof result === 'string' ? result : undefined
 }
 
 interface I18nContextValue {
@@ -57,6 +64,9 @@ export function I18nProvider({
     if (initialLocale) return // cookie present — nothing to migrate
     const saved = window.localStorage.getItem(STORAGE_KEY)
     if (isLocale(saved)) {
+      // One-time mount migration (localStorage -> cookie); not an
+      // external-data sync, so the synchronous setState here is intentional.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(saved)
       writeCookie(saved)
       return

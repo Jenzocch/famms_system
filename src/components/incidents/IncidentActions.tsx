@@ -139,6 +139,10 @@ export default function IncidentActions({
   }, [editing])
 
   useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale option list
+    // synchronously so the dropdown doesn't show the previous factory's
+    // areas while the new factory's areas are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!editing || !fId) { setAreas([]); return }
     supabase.from('areas').select('id, name').eq('factory_id', fId).order('name')
       .then(({ data }) => setAreas(data ?? []))
@@ -146,6 +150,8 @@ export default function IncidentActions({
   }, [editing, fId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch (see areas effect above).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!editing || !areaId) { setMachines([]); return }
     supabase.from('machines').select('id, machine_name, machine_code').eq('area_id', areaId).order('machine_name')
       .then(({ data }) => setMachines(data ?? []))

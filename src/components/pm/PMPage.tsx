@@ -44,6 +44,27 @@ interface RecentItem {
   cost?: number | null
 }
 
+// Raw row shapes from the two loadRecent() selects below (joined
+// machine/schedule are single embedded objects — each log/record has at
+// most one, matching the real PostgREST response shape).
+interface LogRow {
+  id: string
+  notes: string | null
+  performed_by: string | null
+  performed_at: string
+  machine: { machine_name: string; machine_code: string | null } | null
+}
+interface RecordRow {
+  id: string
+  completed_at: string | null
+  findings: string | null
+  cost: number | null
+  schedule: {
+    pm_type: string
+    machine: { machine_name: string; machine_code: string | null } | null
+  } | null
+}
+
 // zh fallbacks; rendered through t(pm.cad*) so labels follow app language.
 const PM_TYPE_LABELS: Record<string, string> = {
   daily: '每日', weekly: '每週', monthly: '每月',
@@ -91,19 +112,37 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
   }, [defaultFactoryId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale option list
+    // synchronously so the dropdown doesn't show the previous factory's
+    // areas while the new factory's areas are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!factoryId) { setAreas([]); setAreaId(''); return }
     supabase.from('areas').select('*').eq('factory_id', factoryId).order('name')
       .then(({ data }) => setAreas(data ?? []))
     setAreaId('')
+    // `supabase` is intentionally omitted: createClient() returns a new
+    // client instance every call (not memoized), so adding it here would
+    // re-run this effect on every render instead of only when factoryId
+    // changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [factoryId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch (see areas effect above).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!areaId) { setMachines([]); return }
     supabase.from('machines').select('*').eq('area_id', areaId).neq('status', 'scrapped').order('machine_name')
       .then(({ data }) => setMachines(data ?? []))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areaId])
 
-  useEffect(() => { loadRecent() }, [])
+  useEffect(() => {
+    loadRecent()
+    // Mount-only load. `loadRecent` is intentionally omitted: it's a fresh
+    // function reference every render (closes over the unstable `supabase`
+    // client), so adding it would re-run this effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function loadRecent() {
     // Ad-hoc maintenance logs
@@ -121,7 +160,7 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
       .order('completed_at', { ascending: false })
       .limit(50)
 
-    const adhoc: RecentItem[] = (logs ?? []).map((l: any) => ({
+    const adhoc: RecentItem[] = ((logs ?? []) as unknown as LogRow[]).map((l) => ({
       id: `log-${l.id}`,
       kind: 'adhoc',
       machineName: l.machine
@@ -132,7 +171,7 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
       when: l.performed_at,
     }))
 
-    const scheduled: RecentItem[] = (records ?? []).map((r: any) => {
+    const scheduled: RecentItem[] = ((records ?? []) as unknown as RecordRow[]).map((r) => {
       const machine = r.schedule?.machine
       return {
         id: `rec-${r.id}`,
@@ -142,7 +181,7 @@ export default function PMPage({ role = 'technician', defaultFactoryId }: { role
           : null,
         performedBy: null,
         notes: r.findings,
-        when: r.completed_at,
+        when: r.completed_at ?? '',
         pmType: r.schedule?.pm_type ?? null,
         cost: r.cost,
       }

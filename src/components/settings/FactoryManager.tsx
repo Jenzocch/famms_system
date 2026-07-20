@@ -56,6 +56,10 @@ export default function FactoryManager() {
 
   useEffect(() => {
     loadAll()
+    // Mount-only load. `loadAll` is intentionally omitted: it's a fresh
+    // function reference every render (closes over the unstable `supabase`
+    // client), so adding it would re-run this effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function loadAll() {

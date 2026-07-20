@@ -63,6 +63,10 @@ export default function AssignForm({
     // button per role with members lets that group be one-click assignable
     // the same way "全部技師" already is, for whatever roles get created.
     supabase.from('custom_roles').select('*').then(({ data }) => setCustomRoles((data ?? []) as CustomRole[]))
+    // Mount-only load. `supabase` is intentionally omitted: createClient()
+    // returns a new client instance every call (not memoized), so adding it
+    // here would re-run this effect on every render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Re-sync the editable fields to the saved assignment whenever the incident's
@@ -70,6 +74,9 @@ export default function AssignForm({
   // reuses this component for another case). Keeps "add / swap assignee" edits
   // reflecting the real DB state instead of going stale.
   useEffect(() => {
+    // Intentional reset-on-prop-change: re-initializes editable local state
+    // from the incident's saved assignment, not an external-data sync.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIds(assignedUserIds ?? [])
     setDept(assignedDept || '')
     setDue(dueDate || '')
@@ -137,9 +144,12 @@ export default function AssignForm({
     const leftovers = (assignedTo ?? '')
       .split(/[,，]/).map(s => s.trim()).filter(Boolean)
       .filter(n => !linkedNames.has(n))
+    // Intentional reset-on-prop-change: re-derives the free-text/vendor split
+    // from the incident's saved assignment, not an external-data sync.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedVendorNames(leftovers.filter(n => vendorNames.has(n)))
     setExtraNames(leftovers.filter(n => !vendorNames.has(n)).join(', '))
-  }, [accounts, vendors])
+  }, [accounts, vendors, assignedTo, assignedUserIds])
 
   const accountName = (a: Account) => a.full_name || `(${ROLE_ZH[a.role] ?? a.role})`
 
@@ -228,7 +238,7 @@ export default function AssignForm({
       }
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : (err && typeof err === 'object' && 'message' in err ? String((err as any).message) : '更新失敗'))
+      toast.error(err instanceof Error ? err.message : (err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '更新失敗'))
     } finally {
       setSubmitting(false)
     }

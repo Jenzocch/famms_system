@@ -25,6 +25,23 @@ interface Machine {
   machine_code: string | null
   maintenance_cycle: number
 }
+// Raw pm_schedules row from loadSchedules()'s select below. `machines` is a
+// single embedded object (each schedule has exactly one machine) — the
+// untyped Supabase client just infers it as an array without a Database
+// type. assigned_user_ids/assigned_to are optional: the base-column retry
+// omits them when migration_pm_assignee.sql hasn't run yet.
+interface RawScheduleRow {
+  id: string
+  machine_id: string
+  pm_type: string
+  interval_days: number | null
+  description: string | null
+  checklist: string | null
+  is_active: boolean
+  assigned_user_ids?: string[]
+  assigned_to?: string | null
+  machines: { machine_name: string; machine_code: string | null } | null
+}
 interface PMSchedule {
   id: string
   machine_id: string
@@ -103,6 +120,11 @@ export default function PMScheduleManager() {
     supabase.from('profiles').select('id, full_name, role, factory_id, custom_role_key').eq('is_active', true).order('full_name')
       .then(({ data }) => setAccounts((data ?? []) as Account[]))
     loadSchedules()
+    // Mount-only load. `supabase`/`loadSchedules` are intentionally omitted:
+    // createClient() returns a new client instance every call (not
+    // memoized) and loadSchedules closes over it, so depending on either
+    // would re-run this effect on every render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const accountName = (a: Account) => a.full_name || `(${ROLE_ZH[a.role] ?? a.role})`
@@ -121,18 +143,30 @@ export default function PMScheduleManager() {
   )
 
   useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale option list
+    // synchronously so the dropdown doesn't show the previous factory's
+    // areas while the new factory's areas are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!factoryId) { setAreas([]); setAreaId(''); return }
     supabase.from('areas').select('*').eq('factory_id', factoryId).order('name')
       .then(({ data }) => setAreas(data ?? []))
     setAreaId('')
+    // `supabase` is intentionally omitted: createClient() returns a new
+    // client instance every call (not memoized), so adding it here would
+    // re-run this effect on every render instead of only when factoryId
+    // changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [factoryId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch (see areas effect above).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!areaId) { setMachines([]); setMachineId(''); return }
     supabase.from('machines').select('id, factory_id, machine_name, machine_code, maintenance_cycle')
       .eq('area_id', areaId).neq('status', 'scrapped').order('machine_name')
       .then(({ data }) => setMachines(data ?? []))
     setMachineId('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areaId])
 
   const checklistToText = (raw: string | null): string => {
@@ -157,22 +191,24 @@ export default function PMScheduleManager() {
         id, machine_id, pm_type, interval_days, description, checklist, is_active,
         machines:machines(machine_name, machine_code)
       `
-    let res: any = await supabase
+    const res = await supabase
       .from('pm_schedules')
       .select(withAssignee)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
+    let rows: unknown = res.data
     if (res.error) {
-      res = await supabase
+      const retryRes = await supabase
         .from('pm_schedules')
         .select(baseCols)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
+      rows = retryRes.data
     }
-    const data = res.data as any[] | null
+    const data = rows as unknown as RawScheduleRow[] | null
 
     if (data) {
-      const mapped = (data as any[]).map(s => ({
+      const mapped = data.map(s => ({
         id: s.id,
         machine_id: s.machine_id,
         pm_type: s.pm_type,

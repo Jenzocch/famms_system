@@ -100,6 +100,10 @@ export default function UserManager({ currentUserId, canAssignAdmin = false }: {
       setCustomRoles((data ?? []) as CustomRole[])
     })
     loadUsers()
+    // Mount-only load. `loadUsers` is intentionally omitted: it's a fresh
+    // function reference every render (closes over the unstable `supabase`
+    // client), so adding it would re-run this effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const roleOptions: { value: string; label: string }[] = [

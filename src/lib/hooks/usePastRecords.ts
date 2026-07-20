@@ -32,6 +32,10 @@ export function usePastRecords(machineId: string | null | undefined, queryText: 
   // Signal 1: machine picked → its history.
   useEffect(() => {
     if (!machineId) {
+      // Intentional reset-before-refetch: clears stale suggestions
+      // synchronously so the previous machine's history doesn't linger while
+      // the new machine's (or no machine's) history loads.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMachineIncidents([])
       setMachineKb([])
       return
@@ -64,6 +68,8 @@ export function usePastRecords(machineId: string | null | undefined, queryText: 
   useEffect(() => {
     const q = queryText.trim()
     if (q.length < 2) {
+      // Intentional reset-before-refetch (see machine-history effect above).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTextKb([])
       return
     }

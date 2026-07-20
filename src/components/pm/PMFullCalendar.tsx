@@ -50,11 +50,6 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
     ? weekDates[0].slice(0, 7)
     : `${year}-${String(month + 1).padStart(2, '0')}`
 
-  useEffect(() => {
-    setSelectedDate(null)
-    loadData()
-  }, [factoryId, monthStr, selectedMachineId])
-
   async function loadData() {
     setLoading(true)
     try {
@@ -70,6 +65,19 @@ export default function PMFullCalendar({ factoryId }: PMFullCalendarProps) {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    // Intentional reset-before-refetch: clears the day-detail selection
+    // synchronously so a stale date from the previous month/filter doesn't
+    // stay "selected" while the new data loads.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedDate(null)
+    loadData()
+    // `loadData` is intentionally omitted: it's a fresh function reference
+    // every render, so adding it would re-run this on every render instead
+    // of only when factoryId/monthStr/selectedMachineId change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [factoryId, monthStr, selectedMachineId])
 
   // Called by TaskDetailPanel when the user confirms a complete/skip form.
   // Returns whether it succeeded so the panel knows to clear its form.

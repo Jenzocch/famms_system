@@ -28,6 +28,25 @@ interface Factory { id: string; name: string }
 interface Area { id: string; name: string }
 interface Machine { id: string; machine_name: string; machine_code: string | null }
 interface IssueType { code: string; label: string }
+
+// Raw row shape from the incidents search select below. The untyped
+// Supabase client (no generated Database type) infers embedded to-one
+// relations (machine/factory) as arrays even though each incident has at
+// most one of each — the code already normalizes both shapes when mapping.
+interface RawIncidentSearchRow {
+  id: string
+  incident_no: string
+  status: string
+  downtime_impact: 'A' | 'C' | 'D'
+  incident_type: string
+  title: string | null
+  reporter_name: string | null
+  reported_at: string
+  assigned_to: string | null
+  machine_id: string | null
+  machine: { machine_code: string | null; machine_name: string } | { machine_code: string | null; machine_name: string }[] | null
+  factory: { name: string } | { name: string }[] | null
+}
 interface IncidentRow {
   id: string
   incident_no: string
@@ -39,8 +58,8 @@ interface IncidentRow {
   reported_at: string
   assigned_to: string | null
   machine_id: string | null
-  machine?: { machine_code: string | null; machine_name: string }
-  factory?: { name: string }
+  machine?: { machine_code: string | null; machine_name: string } | null
+  factory?: { name: string } | null
 }
 
 interface IncidentSearchProps {
@@ -90,16 +109,6 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
     loadFactories().then(data => setFactories(data ?? []))
   }, [])
 
-  useEffect(() => {
-    if (!factoryId) { setAreas([]); setAreaId(''); return }
-    loadAreas(factoryId)
-  }, [factoryId])
-
-  useEffect(() => {
-    if (!areaId) { setMachines([]); setMachineId(''); return }
-    loadMachines(areaId)
-  }, [areaId])
-
   async function loadAreas(fId: string) {
     const { data } = await supabase
       .from('areas')
@@ -118,6 +127,27 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
       .order('machine_name')
     setMachines(data ?? [])
   }
+
+  useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale option list
+    // synchronously so the dropdown doesn't show the previous factory's
+    // areas while the new factory's areas are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!factoryId) { setAreas([]); setAreaId(''); return }
+    loadAreas(factoryId)
+    // `loadAreas` is intentionally omitted: it's a fresh function reference
+    // every render, so adding it would re-run this on every render instead
+    // of only when factoryId changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [factoryId])
+
+  useEffect(() => {
+    // Intentional reset-before-refetch (see areas effect above).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!areaId) { setMachines([]); setMachineId(''); return }
+    loadMachines(areaId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaId])
 
   async function search() {
     setLoading(true)
@@ -146,7 +176,7 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
         return q.order('reported_at', { ascending: false }).limit(500)
       }
 
-      let data: any[]
+      let data: RawIncidentSearchRow[]
       if (!PERMISSIONS.boardFull(userRole)) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setResults([]); setHasSearched(true); if (onResults) onResults([]); return }
@@ -156,18 +186,18 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
         ])
         if (assignedRes.error) throw assignedRes.error
         if (reportedRes.error) throw reportedRes.error
-        const byId = new Map<string, any>()
-        for (const r of [...(assignedRes.data ?? []), ...(reportedRes.data ?? [])]) byId.set(r.id, r)
+        const byId = new Map<string, RawIncidentSearchRow>()
+        for (const r of [...(assignedRes.data ?? []), ...(reportedRes.data ?? [])] as unknown as RawIncidentSearchRow[]) byId.set(r.id, r)
         data = [...byId.values()].sort(
           (a, b) => new Date(b.reported_at).getTime() - new Date(a.reported_at).getTime()
         )
       } else {
         const { data: full, error } = await buildQuery()
         if (error) throw error
-        data = full ?? []
+        data = (full ?? []) as unknown as RawIncidentSearchRow[]
       }
 
-      const mapped = (data ?? []).map((d: any) => ({
+      const mapped = (data ?? []).map((d: RawIncidentSearchRow) => ({
         id: d.id,
         incident_no: d.incident_no,
         status: d.status,
@@ -211,7 +241,7 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
           [t('board.colTitle')]: r.title || typeLabelOf(r.incident_type, t('board.problem')),
           [t('board.colType')]: typeLabelOf(r.incident_type, r.incident_type),
           [t('board.colStatus')]: statusLabelOf(r.status),
-          [t('board.colUrgency')]: t(`urgency.${r.downtime_impact}`, URGENCY_FROM_IMPACT[r.downtime_impact as any]?.label || r.downtime_impact),
+          [t('board.colUrgency')]: t(`urgency.${r.downtime_impact}`, URGENCY_FROM_IMPACT[r.downtime_impact]?.label || r.downtime_impact),
           [t('board.colMachine')]: machineDisplay,
           [t('board.colFactory')]: r.factory?.name || '',
           [t('board.colReporter')]: r.reporter_name || '',
@@ -409,7 +439,7 @@ export default function IncidentSearch({ onResults, userRole = 'technician' }: I
       {results.length > 0 && (
         <div className="space-y-2">
           {results.map(inc => {
-            const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact as any]
+            const urgency = URGENCY_FROM_IMPACT[inc.downtime_impact]
             const statusLabel = statusLabelOf(inc.status)
             const statusColor = STATUS_ZH_COLOR[inc.status as IncidentStatus] || 'bg-gray-100 text-gray-700'
             const typeLabel = typeLabelOf(inc.incident_type, inc.incident_type)

@@ -57,22 +57,41 @@ export default function AssetManager() {
   useEffect(() => {
     if (factories.length === 0) return
     if (!factoryId || !factories.some(f => f.id === factoryId)) {
+      // Intentional reset-on-list-change: keeps the selection valid (or
+      // preselects the first factory) whenever the shared factory list
+      // changes, not an external-data sync.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFactoryId(factories[0].id)
     }
-  }, [factories])
+  }, [factories, factoryId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch: clears the stale option list
+    // synchronously so the dropdown doesn't show the previous factory's
+    // areas while the new factory's areas are loading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!factoryId) { setAreas([]); setAreaId(''); return }
     supabase.from('areas').select('*').eq('factory_id', factoryId).order('name').then(({ data }) => {
       setAreas(data ?? [])
       if (data && data.length > 0) setAreaId(data[0].id)
       else setAreaId('')
     })
+    // `supabase` is intentionally omitted: createClient() returns a new
+    // client instance every call (not memoized), so adding it here would
+    // re-run this effect on every render instead of only when factoryId
+    // changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [factoryId])
 
   useEffect(() => {
+    // Intentional reset-before-refetch (see areas effect above).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!areaId) { setAssets([]); return }
     loadAssets()
+    // `loadAssets` is intentionally omitted: it's a fresh function reference
+    // every render (closes over the unstable `supabase` client), so adding
+    // it would re-run this effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areaId])
 
   async function loadAssets() {

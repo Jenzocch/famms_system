@@ -103,8 +103,15 @@ export default function TelegramSettings({
   }
 
   useEffect(() => {
+    // Mount-only load. `load`/`loadPeople` are reused elsewhere as
+    // post-mutation refetch callbacks (see addGroup/addPersonalUser below),
+    // so they stay as named async functions rather than being inlined here;
+    // they're intentionally omitted from deps since they're fresh function
+    // references every render (closing over the unstable `supabase` client).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
     loadPeople()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function addGroup() {

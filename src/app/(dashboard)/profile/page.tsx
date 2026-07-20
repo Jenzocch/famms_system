@@ -31,6 +31,10 @@ export default function ProfilePage() {
       setFactoryId(p?.factory_id ?? '')
     }
     load()
+    // Mount-only load. `supabase` is intentionally omitted: createClient()
+    // returns a new client instance every call (not memoized), so adding it
+    // here would re-run this effect on every render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Only admins may (re)assign a factory. For everyone else the factory is the
