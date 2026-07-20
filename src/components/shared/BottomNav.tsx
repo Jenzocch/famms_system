@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion } from 'motion/react'
 import { ClipboardList, Plus, LayoutDashboard, Settings, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types'
 import { PERMISSIONS } from '@/lib/permissions'
 import type { EffectiveCapabilities } from '@/lib/roles'
 import { useI18n } from '@/lib/i18n'
+import { springPress } from '@/lib/motion'
 
 interface NavItem {
   href: string
@@ -41,7 +43,11 @@ export default function BottomNav({ userRole = 'technician', incidentBadge = 0, 
   const visibleNav = NAV.filter(item => !item.requiredRole || item.requiredRole(userRole, capabilities))
 
   return (
-    <nav className="print:hidden lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom">
+    // Translucent floating chrome (Apple HIG): content scrolls underneath
+    // instead of stopping at an opaque bar. backdrop-blur needs a fallback —
+    // browsers without it (or prefers-reduced-transparency) get the plain
+    // bg-white/border via the supports-not query.
+    <nav className="print:hidden lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/70 z-50 safe-area-bottom [@media(prefers-reduced-transparency:reduce)]:bg-white [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none supports-[not(backdrop-filter:blur(1px))]:bg-white">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {visibleNav.map(({ href, labelKey, icon: Icon, primary }) => {
           const label = t(labelKey)
@@ -58,14 +64,17 @@ export default function BottomNav({ userRole = 'technician', incidentBadge = 0, 
 
           if (primary) {
             return (
-              <Link
-                key={href}
-                href={href}
-                className="flex flex-col items-center justify-center -mt-5 active:scale-[0.98] transition-transform duration-150"
-              >
-                <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
+              <Link key={href} href={href} className="flex flex-col items-center justify-center -mt-5">
+                {/* Momentum-style spring press (springPress: a touch is a
+                    direct, physical action, so a little bounce on release
+                    reads as responsive rather than distracting). */}
+                <motion.div
+                  whileTap={{ scale: 0.9 }}
+                  transition={springPress}
+                  className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center shadow-md"
+                >
                   <Icon className="w-6 h-6 text-white" />
-                </div>
+                </motion.div>
                 <span className="text-xs text-blue-600 font-medium mt-1">{label}</span>
               </Link>
             )

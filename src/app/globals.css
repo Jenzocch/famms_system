@@ -49,6 +49,12 @@
 }
 
 :root {
+  /* System font stack instead of a Google Fonts download: Apple's own
+     typography guidance is to default to the platform font before a custom
+     face, since it already ships optical sizing, tracking tables and
+     legibility tuning per platform — and it removes a build-time network
+     dependency on fonts.googleapis.com entirely. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -129,6 +135,29 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Size-specific tracking/leading (Apple's typography guidance: large text
+     wants negative tracking and tight leading, small text wants roughly
+     normal tracking and looser leading) — Tailwind's default scale pairs
+     each text-* size with a sensible line-height already, but never varies
+     letter-spacing by size, so headings across the app read slightly loose
+     at large sizes without this. */
+  h1 { letter-spacing: -0.02em; line-height: 1.15; }
+  h2 { letter-spacing: -0.015em; line-height: 1.2; }
+  h3 { letter-spacing: -0.01em; line-height: 1.25; }
+}
+
+/* Reduced motion: swap spring/slide transitions for a short cross-fade
+   instead of removing feedback entirely (Apple's guidance — reduced motion
+   isn't NO motion). Scoped to the .motion-safe-* pattern components opt
+   into; see src/lib/motion.ts. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

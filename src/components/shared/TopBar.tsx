@@ -38,7 +38,9 @@ export default function TopBar({ profile, customRole = null }: TopBarProps) {
     : 'U'
 
   return (
-    <header className="print:hidden bg-white border-b border-gray-100 sticky top-0 z-40">
+    // Translucent floating chrome, matching BottomNav — content scrolls
+    // underneath instead of stopping at an opaque bar.
+    <header className="print:hidden bg-white/80 backdrop-blur-xl border-b border-gray-100/70 sticky top-0 z-40 [@media(prefers-reduced-transparency:reduce)]:bg-white [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none supports-[not(backdrop-filter:blur(1px))]:bg-white">
       <div className="flex items-center justify-between px-4 h-12 max-w-lg mx-auto">
         <div className="flex items-center gap-2 text-blue-600 min-w-0">
           <Wrench className="w-5 h-5 shrink-0" />
