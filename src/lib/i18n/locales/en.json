@@ -79,10 +79,8 @@
     "selectAreaOther": "Other",
     "areaCustom": "Enter area name",
     "selectMachine": "Select machine/item (optional)",
-    "problemTitle": "Issue Title",
-    "titlePlaceholder": "Short description, e.g. filler leaking",
-    "problemDesc": "Description",
-    "descPlaceholder": "Details: where, what, when it started...",
+    "problemDesc": "What happened?",
+    "descPlaceholder": "Describe the issue: where, what, when it started... (a title is generated automatically)",
     "photos": "Site photos (max 5, auto-compressed)",
     "takePhoto": "Take or choose photos",
     "chooseFromGallery": "Choose from gallery",
@@ -256,6 +254,20 @@
     "hygieneLubricant": "Lubricants/chemicals are food-grade or fully cleaned up",
     "hygieneCleanArea": "Area cleaned, no metal shavings/foreign debris left behind",
     "hygieneRequired": "Please check all three hygiene confirmations before closing"
+  },
+  "rca": {
+    "gateHeading": "Root Cause Analysis (RCA) required before closing",
+    "gateHint": "The same issue on this machine occurred {count} times in the last 90 days. Complete this analysis to continue.",
+    "rootCause": "Root cause (why did it happen?)",
+    "correctiveAction": "Corrective action (how was it fixed?)",
+    "preventiveAction": "Preventive action (how will it be prevented?)",
+    "responsiblePerson": "Responsible person",
+    "selectPerson": "Select responsible person",
+    "dueDate": "Due date",
+    "submitAndClose": "Save RCA and continue closing",
+    "fillRequired": "Please fill in all RCA fields",
+    "saved": "RCA saved — continuing to close the case…",
+    "saveFailed": "Failed to save RCA"
   },
   "pm": {
     "manageTitle": "PM Management",

@@ -79,10 +79,8 @@
     "selectAreaOther": "Lainnya",
     "areaCustom": "Masukkan nama area",
     "selectMachine": "Pilih mesin/item (opsional)",
-    "problemTitle": "Judul Masalah",
-    "titlePlaceholder": "Deskripsi singkat, mis. filler bocor",
-    "problemDesc": "Deskripsi",
-    "descPlaceholder": "Detail: di mana, apa, kapan mulai...",
+    "problemDesc": "Ada masalah apa?",
+    "descPlaceholder": "Jelaskan masalahnya: lokasi, kondisi, kapan mulai... (judul dibuat otomatis)",
     "photos": "Foto lokasi (maks 5, auto-kompres)",
     "takePhoto": "Ambil atau pilih foto",
     "chooseFromGallery": "Pilih dari galeri",
@@ -256,6 +254,20 @@
     "hygieneLubricant": "Pelumas/kimia food-grade atau sudah dibersihkan",
     "hygieneCleanArea": "Area sudah dibersihkan, tanpa serpihan logam/benda asing",
     "hygieneRequired": "Mohon centang ketiga konfirmasi higiene sebelum menutup kasus"
+  },
+  "rca": {
+    "gateHeading": "Perlu Analisis Akar Masalah (RCA) sebelum menutup",
+    "gateHint": "Masalah sejenis pada mesin ini sudah terjadi {count} kali dalam 90 hari terakhir. Lengkapi analisis berikut untuk melanjutkan.",
+    "rootCause": "Akar masalah (mengapa terjadi?)",
+    "correctiveAction": "Tindakan korektif (bagaimana cara memperbaikinya?)",
+    "preventiveAction": "Tindakan pencegahan (bagaimana mencegah terulang?)",
+    "responsiblePerson": "Penanggung jawab",
+    "selectPerson": "Pilih penanggung jawab",
+    "dueDate": "Batas waktu",
+    "submitAndClose": "Simpan RCA dan lanjutkan menutup",
+    "fillRequired": "Mohon lengkapi semua kolom RCA",
+    "saved": "RCA tersimpan, melanjutkan menutup kasus…",
+    "saveFailed": "Gagal menyimpan RCA"
   },
   "pm": {
     "manageTitle": "Manajemen PM",
