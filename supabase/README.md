@@ -43,6 +43,7 @@
 | 6 | `migration_rls_5_incident_field_guard.sql` | 擋掉技師繞過畫面直接用 devtools 改 `due_date` / 結案 / 改工單內容 |
 | 7 | `migration_rls_6_pm_assignee_access.sql` | PM 保養版的第 5 步，讓跨廠 PM 負責人看得到自己排定的任務 |
 | 8 | `migration_security_phase3_function_execute.sql` | 收回 `PUBLIC` 對這些函式的執行權限——只收回 `anon` 不夠，Postgres 預設會把新函式的 EXECUTE 權限給 `PUBLIC`，而每個角色（包含 `anon`）都隱含是 `PUBLIC` 的成員，所以只 revoke `anon` 沒有真正關上這個洞 |
+| 9 | `migration_rls_7_missing_tables.sql` | 補上三張晚於 RLS 佈署才建立的表（`telegram_report_drafts`／`vendors`／`parts_requests`）的 RLS 與政策，並移除一次性的 `rls_set()` 佈署工具函式——沒補之前，任何登入帳號都能跨廠直接讀寫這三張表 |
 
 跑完這 8 步之後再跑 `SYNC_SCHEMA_LATEST.sql` 是安全的——它不會動 anon 權限或 RLS 狀態，不會把這一組鎖定復原。
 

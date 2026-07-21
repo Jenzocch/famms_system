@@ -78,7 +78,8 @@ BEGIN
         'app_can_access_incident', 'app_can_access_pm_schedule',
         'user_role', 'is_admin', 'is_supervisor_up',
         'prevent_profile_privilege_escalation', 'enforce_incident_field_roles',
-        'enforce_incident_machine_factory', 'handle_new_user', 'log_incident_change'
+        'enforce_incident_machine_factory', 'handle_new_user', 'log_incident_change',
+        'rls_set'
       )
   LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', r.sig);
