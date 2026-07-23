@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
-import { addDays, addWeeks, addMonths } from 'date-fns'
 import type { IncidentStatus } from '@/types'
 import DashboardView, { DashboardRow } from '@/components/dashboard/DashboardView'
 import { OPEN_STATUSES } from '@/lib/incident-display'
+import { nextDueFromLast } from '@/lib/pm'
 
 export const metadata = { title: 'Dashboard | FAMMS' }
 
@@ -30,19 +30,6 @@ interface PMRecordRow {
   completed_at: string | null
 }
 
-function getNextDueDate(lastMaintained: string | null, pmType: string, intervalDays?: number | null): Date {
-  const base = lastMaintained ? new Date(lastMaintained) : new Date()
-  switch (pmType) {
-    case 'daily': return addDays(base, 1)
-    case 'weekly': return addWeeks(base, 1)
-    case 'monthly': return addMonths(base, 1)
-    case 'quarterly': return addMonths(base, 3)
-    case 'half_yearly': return addMonths(base, 6)
-    case 'yearly': return addMonths(base, 12)
-    case 'custom': return addDays(base, intervalDays && intervalDays > 0 ? intervalDays : 30)
-    default: return addMonths(base, 1)
-  }
-}
 
 export default async function DashboardPage() {
   const user = await getCurrentUser()
@@ -123,7 +110,7 @@ export default async function DashboardPage() {
     .filter(s => s.machines)
     .map(s => {
       const lastMaintained = lastByMachine[s.machine_id] ?? null
-      const dueDate = getNextDueDate(lastMaintained, s.pm_type, s.interval_days)
+      const dueDate = nextDueFromLast(lastMaintained, s.pm_type, s.interval_days)
       // Server Component (see note above) — same false-positive purity flag.
       // eslint-disable-next-line react-hooks/purity
       const daysOverdue = Math.floor((Date.now() - dueDate.getTime()) / 86400000)

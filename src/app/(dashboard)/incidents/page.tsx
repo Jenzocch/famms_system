@@ -3,27 +3,9 @@ import { getCurrentUser } from '@/lib/auth'
 import type { BoardRow } from '@/components/incidents/IncidentBoard'
 import IncidentsBoardWithSearch from '@/components/incidents/IncidentsBoardWithSearch'
 import { OPEN_STATUSES } from '@/lib/incident-display'
-import { addDays, addWeeks, addMonths } from 'date-fns'
+import { nextDueFromLast } from '@/lib/pm'
 
 export const metadata = { title: 'Board | FAMMS' }
-
-// Mirrors dashboard/page.tsx's getNextDueDate exactly (same cadence math) so
-// the board banner's overdue count agrees with the dashboard's own PM widget.
-// Duplicated rather than imported — dashboard/page.tsx is a route module, not
-// a shared lib, so importing from it would pull a whole other page in.
-function getNextDueDate(lastMaintained: string | null, pmType: string, intervalDays?: number | null): Date {
-  const base = lastMaintained ? new Date(lastMaintained) : new Date()
-  switch (pmType) {
-    case 'daily': return addDays(base, 1)
-    case 'weekly': return addWeeks(base, 1)
-    case 'monthly': return addMonths(base, 1)
-    case 'quarterly': return addMonths(base, 3)
-    case 'half_yearly': return addMonths(base, 6)
-    case 'yearly': return addMonths(base, 12)
-    case 'custom': return addDays(base, intervalDays && intervalDays > 0 ? intervalDays : 30)
-    default: return addMonths(base, 1)
-  }
-}
 
 // Count of overdue active PM schedules, scoped to what this viewer's board
 // can see (their factory, or every factory for admin/cross-factory accounts)
@@ -68,7 +50,7 @@ async function getPmOverdueCount(
 
   return (schedulesRes.data ?? []).filter(s => {
     const lastMaintained = lastByMachine[s.machine_id] ?? null
-    const dueDate = getNextDueDate(lastMaintained, s.pm_type, (s as { interval_days: number | null }).interval_days)
+    const dueDate = nextDueFromLast(lastMaintained, s.pm_type, (s as { interval_days: number | null }).interval_days)
     return Date.now() - dueDate.getTime() > 0
   }).length
 }

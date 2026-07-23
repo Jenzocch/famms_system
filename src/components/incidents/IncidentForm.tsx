@@ -97,7 +97,12 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
     const trimmedDesc = description.trim()
     const title = trimmedDesc.length > 60 ? `${trimmedDesc.slice(0, 57)}...` : trimmedDesc
     // For "other", use the problem title as the incident type label on the board.
-    const incidentType = issueType === 'other' ? title : issueType
+    // 'other' stays literally 'other'. It used to store the short title as a
+    // pseudo-type, but since the title/description merge the title IS the
+    // first 60 chars of the description — storing a whole sentence as the
+    // type broke the board's type chip and made repeat-failure matching
+    // (same machine + same incident_type) never match for 'other' cases.
+    const incidentType = issueType
 
     // Deadline = manual pick if given, else auto-derived from urgency (SLA).
     const impactCode = urgency === 'critical' ? 'A' : urgency === 'medium' ? 'C' : 'D'
@@ -325,7 +330,7 @@ export default function IncidentForm({ presetMachineId }: { presetMachineId?: st
               className="mt-1"
             />
             <p className="text-xs text-gray-400 mt-1">
-              {t('report.dueDateHint', '留空則依緊急程度自動計算（緊急=當天、高=1天、中=3天、低=7天）')}
+              {t('report.dueDateHint', '留空則依緊急程度自動計算（緊急=當天、中=7天、一般=30天）')}
             </p>
           </div>
         </details>

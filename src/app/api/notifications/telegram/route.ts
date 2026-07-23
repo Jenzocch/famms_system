@@ -455,10 +455,16 @@ async function handleNewReportUrgency(admin: ReturnType<typeof createAdminClient
     .gte('created_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString())
 
   const title = draft.description.length > 60 ? `${draft.description.slice(0, 57)}...` : draft.description
+  // A matched machine code means this is a machine issue — typing it 'other'
+  // (as this used to unconditionally) broke type stats AND cross-channel
+  // repeat-failure matching: the web form types the same fault 'machine', and
+  // detection keys on same machine + same incident_type, so a Telegram report
+  // could never match a web report of the identical fault.
+  const incidentType = machineId ? 'machine' : 'other'
   const basePayload = {
     factory_id: draft.factory_id,
     machine_id: machineId,
-    incident_type: 'other',
+    incident_type: incidentType,
     title,
     description: draft.description,
     reporter_name: profile.full_name || null,
@@ -510,7 +516,7 @@ async function handleNewReportUrgency(admin: ReturnType<typeof createAdminClient
     actionType: 'create',
     resourceType: 'incident',
     resourceId: incident.id,
-    newValue: { incident_no: incident.incident_no, title, incident_type: 'other' },
+    newValue: { incident_no: incident.incident_no, title, incident_type: incidentType },
     changeSummary: `工單已建立：${incident.incident_no}（via Telegram）`,
     factoryId: draft.factory_id,
   })
@@ -543,13 +549,13 @@ async function handleNewReportUrgency(admin: ReturnType<typeof createAdminClient
   }).catch(() => {})
 
   // Best-effort repeat-failure candidate check — same rule as the web report
-  // form (see src/lib/repeat-failure.ts). Telegram /lapor reports always use
-  // incident_type 'other' (basePayload above), same value used to match.
+  // form (see src/lib/repeat-failure.ts), matched on the same incidentType
+  // written to basePayload above ('machine' when a machine code was detected).
   // Never blocks the report itself: any failure here is swallowed.
   try {
     const potentialRepeat = machineId
       ? await checkPotentialRepeatFailure(admin, {
-          machineId, incidentType: 'other', excludeIncidentId: incident.id,
+          machineId, incidentType, excludeIncidentId: incident.id,
         })
       : null
     if (potentialRepeat) {
