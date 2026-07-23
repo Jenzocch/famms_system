@@ -14,6 +14,7 @@
 //    TZ setting (verified: a UTC-negative TZ shifts every date by one day).
 //    Only UTC getters/setters below — output is identical in any server TZ.
 
+import { addDays, addWeeks, addMonths } from 'date-fns'
 import type { PMType } from '@/types'
 
 // zh fallbacks; rendered through t(PM_TYPE_KEYS[type]) so labels follow the
@@ -47,6 +48,27 @@ export function checklistIncompleteError(
   if (required === 0) return null
   const done = Array.isArray(checklistResults) ? checklistResults.filter(c => c?.done).length : 0
   return done < required ? 'Semua item checklist harus dicentang sebelum menandai selesai' : null
+}
+
+// Next PM due date from the LAST COMPLETED maintenance: last + one interval
+// (no anchoring needed — it's a single step from a real completion date, not
+// a projected series, so the chained-add drift rule below doesn't apply, and
+// date-fns' clamped addMonths is the intended semantics here). Used by the
+// dashboard's overdue-PM widget and the board's PM banner — both MUST use
+// this one function so their overdue counts can never disagree (they used to
+// be two "mirrored exactly" copies in two route files).
+export function nextDueFromLast(lastMaintained: string | null, pmType: string, intervalDays?: number | null): Date {
+  const base = lastMaintained ? new Date(lastMaintained) : new Date()
+  switch (pmType) {
+    case 'daily': return addDays(base, 1)
+    case 'weekly': return addWeeks(base, 1)
+    case 'monthly': return addMonths(base, 1)
+    case 'quarterly': return addMonths(base, 3)
+    case 'half_yearly': return addMonths(base, 6)
+    case 'yearly': return addMonths(base, 12)
+    case 'custom': return addDays(base, customDays(intervalDays))
+    default: return addMonths(base, 1)
+  }
 }
 
 // Custom "every N days" schedules fall back to this when no interval is set.
