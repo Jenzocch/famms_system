@@ -22,7 +22,13 @@ export default function WorkflowProgress({ status, userRole }: { status: Inciden
   const { t } = useI18n()
 
   const isWaiting = WAITING_STATES.includes(status)
-  const activeIndex = isWaiting ? -1 : MAIN_STEPS.indexOf(status)
+  // A waiting side-state is NOT "back to square one" — the case was already
+  // accepted and is being worked; it's just blocked. Anchor it at the
+  // analyzing slot (the same place ProgressUpdate resumes a waiting case),
+  // so Baru/Diterima stay ✓ and the anchored circle shows a paused badge
+  // with the actual waiting label (e.g. Tunggu Spare) instead of the whole
+  // bar resetting to the start.
+  const activeIndex = isWaiting ? MAIN_STEPS.indexOf('analyzing') : MAIN_STEPS.indexOf(status)
   const isClosed = status === 'closed'
 
   // An observation-period case is the supervisor's cue to review and close —
@@ -70,8 +76,11 @@ export default function WorkflowProgress({ status, userRole }: { status: Inciden
         {MAIN_STEPS.map((step, i) => {
           const isDone = isClosed
             ? true
-            : !isWaiting && i < activeIndex
-          const isActive = !isWaiting && i === activeIndex
+            : i < activeIndex
+          const isActive = i === activeIndex && !isClosed
+          // Waiting case's anchored slot: amber pause instead of blue active,
+          // labeled with the real waiting status (Tunggu Spare / Vendor / …).
+          const isPaused = isWaiting && isActive
 
           return (
             <div key={step} className="flex items-center flex-1 min-w-0">
@@ -80,18 +89,21 @@ export default function WorkflowProgress({ status, userRole }: { status: Inciden
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
                   isDone && !isActive
                     ? 'bg-green-500 border-green-500 text-white'
+                    : isPaused
+                    ? 'bg-amber-500 border-amber-500 text-white ring-2 ring-amber-200'
                     : isActive
                     ? 'bg-blue-600 border-blue-600 text-white ring-2 ring-blue-200'
                     : 'bg-white border-gray-300 text-gray-400'
                 }`}>
-                  {isDone && !isActive ? '✓' : i + 1}
+                  {isDone && !isActive ? '✓' : isPaused ? '⏸' : i + 1}
                 </div>
                 <span className={`text-center mt-1 leading-tight ${
+                  isPaused ? 'text-amber-700 font-semibold' :
                   isActive ? 'text-blue-700 font-semibold' :
                   isDone && !isActive ? 'text-green-700' :
                   'text-gray-400'
                 }`} style={{ fontSize: '9px', maxWidth: '48px' }}>
-                  {stepLabel(step)}
+                  {isPaused ? stepLabel(status) : stepLabel(step)}
                 </span>
               </div>
 

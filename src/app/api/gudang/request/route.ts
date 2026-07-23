@@ -10,12 +10,17 @@ import { NextResponse } from 'next/server'
 // env: GUDANG_WEBHOOK_URL    e.g. https://<project>.supabase.co/functions/v1/famms-request
 //      GUDANG_WEBHOOK_SECRET shared secret, same value configured on the Gudang side
 
-// FAMMS factory code → Gudang One warehouse code
+// FAMMS factory code → Gudang One warehouse code. A factory code NOT in this
+// map (factories created after this was written — e.g. LAB) falls back to
+// DEFAULT_WAREHOUSE instead of rejecting the request: blocking a technician's
+// parts request over a missing mapping row helps nobody, and the payload note
+// carries the real factory so warehouse staff can route it themselves.
 const FACTORY_TO_WAREHOUSE: Record<string, string> = {
   DIN: 'DENIKIN',
   SJA: 'SJA',
   OLT: 'OLENTIA',
 }
+const DEFAULT_WAREHOUSE = process.env.GUDANG_DEFAULT_WAREHOUSE || 'DENIKIN'
 
 type ItemInput = { name?: unknown; part_no?: unknown; qty?: unknown; unit?: unknown }
 
@@ -69,13 +74,14 @@ export async function POST(req: Request) {
   // Supabase types to-one joins as arrays; at runtime .single() returns objects
   const factory = incident.factory as unknown as { code: string | null; name: string | null } | null
   const machine = incident.machine as unknown as { machine_code: string | null; machine_name: string | null } | null
-  const warehouse = FACTORY_TO_WAREHOUSE[factory?.code ?? ''] ?? null
-  if (!warehouse) {
-    return NextResponse.json(
-      { error: `Pabrik ${factory?.code ?? '?'} belum dipetakan ke gudang` },
-      { status: 400 }
-    )
-  }
+  const mappedWarehouse = FACTORY_TO_WAREHOUSE[factory?.code ?? ''] ?? null
+  const warehouse = mappedWarehouse ?? DEFAULT_WAREHOUSE
+  // Unmapped factory → the request still goes through (to the default
+  // warehouse), but the note tells warehouse staff which plant it's really
+  // for, so they can route/hand it over correctly.
+  const noteForGudang = mappedWarehouse
+    ? note
+    : [`[Pabrik: ${factory?.name || factory?.code || '?'}]`, note].filter(Boolean).join(' ')
 
   // Idempotency guard: a double-tap, or a retry after the network dropped
   // mid-response, must not create a second request (and a second Gudang push).
@@ -139,7 +145,7 @@ export async function POST(req: Request) {
     urgency,
     requester: user.full_name || 'FAMMS user',
     warehouse,
-    note,
+    note: noteForGudang,
   }
 
   let resp: Response
